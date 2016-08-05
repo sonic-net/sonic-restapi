@@ -1,0 +1,18 @@
+Source: sonic-db-sql
+Section: net
+Priority: optional
+Maintainer: Dell <support@dell.com>
+Build-Depends: debhelper (>= 9), dh-autoreconf, 
+ libsonic-common-dev,libsonic-logging-dev,libsqlite3-dev,sqlite3
+Standards-Version: 3.9.3
+
+Package: libsonic-db-sql1
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: This package contains implementation of System Device Interface(SDI)
+
+Package: libsonic-db-sql-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},libsonic-common-dev,libsonic-logging-dev,libsqlite3-0,libsonic-db-sql1 (= ${binary:Version})
+Description: This package contains implementation of System Device Interface(SDI) for VM
+
