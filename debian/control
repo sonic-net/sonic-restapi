@@ -5,6 +5,8 @@ Maintainer: Dell <support@dell.com>
 Build-Depends: debhelper (>= 9), dh-autoreconf, 
  libsonic-common-dev,libsonic-logging-dev,libsqlite3-dev,sqlite3
 Standards-Version: 3.9.3
+Vcs-Browser: http://github.com/Azure/sonic-sim-object-model-db
+Vcs-Git: http://github.com/Azure/sonic-sim-object-model-db.git
 
 Package: libsonic-db-sql1
 Architecture: any
