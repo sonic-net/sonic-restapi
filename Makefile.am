@@ -1,4 +1,4 @@
-
+ACLOCAL_AMFLAGS=-I m4
 
 nobase_include_HEADERS = sonic/db_sql_defines.h  sonic/db_sql_ops.h
 #The sdi-sys library
