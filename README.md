@@ -1,7 +1,7 @@
-sonic-db-sql
+sonic-sim-object-model-db
 -------------
 
-sonic-db-sql is rapper to db-sql api used for VM target.
+sonic-sim-object-model-db is a wrapper to db-sql api used for VM target.
 
 
 
