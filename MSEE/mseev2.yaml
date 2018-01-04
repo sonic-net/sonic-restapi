@@ -1,0 +1,1582 @@
+#
+# Current rules
+# 1. All requests are sync.
+#
+# responses:
+# put:
+#   201 - Created
+#   400 - Bad Request. Malformed arguments for API call
+#   401 - Unauthorized.  Invalid authentication credentials 
+#   403 - Forbidden (capacity isssues)
+#   404 - Object is not found
+#   405 - Method not allowed. Some attribute can not be updated.
+#   500 - Internal Server Error
+#   503 - Service Unavailable
+# get:
+#   200 - OK
+#   400 - Bad Request. Malformed arguments for API call
+#   401 - Unauthorized.  Invalid authentication credentials
+#   404 - Object is not found
+#   500 - Internal Server Error
+#   503 - Service Unavailable
+# delete:
+#   204 - No Content
+#   400 - Bad Request. Malformed arguments for API call
+#   401 - Unauthorized.  Invalid authentication credentials
+#   404 - Object is not found
+#   500 - Internal Server Error
+#   503 - Service Unavailable
+#
+# dictionary:
+#   vrf_name
+#   vrf_id
+#   vnid
+#   ip_prefix
+#   ip_addr
+#
+# Requests:
+# 1. Remove all resources vrouter
+# 2. remove route but keep nexthop nexthop
+#
+# MS EE REST API v1. Defines API for controlling data path in both MS EE and Baremetal scenario.
+# Scenario #1: MS EE.
+# The dataplane has 2 sets of ports:
+# 1. "customer" ports
+# 2. "provider" ports
+# Every "customer" port is connected to a customer device. It supports QinQ encapsulation only.
+# All other packet types would be dropped. QinQ tag represents a customer virtual network.
+# Every "provider" port is connected to some Azure networking device. It receives and sends
+# VXLAN traffic most of the time.
+#
+# Scenario #2: Baremetal
+# The dataplane has 2 sets of ports:
+# 1. "baremetal server" ports
+# 2. "provider" ports
+# Every "baremetal server" port is connected to one baremetal server. It supports IPv4 traffic
+# only (IPv4 frames, ARP frames). A baremetal server and its ports makes one L3 domain, which
+# could be connected to other L3 domains.
+# Every "provider" port is the same as the "provider" port for MS EE scenario
+#
+# Our dataplane is designed as follow
+# 1. We have virtual routers which represents a "virtual network" for a customer. Virtual
+#    routers are defined by "vrf_id" which is unsigned integer value. The virtual routers
+#    are used to bind a customer ports with "provider" ports together.
+# 2. We have a virtual routing table which is unique and separated for every virtual router.
+# 3. We have tunnels which represent "Azure" next hops for virtual routing tables.
+# 4. We have port specific API to define parameters for client ports
+#
+# When you remove an entity which is referenced by other entity (for example you want to remove
+# a virtual router instance, but you have references to it from the virtual routes) the target
+# entity will be removed with all entities (recursively) which has references to the removing entity.
+# FIXME: Probably we should return list of all entities which have been removed (currently impossible
+# to implement because of swssconfig restrictions)
+
+# Some details about '40X' error responses:
+# - '400' http error returns when there're one or more malformed arguments (wrong type, format, size) in the request.
+# - '404' http error returns when there're one or more references to non-existent values in the request.
+# In case of bulk API (vroute API):
+# - If a request has a malformed argument (arguments) or a reference (references) to non-existent values
+#   in its path the API must return '400' or '404' respectively.
+# - if a request has the same error in the attributes of the request, the API must:
+#    - run the request with the valid attributes
+#    - return '200' http status code
+#    - put malformed attributes into the list of 'failed' attributes.
+#
+
+swagger: '2.0'
+info:
+  title: MSEEv2 API
+  description: MSEEv2 VNET Control API
+  version: 1.0.0
+host: msee.com
+schemes:
+  - http
+  - https
+basePath: /v1
+produces:
+  - application/json
+consumes:
+  - application/json
+paths:
+#----------------------------------------------
+# Virtual router object
+#----------------------------------------------
+  '/config/vrouter/{vrf_id}':
+    put:
+      summary: Create a new virtual router
+      description: If a virtual router with specified vrf_id doesn't exist, new vrf_id with empty virtual table would be created. If a virtual router with specified vrf_id exists already, nothing will be changed.
+      tags:
+        - Shared
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: virtual router id. (32-bit unsigned integer value)
+        - name: attr
+          in: body
+          required: true
+          description: attributes for virtual router
+          schema:
+            $ref: '#/definitions/VirtualRouterEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get information about an existing virtual router
+      description: Returns attributes for requested vrf_id. If the vrf_id is not defined it returns '404' error.
+      tags:
+        - Shared
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: virtual router id
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - vrf_id
+              - attr
+            properties:
+              vrf_id:
+                type: integer
+                format: int32
+                description: virtual router id
+              attr:
+                $ref: '#/definitions/VirtualRouterEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Virtual router is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a virtual router
+      description: Remove a virtual router which is defined by vrf_id. If a virtual router with 'vrf_id' is not defined the API will return '404'.
+      tags:
+        - Shared
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: virtual router id
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Virtual router is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/config/vrouter':
+    get:
+      summary: Get a list of existing virtual routers
+      description: Return a list of defined virtual router objects. If there're no virtual routers defined it returns an empty list.
+      tags:
+        - Shared
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              type: object
+              required:
+                - vrf_id
+                - attr
+              properties:
+                vrf_id:
+                  type: integer
+                  format: int32
+                  description: virtual router id
+                attr:
+                  $ref: '#/definitions/VirtualRouterEntry'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# vxlan tunnel object
+#----------------------------------------------
+  '/config/tunnel/encap/vxlan/{vnid}':
+    put:
+      summary: Create a tunnel
+      description: If a tunnel with vxlan "vnid" doesn't exist yet then create a new tunnel with "vnid". If the tunnel already exists, it's attributes will be updated.
+      tags:
+        - Shared
+      parameters:
+        - name: vnid
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: vxlan id (24-bit)
+        - name: attr
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TunnelEntry'
+      responses:
+        '204':
+          description: OK
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a tunnel
+      description: If a tunnel defined by vnid exists then remove it. If it doesn't exist return '404' error.
+      tags:
+        - Shared
+      parameters:
+        - name: vnid
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: vxlan id (24-bit)
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get information about a tunnel
+      description: If a tunnel defined by vnid exists then return an objects with the tunnel attributes. Otherwise return '404' error.
+      tags:
+        - Shared
+      parameters:
+        - name: vnid
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: vxlan id (24-bit)
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - vnid
+              - attr
+            properties:
+              vnid:
+                type: integer
+                format: int32
+                description: vxlan id (24-bit)
+              attr:
+                $ref: '#/definitions/TunnelEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/config/tunnel/encap/vxlan':
+    get:
+      summary: Get a list of existing tunnels
+      description: Return a list of existing tunnels. If there're no parameters, all existing tunnels would be returned. If there're 'vrf_id' query parameter, only tunnels for this 'vrf_id' will be returned. If there're no tunnels to return, empty list will be returned.
+      tags:
+        - Shared
+      parameters:
+        - name: vrf_id
+          in: query
+          required: false
+          type: integer
+          format: int32
+          description: It could be used to filter out tunnels only for given vrF_id
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              type: object
+              required:
+                - vnid
+                - attr
+              properties:
+                vnid:
+                  type: integer
+                  format: int32
+                  description: vxlan id (24-bit)
+                attr:
+                  $ref: '#/definitions/TunnelEntry'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+
+#----------------------------------------------
+# route object
+#----------------------------------------------
+  '/config/vrouter/{vrf_id}/routes':
+    put:
+      summary: Create/update IP routes for a virtual router
+      description: This API calls receives a list of route entries which supposed to be inserted into virtual routing table, defined by 'vrf_id'. Internally the API will try to insert every route entry individually. If a route entry is already existed in the virtual routing table, the attributes of the rouing entry will be updated and the route entry will be returned in as a member of the "updated" list. If a route entry doesn't exist in the routing table yet, it will be inserted there and returned as a member of "added" list. If something went wrong the route entry will be returned as member of "failed" list with "error" attribute set to an actual error for the route entry.
+      tags:
+        - Shared
+      parameters:
+        - name: vrf_id
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: name of a virtual id
+        - name: attr
+          in: body
+          required: true
+          description: attributes for virtual router IP prefix
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteEntry'
+      responses:
+        '201':
+          description: OK
+          schema:
+            type: object
+            required:
+              - added
+              - updated
+              - failed
+            properties:
+              added:
+                description: list of added routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+              updated:
+                description: list of updated routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+              failed:
+                description: list of failed routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove IP routes for a virtual router
+      description: This API call will remove all route entries from a virtual router defined by 'vrf_id'. If 'attr' parameter is provided, only route entries from the list will be removed. If 'vnid' query parameter is defined, this API call will remove only routes, which nexthop tunnel is 'vnid'. If the removing went successfully the route entry will be added to "removed" list in the response, otherwise it would be added to "failed" list.
+      tags:
+        - Shared
+      parameters:
+        - name: vrf_id
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: name of a virtual id
+        - name: vnid
+          in: query
+          required: false
+          type: integer
+          format: int32
+          description: vxlan id (24-bit). Allows to remove routes with defined vnid only. Applicable for routes with nexthop_type 'vxlan-tunnel'. Otherwise '400' error will be returned
+        - name: attr
+          in: body
+          required: false
+          description: attributes for virtual router IP prefix
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteEntry'
+      responses:
+        '201':
+          description: OK
+          schema:
+            type: object
+            required:
+              - removed
+              - failed
+            properties:
+              removed:
+                description: list of removed routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+              failed:
+                description: list of failed routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get IP routes for a given virtual router
+      description: Return a list of routing entries for a given virtual router defined by "vrf_id" parameter. If there're no routing entries an empty list would be returned. The output list could be filterd by "vnid" and "ip_prefix" parameters. If one of the parameters is defined for the request, the output will contain only routing entries which have this parameter in their attributes.
+      tags:
+        - Shared
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: virtual router id
+        - name: vnid
+          in: query
+          required: false
+          type: integer
+          format: int32
+          description: vxlan id (24-bit). Allows to output routes with defined vnid only. Applicable for routes with nexthop_type 'vxlan-tunnel'. Otherwise '400' error will be returned
+        - name: ip_prefix
+          in: query
+          required: false
+          type: string
+          description: destination IP address block. If presented, get will return information about only this ip prefix
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# QinQ interface object
+#----------------------------------------------
+  '/config/interface/qinq/{port}/{stag}/{ctag}':
+    put:
+      summary: Create/update QinQ router interface for a physical port
+      description: If the interface is already created, it's parameters will be updated. If the port is already used for '/config/interface/port/{port}' API, '400' error will be returned.
+      tags:
+        - MSEE
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: router interface name
+        - name: stag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ outer tag
+        - name: ctag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ inner tag
+        - in: body
+          name: attr
+          required: true
+          description: attributes for QinQ router interface
+          schema:
+            $ref: '#/definitions/QinQEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '405':
+          description: Method not allowed
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a QinQ router interface from a physical port
+      description: If the router interface doesn't exist, '404' error will be returned.
+      tags:
+        - MSEE
+      parameters:
+        - in: path
+          name: port
+          type: string
+          required: true
+          description: physical port that bound to the QinQ router interface
+        - name: stag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ outer tag
+        - name: ctag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ inner tag
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get QinQ router interface information
+      description: Return attributes for a given QinQ interface. If there're no interface with such parameters '404' error will be returned.
+      tags:
+        - MSEE
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: physical port that bound to the QinQ router interface
+        - name: stag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ outer tag
+        - name: ctag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ inner tag
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - port
+              - stag
+              - ctag
+              - attr
+            properties:
+              port:
+                type: string
+                description: physical port that bound to the QinQ router interface
+              stag:
+                type: integer
+                format: int16
+                description: QinQ outer tag
+              ctag:
+                type: integer
+                format: int16
+                description: QinQ inner tag
+              attr:
+                $ref: '#/definitions/QinQEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/config/interface/qinq/{port}':
+    delete:
+      summary: Remove all QinQ router interfaces from a physical port
+      description: If "port" is not found on the device, '404' error will be returned. If "port" is found, but there're no QinQ interface defined, it will just return '204' reponse.
+      tags:
+        - MSEE
+      parameters:
+        - in: path
+          name: port
+          type: string
+          required: true
+          description: physical port that bound to the QinQ router interface
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get a list of all QinQ router interfaces for a port
+      description: If there're no QinQ router interfaces for a port an empty list will be returned.
+      tags:
+        - MSEE
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: physical port that bound to the QinQ router interface
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              type: object
+              required:
+                - port
+                - stag
+                - ctag
+                - attr
+              properties:
+                port:
+                  type: string
+                  description: physical port that bound to the QinQ router interface
+                stag:
+                  type: integer
+                  format: int16
+                  description: QinQ outer tag
+                ctag:
+                  type: integer
+                  format: int16
+                  description: QinQ inner tag
+                attr:
+                  $ref: '#/definitions/QinQEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# Port interface object
+#----------------------------------------------
+  '/config/interface/port/{port}':
+    put:
+      summary: Create/update port router interface.
+      description: If the interface is already created, the port attributes will be updated. If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400' error will be returned.
+      tags:
+        - Baremetal
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: router interface name
+        - in: body
+          name: attr
+          required: true
+          description: attributes for port router interface
+          schema:
+            $ref: '#/definitions/PortEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove port router interface
+      description: If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400' error will be returned.
+      tags:
+        - Baremetal
+      parameters:
+        - in: path
+          name: port
+          type: string
+          required: true
+          description: physical port that bound to the port router interface
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get port router interface information
+      description: If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400' error will be returned.
+      tags:
+        - Baremetal
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: physical port that bound to the port router interface
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - port
+              - attr
+            properties:
+              port:
+                type: string
+                description: physical port that bound to the port router interface
+              attr:
+                $ref: '#/definitions/PortEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# PHY interface object
+#----------------------------------------------
+  '/state/interface/{port}':
+    get:
+      summary: Get information about a device physical interface
+      tags:
+        - Shared
+      parameters:
+        - name: port
+          in: path
+          type: string
+          required: true
+          description: physical port
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - port
+              - attr
+            properties:
+              port:
+                type: string
+                description: physical port
+              attr:
+                $ref: '#/definitions/InterfaceEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/state/interface':
+    get:
+      summary: Get information about all device physical interfaces
+      tags:
+        - Shared
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              type: object
+              required:
+                - port
+                - attr
+              properties:
+                port:
+                  type: string
+                  description: physical port
+                attr:
+                  $ref: '#/definitions/InterfaceEntry'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# tunnel decapsulation endpoint object
+#----------------------------------------------
+  '/config/tunnel/decap/{tunnel_type}':
+    put:
+      summary: Setup or update tunnel decapsulation parameters
+      tags:
+        - Shared
+      description: >-
+          For ininip tunnel, the router will use the global virtual router to do L3 lookup after the decap.
+          For vxlan tunnel, the router will use vnid to vrf_id mapping to determine subsequent virtual router to do L3 lookup after the decap.
+      parameters:
+        - name: tunnel_type
+          in: path
+          required: true
+          type: string
+          enum:
+            - ipinip
+            - vxlan
+            - nvgre
+          description: type of a tunnel endpoint
+        - name: attr
+          in: body
+          required: true
+          description: attributes for TunnelDecapsulator
+          schema:
+            $ref: '#/definitions/TunnelDecapEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get tunnel decapsulation parameters
+      tags:
+        - Shared
+      parameters:
+        - name: tunnel_type
+          in: path
+          required: true
+          type: string
+          enum:
+            - ipinip
+            - vxlan
+            - nvgre
+          description: type of a tunnel endpoint
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - tunnel_type
+              - attr
+            properties:
+              tunnel_type:
+                type: string
+                enum:
+                  - ipinip
+                  - vxlan
+                  - nvgre
+              attr:
+                $ref: '#definitions/TunnelDecapEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove tunnel decapsulation information
+      tags:
+        - Shared
+      parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - ipinip
+            - vxlan
+            - nvgre
+          description: type of a tunnel endpoint
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# Monitor object
+#----------------------------------------------
+  '/state/counter/{group}':
+    get:
+      summary: Get a specific group of counters.
+      tags:
+        - Shared
+      parameters:
+        - name: group
+          in: path
+          type: string
+          required: true
+          enum:
+            - dpdk.total
+            - dpdk.switch_ports
+            - dpdk.nic
+          description: group name for a group of counters
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/GroupCounterMap'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/state/counter':
+    get:
+      summary: Get counters for all available groups.
+      tags:
+        - Shared
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/GroupCounterMap'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/state/statistics/{group}':
+    get:
+      summary: Get a specific group of statistics.
+      tags:
+        - Shared
+      parameters:
+        - name: group
+          in: path
+          type: string
+          required: true
+          enum:
+            - rings
+            - mempools
+            - fibs
+          description: group name for a group of counters
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/GroupStatisticsMap'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/state/statistics':
+    get:
+      summary: Get counters for all available groups.
+      tags:
+        - Shared
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/GroupStatisticsMap'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/state/histogram':
+    get:
+      summary: Get histogram for queueId and burst size.
+      tags:
+        - Shared
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/QueueidHistogramMap'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# Schema definitions
+#----------------------------------------------
+definitions:
+  Error:
+    type: object
+    properties:
+      error:
+        type: object
+        required:
+          - code
+          - message
+        properties:
+          code:
+            type: integer
+            format: int32
+          message:
+            type: string
+          fields:
+            type: array
+            items:
+              type: string
+          details:
+            type: string
+  RouteEntry:
+    type: object
+    required:
+      - ip_prefix
+      - nexthop_type
+      - nexthop
+    properties:
+      ip_prefix:
+        description: >-
+          destination IP address block, either customer advertised
+          on-premise IP prefix block or customer VM IP address. This
+          is limited to v4 IP address.
+        type: string
+      nexthop_type:
+        type: string
+        enum:
+          - ip
+          - vxlan-tunnel
+        description: next hop type. ip nexthop or vxlan tunnel nexthop. For future, we can more tunnel nexthop such as vxlan-gpe,nvgre, etc. on
+      nexthop:
+        type: string
+        description: >-
+          ip address of nexthop.
+          When nexthop_type is 'ip', then nexthop is the CE IP address;
+          When nexthop_type is 'vxlan_tunnel', the next hop is the PA address of the customer VM
+      mac_address:
+        type: string
+        description: >-
+          when ip_prefix has a length == 32, then this is a mac address of the target host defined by the "ip_prefix"
+          when ip_prefix has a length  < 32, then this is a mac address of a gateway for the "ip_prefix" network
+          this attrubute is required if nexthop_type=='vxlan-tunnel'.
+      vnid:
+        type: integer
+        format: int32
+        description: vxlan id for a tunnel. In case of vxlan tunnel it contains vxlan tunnel id (24-bit). Invalid for other next hop types. This parameter is required if nexthop_type=='vxlan-tunnel'
+      src_ip:
+        type: string
+        description: >-
+          tunnel source IP address. By default, it uses the
+          corresponding loopback IP. If the nexthop is v4, then use the
+          v4 loopback IP of the device. If the nexthop is v6, then use
+          the v6 loopback IP of the device.
+      port:
+        type: string
+        enum:
+          - standard
+          - azure
+        description: >-
+          port to use for VXLAN encapsulation standard = 4789 azure = 65330
+          will default to azure
+      error:
+        type: string
+        description: error which causes to the route to be upserted
+  QinQEntry:
+    type: object
+    required:
+      - vrf_id
+    properties:
+      vrf_id:
+        type: integer
+        format: int32
+        description: virtual router id
+      peer_ip:
+        type: string
+        description: interface peer IP address
+      proxy_arp_ip:
+        type: string
+        description: IP address to do proxy arp
+      subnet:
+        type: string
+        description: interface subnet
+  PortEntry:
+    type: object
+    required:
+      - vrf_id
+      - addr
+      - mac_address
+    properties:
+      vrf_id:
+        type: integer
+        format: int32
+        description: virtual router id
+      addr:
+        type: string
+        description: interface address with ip prefix length. It's possible to have several ip addresses per vrouter
+      spoof_guard:
+        description: defines a list of ipv4 prefixes, which expected to be seen behind this interface. In case this attribute is missing, or the list is empty this feature is disabled.
+        type: array
+        items:
+          type: string
+      mac_address:
+        type: string
+        description: >-
+          MAC address of the customer device.
+  TunnelDecapEntry:
+    type: object
+    required:
+      - ip_addr
+    properties:
+      ip_addr:
+        type: string
+        description: tunnel local termination IP address
+  VirtualRouterEntry:
+    type: object
+    required:
+      - vrf_name
+    properties:
+      vrf_name:
+        type: string
+        description: name of the Virtual Router
+      dhcp_relays:
+        description: list of ipv4 addresses of dhcp relays for this vnet
+        type: array
+        items:
+          type: string
+  InterfaceEntry:
+    type: object
+    required:
+      - admin-state
+    properties:
+      admin-state:
+        type: string
+        enum:
+          - up
+          - down
+        description: interface adminstrative state
+  TunnelEntry:
+    type: object
+    required:
+      - vrf_id
+    properties:
+      vrf_id:
+        type: integer
+        format: int32
+        description: virtual router id
+  CounterMap:
+    type: object
+    additionalProperties:
+      type: integer
+  GroupCounterMap:
+    type: object
+    additionalProperties:
+      $ref: '#/definitions/CounterMap'
+    example:
+      dpdk.total:
+        rx.rx_ok: 100
+        rx.tx_drops: 0
+  StatisticsMap:
+    type: object
+    additionalProperties:
+      type: integer
+  GroupStatisticsMap:
+    type: object
+    additionalProperties:
+      $ref: '#/definitions/StatisticsMap'
+    example:
+      fibs:
+        encap.vrf_table_entries: 10
+        encap.keys_entries: 5
+        encap.nh_keys_entries: 1
+  BurstHistogramMap:
+    type: object
+    additionalProperties:
+      type: number
+  QueueidHistogramMap:
+    type: object
+    additionalProperties:
+        $ref: '#/definitions/BurstHistogramMap'
+    example:
+      0:
+        1: 0.8
+        2: 0.5
+      1:
+        1: 0.8
+        2: 0.5
