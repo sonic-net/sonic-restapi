@@ -1,0 +1,31 @@
+FROM debian:jessie
+
+MAINTAINER pavelsh@microsoft.com
+
+## Make apt-get non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+ && apt-get install -y \
+      vim          \
+      curl         \
+      netcat-openbsd \
+      iproute2     \
+      supervisor
+
+COPY debs /debs
+RUN dpkg -i /debs/libhiredis0.13_0.13.3-2_amd64.deb \
+ && dpkg -i /debs/libhiredis-dev_0.13.3-2_amd64.deb \
+ && dpkg -i /debs/libnl-3-200_3.2.27-1_amd64.deb \
+ && dpkg -i /debs/libnl-genl-3-200_3.2.27-1_amd64.deb \
+ && dpkg -i /debs/libnl-route-3-200_3.2.27-1_amd64.deb \
+ && dpkg -i /debs/libswsscommon_1.0.0_amd64.deb \
+ && dpkg -i /debs/libswsscommon-dev_1.0.0_amd64.deb \
+ && dpkg -i /debs/sonic-rest-api_1.0.0_amd64.deb \
+ && dpkg -i /debs/arpresponder-bm_1.0.0_amd64.deb \
+ && dpkg -i /debs/arpresponder-msee_1.0.0_amd64.deb
+RUN rm -fr /debs
+
+COPY supervisor/supervisor.conf /etc/supervisor/conf.d/
+
+ENTRYPOINT ["/usr/bin/supervisord"]

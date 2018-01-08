@@ -99,6 +99,70 @@ consumes:
   - application/json
 paths:
 #----------------------------------------------
+# Server level API
+#----------------------------------------------
+  '/config':
+    get:
+      summary: Get the snapshot of current server configuration
+      description: Returns a Json blob containing all configuration currently set up for the server.
+      tags:
+        - Shared
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ServerSnapshot'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/state/heartbeat':
+    get:
+      summary: the heartbeat API for caller to check the status of the server
+      description: Returns Ok when server is live. Also returns API version and config reset time info of the server.
+      tags:
+        - Shared
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - server_version
+              - reset_GUID
+              - reset_time
+            properties:
+              server_version:
+                type: string
+                description: version of the restful server.
+              reset_GUID:
+                type: string
+                description: a GUID which will change after each time server restart from scratch.
+              reset_time:
+                type: string
+                format: date-time
+                description: time of server restartting from scratch, in a human readable format.
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Virtual router object
 #----------------------------------------------
   '/config/vrouter/{vrf_id}':
@@ -627,7 +691,7 @@ paths:
   '/config/interface/qinq/{port}/{stag}/{ctag}':
     put:
       summary: Create/update QinQ router interface for a physical port
-      description: If the interface is already created, it's parameters will be updated. If the port is already used for '/config/interface/port/{port}' API, '400' error will be returned.
+      description: If the interface is already created, only attributes "peer_ip", "proxy_arp_ip" and "subnet" can be updated. If the port is already used for '/config/interface/port/{port}' API, '400' error will be returned. 
       tags:
         - MSEE
       parameters:
@@ -801,7 +865,7 @@ paths:
   '/config/interface/qinq/{port}':
     delete:
       summary: Remove all QinQ router interfaces from a physical port
-      description: If "port" is not found on the device, '404' error will be returned. If "port" is found, but there're no QinQ interface defined, it will just return '204' reponse.
+      description: If "port" is not found on the device, '404' error will be returned. If "port" is found, but there're no QinQ interface defined, it will just return '204' reponse. 
       tags:
         - MSEE
       parameters:
@@ -896,7 +960,7 @@ paths:
   '/config/interface/port/{port}':
     put:
       summary: Create/update port router interface.
-      description: If the interface is already created, the port attributes will be updated. If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400' error will be returned.
+      description: If the interface is already created, only attribute "spoof_guard" can be updated. If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400' error will be returned.
       tags:
         - Baremetal
       parameters:
@@ -1182,7 +1246,7 @@ paths:
                   - vxlan
                   - nvgre
               attr:
-                $ref: '#definitions/TunnelDecapEntry'
+                $ref: '#/definitions/TunnelDecapEntry'
         '400':
           description: Malformed arguments for API call
           schema:
@@ -1580,3 +1644,28 @@ definitions:
       1:
         1: 0.8
         2: 0.5
+  ServerSnapshot:
+    type: object
+    properties:
+      decap_model:
+        $ref: '#/definitions/TunnelDecapEntry'
+      vrf_map:
+        additionalProperties:
+          $ref: '#/definitions/VrfSnapshot'
+  VrfSnapshot:
+    type: object
+    properties:
+      vrf_info:
+        $ref: '#/definitions/VirtualRouterEntry'
+      vxlan_map:
+        additionalProperties:
+          $ref: '#/definitions/TunnelEntry'
+      qinqport_map:
+        additionalProperties:
+          $ref: '#/definitions/QinQEntry'
+      port_map:
+        additionalProperties:
+          $ref: '#/definitions/PortEntry'
+      routes:
+        additionalProperties:
+          $ref: '#/definitions/RouteEntry'
