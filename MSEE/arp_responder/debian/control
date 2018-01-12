@@ -1,0 +1,21 @@
+Source: arpresponder
+Maintainer: Pavel Shirshov <pavelsh@microsoft.com>
+Section: net
+Priority: optional
+Build-Depends: dh-exec (>=0.3), debhelper (>= 9)
+Standards-Version: 1.0.0
+
+Package: arpresponder-msee
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: This package contains arpresponder for MSEE scenario.
+
+Package: arpresponder-msee-client
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: This package contains arpresponder-client demo for MSEE scenario.
+
+Package: arpresponder-bm
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: This package contains arpresponder for Baremetal scenario.
