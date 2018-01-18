@@ -574,7 +574,15 @@ func SwssGetVrouterRoutes(vrfID int, vnidMatch int, ipFilter string) (routes []R
 
         if vnid, ok := kvp["vxlanid"]; ok {
             routeModel.Vnid, _ = strconv.Atoi(vnid)
-            if vnidMatch >= 0 && vnidMatch != routeModel.Vnid {
+        }
+
+        if vnidMatch >= 0 {
+            // vnid only applicable for vxlan tunnels
+            if kvp["nexthop_type"] != "vxlan-tunnel" {
+                continue
+            }
+
+            if vnidMatch != routeModel.Vnid {
                 continue
             }
         }
