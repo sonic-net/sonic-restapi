@@ -598,7 +598,12 @@ class msee_expected_tests(msee_client):
             b'mac_address': b'01:02:03:04:05:06',
             b'vxlanid': 9875
         })
-        self.db.sadd('VROUTER_ROUTES_TABLE_KEY_SET', b'1234:127.0.0.0/24', b'1234:127.0.0.1/24')
+        self.db.hmset('VROUTER_ROUTES_TABLE:1234:127.0.0.2/24', {
+            b'nexthop_type': b'ip',
+            b'nexthop': b'92.89.1.2',
+            b'mac_address': b'01:02:03:04:05:06',
+        })
+        self.db.sadd('VROUTER_ROUTES_TABLE_KEY_SET', b'1234:127.0.0.0/24', b'1234:127.0.0.1/24',b'1234:127.0.0.2/24')
 
         r = self.delete_config_vrouter_vrf_id_routes(1234, 9876)
         self.assertEqual(r.status_code, 201)
@@ -615,7 +620,7 @@ class msee_expected_tests(msee_client):
         })
 
         keys = self.db.keys()
-        self.assertEqual(sorted(keys), sorted([b'VROUTER_ROUTES_TABLE_KEY_SET', b'VROUTER_ROUTES_TABLE:1234:127.0.0.1/24']))
+        self.assertEqual(sorted(keys), sorted([b'VROUTER_ROUTES_TABLE_KEY_SET', b'VROUTER_ROUTES_TABLE:1234:127.0.0.1/24', b'VROUTER_ROUTES_TABLE:1234:127.0.0.2/24']))
 
     def test_delete_config_vrouter_vrf_id_routes_novnid(self):
         self.cache.hset('VRFNAME_VRFID_MAP', 'testvrfname', 1234)
