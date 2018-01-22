@@ -50,8 +50,8 @@ COPY debug/* /usr/bin/
 RUN mkdir /usr/sbin/cert
 RUN mkdir /usr/sbin/cert/client
 RUN mkdir /usr/sbin/cert/server
-COPY cert/testserver/msroot.cer /usr/sbin/cert/client/
-COPY cert/testserver/* /usr/sbin/cert/server/
+COPY cert/client/* /usr/sbin/cert/client/
+COPY cert/server/* /usr/sbin/cert/server/
 
 RUN apt-get autoremove -y \
  && apt-get clean \
