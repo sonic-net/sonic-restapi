@@ -1464,6 +1464,11 @@ func GetSwitchCounterFromCounterDB() (groupcounters map[msee.MseeCounterName]int
     groupcounters = make(map[msee.MseeCounterName]int64)
 
     for port, counterID := range portCounterIDMap {
+        if _, ok := portIDMap[port]; !ok {
+            // The port is not a port for customer devices
+            continue
+        }
+
         var kv map[string]string
         kv, err = CounterGetKVs("COUNTERS:" + counterID)
 
