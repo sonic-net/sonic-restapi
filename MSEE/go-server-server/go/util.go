@@ -182,9 +182,9 @@ func ValidateTunnelType(w http.ResponseWriter, tunnelType string) error {
 }
 
 func ValidateCounterGroupName(w http.ResponseWriter, groupName string) error {
-    if groupName != "dpdk.total" && groupName != "dpdk.switch_ports" && groupName != "dpdk.nic" && groupName != "switch.switch_ports" {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"group"}, "group name must be dpdk.total, dpdk.switch_ports, dpdk.nic or switch.switch_ports")
-        return errors.New("group name must be dpdk.total, dpdk.switch_ports, dpdk.nic or switch.switch_ports")
+    if groupName != "dpdk.total" && groupName != "dpdk.switch_ports" && groupName != "dpdk.nic" && groupName != "switch.switch_ports" && groupName != "dpdk.switch_vnis" {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"group"}, "group name must be dpdk.total, dpdk.switch_ports, dpdk.nic, switch.switch_ports or dpdk.switch_vnis")
+        return errors.New("group name must be dpdk.total, dpdk.switch_ports, dpdk.nic, switch.switch_ports or dpdk.switch_vnis")
     }
     return nil
 }
