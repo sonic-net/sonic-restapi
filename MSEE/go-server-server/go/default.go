@@ -1310,6 +1310,12 @@ func ConfigVrouterVrfIdRoutesPut(w http.ResponseWriter, r *http.Request) {
         if kv["nexthop_type"] == "vxlan-tunnel" {
             kv["vxlanid"] = strconv.Itoa(r.Vnid)
             kv["mac_address"] = r.MACAddress
+            kv["port"] = r.Port
+
+            if r.SrcIP != "" {
+                kv["src_ip"] = r.SrcIP
+            }
+
             vnidkv, err := SwssGetKVs("TUNNEL_TABLE:encapsulation:vxlan:"+kv["vxlanid"])
             if err != nil || vnidkv == nil {
                 failed = append(failed, r)

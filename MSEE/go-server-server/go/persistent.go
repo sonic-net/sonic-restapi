@@ -599,6 +599,10 @@ func SwssGetVrouterRoutes(vrfID int, vnidMatch int, ipFilter string) (routes []R
             routeModel.MACAddress = mac
         }
 
+        if port, ok := kvp["port"]; ok {
+            routeModel.Port = port
+        }
+
         routes = append(routes, routeModel)
     }
 

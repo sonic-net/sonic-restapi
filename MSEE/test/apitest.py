@@ -333,7 +333,9 @@ class msee_expected_tests(msee_client):
             b'nexthop': b'92.89.1.2',
             b'nexthop_type': b'vxlan-tunnel',
             b'mac_address': b'01:02:03:04:05:06',
-            b'vxlanid': b'9876'
+            b'vxlanid': b'9876',
+            b'src_ip': b'192.168.0.1',
+            b'port': b'azure'
         })
 
     def test_put_config_vrouter_vrf_id_routes_standard(self):
@@ -363,7 +365,9 @@ class msee_expected_tests(msee_client):
             b'nexthop': b'92.89.1.2',
             b'nexthop_type': b'vxlan-tunnel',
             b'mac_address': b'01:02:03:04:05:06',
-            b'vxlanid': b'9876'
+            b'vxlanid': b'9876',
+            b'src_ip': b'192.168.0.1',
+            b'port': b'standard'
         })
 
     @unittest.expectedFailure
@@ -393,7 +397,9 @@ class msee_expected_tests(msee_client):
             b'nexthop': b'2620:0:ccc::2',
             b'nexthop_type': b'vxlan-tunnel',
             b'mac_address': b'01:02:03:04:05:06',
-            b'vxlanid': b'9876'
+            b'vxlanid': b'9876',
+            b'src_ip': b'192.168.0.1',
+            b'port': b'azure'  
         })
 
     def test_put_config_vrouter_vrf_id_routes_nexthop_type_ip(self):
@@ -511,7 +517,9 @@ class msee_expected_tests(msee_client):
             b'nexthop': b'92.89.1.2',
             b'nexthop_type': b'vxlan-tunnel',
             b'mac_address': b'01:02:03:04:05:06',
-            b'vxlanid': b'9876'
+            b'vxlanid': b'9876',
+            b'src_ip': b'192.168.0.1',
+            b'port': b'azure'
         })
 
     def test_delete_config_vrouter_vrf_id_routes(self):
