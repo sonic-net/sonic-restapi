@@ -155,7 +155,7 @@ class msee_client(unittest.TestCase):
         self.db = redis.StrictRedis('localhost', 6379, 0)
         self.db.flushdb()
 
-        self.cache = redis.StrictRedis('localhost', 6379, 4)
+        self.cache = redis.StrictRedis('localhost', 6379, 7)
         self.cache.flushdb()
 
         # Sanity check
