@@ -908,7 +908,7 @@ func ConfigTunnelEncapVxlanVnidPut(w http.ResponseWriter, r *http.Request) {
     mseevnid := msee.MseeVniT(vnid)
     mseeVrfID := msee.MseeVrfIDT(attr.VrfID)
     ret, err := mseeClient.MapVniToVrf(mseevnid, mseeVrfID)
-    str := fmt.Sprintf("trace: thrift: map_vni_to_vrf(%v, %v) = (%v, %v)", mseevnid, ret, err)
+    str := fmt.Sprintf("trace: thrift: map_vni_to_vrf(%v, %v) = (%v, %v)", mseevnid, mseeVrfID, ret, err)
 
     if WriteRequestErrorForMSEEThrift(w, err, ret, str) {
         return
