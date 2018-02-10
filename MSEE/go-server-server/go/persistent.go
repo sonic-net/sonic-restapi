@@ -34,7 +34,12 @@ var configSnapshot *ServerSnapshotModel
 
 const APPL_DB int = 0
 const COUNTER_DB int = 2
-const APPL_CACHE_DB int = 4
+// TODO:
+// DB 4 is reserved for config DB, we can not simply flush it any more
+// when we reset the server. It will affect other applications on Sonic.
+// Let use use DB 7 for caching now and move the info in cache to config DB
+// with new schema and delete only keys for this server in Reset.
+const APPL_CACHE_DB int = 7
 
 const SWSS_TIMEOUT uint = 0
 
