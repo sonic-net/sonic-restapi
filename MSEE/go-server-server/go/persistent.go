@@ -34,6 +34,8 @@ var configSnapshot *ServerSnapshotModel
 
 const APPL_DB int = 0
 const COUNTER_DB int = 2
+const CONFIG_DB int = 4
+
 // TODO:
 // DB 4 is reserved for config DB, we can not simply flush it any more
 // when we reset the server. It will affect other applications on Sonic.
@@ -523,6 +525,39 @@ func SwssGetKVs(key string) (kv map[string]string, err error) {
     }
 
     return
+}
+
+func ConfigDBGetKVs(key string) (kv map[string]string, err error) {
+    pipe := redisDB.TxPipeline()
+    pipe.Select(CONFIG_DB)
+    kvRes := pipe.HGetAll(key)
+    _, err = pipe.Exec()
+    if err != nil {
+        return
+    }
+
+    kv = kvRes.Val()
+    if len(kv) == 0 {
+        kv = nil
+    }
+
+    return
+}
+
+func ConfigDBDelKey(key string) error {
+    pipe := redisDB.TxPipeline()
+    pipe.Select(CONFIG_DB)
+    _ = pipe.Del(key)
+    _, err := pipe.Exec()
+    return err
+}
+
+func ConfigDBSetKey(key string, kv map[string]interface{}) error {
+    pipe := redisDB.TxPipeline()
+    pipe.Select(CONFIG_DB)
+    _ = pipe.HMSet(key, kv)
+    _, err := pipe.Exec()
+    return err
 }
 
 func SwssGetKVsMulti(pattern string) (kv map[string]map[string]string, err error) {

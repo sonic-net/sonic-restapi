@@ -666,16 +666,23 @@ func ConfigTunnelDecapTunnelTypeDelete(w http.ResponseWriter, r *http.Request) {
     pt.Del("decapsulation:"+vars["tunnel_type"], "DEL", "")
 
     if vars["tunnel_type"] == "vxlan" {
-        aclpt := swsscommon.NewProducerStateTable(swssDB, "ACL_TABLE")
-        defer aclpt.Delete()
+        err = ConfigDBDelKey("ACL_TABLE|DPDK");
 
-        aclrpt := swsscommon.NewProducerStateTable(swssDB, "ACL_RULE_TABLE")
-        defer aclrpt.Delete()
+        if err != nil {
+            log.Printf("debug: delete key failed for %v", "ACL_TABLE|DPDK")
+        }
 
-        aclpt.Del("DPDK", "DEL", "")
+        err = ConfigDBDelKey("ACL_RULE|DPDK|RULE_1");
 
-        aclrpt.Del("DPDK:RULE_1", "DEL", "")
-        aclrpt.Del("DPDK:RULE_2", "DEL", "")
+        if err != nil {
+            log.Printf("debug: delete key failed for %v", "ACL_RULE|DPDK|RULE_1")
+        }
+
+        err = ConfigDBDelKey("ACL_RULE|DPDK|RULE_2");
+
+        if err != nil {
+            log.Printf("debug: delete key failed for %v", "ACL_RULE|DPDK|RULE_2")
+        }
     }
 
     configSnapshot.DecapModel = TunnelDecapModel{}
@@ -751,31 +758,40 @@ func ConfigTunnelDecapTunnelTypePut(w http.ResponseWriter, r *http.Request) {
     }, "SET", "")
 
     if vars["tunnel_type"] == "vxlan" {
-        aclpt := swsscommon.NewProducerStateTable(swssDB, "ACL_TABLE")
-        defer aclpt.Delete()
-
-        aclrpt := swsscommon.NewProducerStateTable(swssDB, "ACL_RULE_TABLE")
-        defer aclrpt.Delete()
-
-        aclpt.Set("DPDK", map[string]string{
+        err = ConfigDBSetKey("ACL_TABLE|DPDK", map[string]interface{}{
             "policy_desc": "dpdk",
-            "ports": *PortChannelPortsFlag,
+            "ports@": *PortChannelPortsFlag,
             "type": "L3",
-        }, "SET", "")
+        })
 
-        aclrpt.Set("DPDK:RULE_1", map[string]string{
+        if err != nil {
+            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "Failed to set ACL_TABLE|DPDK")
+            return
+        }
+
+        err = ConfigDBSetKey("ACL_RULE|DPDK|RULE_1", map[string]interface{}{
             "dst_ip": *LoAddr4Flag + "/32",
             "l4_dst_port": "4789",
             "packet_action": "REDIRECT:" +  DPDK_vlan_dpdk_ip,
             "priority": "9999",
-        }, "SET", "")
+        })
 
-        aclrpt.Set("DPDK:RULE_2", map[string]string{
+        if err != nil {
+            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "Failed to set ACL_RULE|DPDK|RULE_1")
+            return
+        }
+
+        err = ConfigDBSetKey("ACL_RULE|DPDK|RULE_2", map[string]interface{}{
             "dst_ip": *LoAddr4Flag + "/32",
             "l4_dst_port": "65330",
             "packet_action": "REDIRECT:" +  DPDK_vlan_dpdk_ip,
             "priority": "9999",
-        }, "SET", "")
+        })
+
+        if err != nil {
+            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "Failed to set ACL_RULE|DPDK|RULE_2")
+            return
+        }
     }
 
     configSnapshot.DecapModel = attr
