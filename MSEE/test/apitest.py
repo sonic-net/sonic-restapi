@@ -158,11 +158,17 @@ class msee_client(unittest.TestCase):
         self.cache = redis.StrictRedis('localhost', 6379, 7)
         self.cache.flushdb()
 
+        self.configdb = redis.StrictRedis('localhost', 6379, 4)
+        self.configdb.flushdb()
+
         # Sanity check
         keys = self.db.keys()
         self.assertEqual(keys, [])
 
         keys = self.cache.keys()
+        self.assertEqual(keys, [])
+
+        keys = self.configdb.keys()
         self.assertEqual(keys, [])
 
     @classmethod
@@ -1350,24 +1356,26 @@ class msee_expected_tests(msee_client):
         self.assertEqual(sorted(keys), sorted([
             b'TUNNEL_TABLE:decapsulation:vxlan',
             b'TUNNEL_TABLE_KEY_SET',
-            b'ACL_RULE_TABLE:DPDK:RULE_1',
-            b'ACL_RULE_TABLE:DPDK:RULE_2',
-            b'ACL_RULE_TABLE_KEY_SET',
-            b'ACL_TABLE:DPDK',
-            b'ACL_TABLE_KEY_SET'
+        ]))
+
+        keys = self.configdb.keys()
+        self.assertEqual(sorted(keys), sorted([
+            b'ACL_RULE|DPDK|RULE_1',
+            b'ACL_RULE|DPDK|RULE_2',
+            b'ACL_TABLE|DPDK',
         ]))
 
         tunnel_table = self.db.hgetall('TUNNEL_TABLE:decapsulation:vxlan')
         self.assertEqual(tunnel_table, {b'local_termination_ip': b'34.53.1.0'})
 
-        acl_table = self.db.hgetall('ACL_TABLE:DPDK')
+        acl_table = self.configdb.hgetall('ACL_TABLE|DPDK')
         self.assertEqual(acl_table, {
             b'policy_desc': b'dpdk',
-            b'ports': b'Ethernet4,Ethernet8',
+            b'ports@': b'Ethernet4,Ethernet8',
             b'type': b'L3'
         })
 
-        acl_rule_table = self.db.hgetall('ACL_RULE_TABLE:DPDK:RULE_1')
+        acl_rule_table = self.configdb.hgetall('ACL_RULE|DPDK|RULE_1')
         self.assertEqual(acl_rule_table, {
             b'dst_ip': b'127.0.0.1/32',
             b'l4_dst_port': b'4789',
@@ -1375,7 +1383,7 @@ class msee_expected_tests(msee_client):
             b'priority': b'9999'
         })
 
-        acl_rule_table = self.db.hgetall('ACL_RULE_TABLE:DPDK:RULE_2')
+        acl_rule_table = self.configdb.hgetall('ACL_RULE|DPDK|RULE_2')
         self.assertEqual(acl_rule_table, {
             b'dst_ip': b'127.0.0.1/32',
             b'l4_dst_port': b'65330',
@@ -1400,25 +1408,24 @@ class msee_expected_tests(msee_client):
     def test_delete_config_tunnel_decap_tunnel_type(self):
         self.db.hset('TUNNEL_TABLE:decapsulation:vxlan', b'local_termination_ip', b'34.53.1.0')
         self.db.sadd('TUNNEL_TABLE_KEY_SET', b'decapsulation:vxlan')
-        self.db.hmset('ACL_TABLE:DPDK', {
+
+        self.configdb.hmset('ACL_TABLE|DPDK', {
             b'policy_desc': b'dpdk',
-            b'ports': b'Ethernet0',
+            b'ports@': b'Ethernet0',
             b'type': b'L3'
         })
-        self.db.hmset('ACL_RULE_TABLE:DPDK:RULE_1', {
+        self.configdb.hmset('ACL_RULE|DPDK|RULE_1', {
             b'dst_ip': b'127.0.0.1/32',
             b'l4_dst_port': b'4789',
             b'packet_aciton': 'REDIRECT:Ethernet0',
             b'priority': b'9999'
         })
-        self.db.hmset('ACL_RULE_TABLE:DPDK:RULE_2', {
+        self.configdb.hmset('ACL_RULE|DPDK|RULE_2', {
             b'dst_ip': b'127.0.0.1/32',
             b'l4_dst_port': b'65330',
             b'packet_aciton': 'REDIRECT:Ethernet0',
             b'priority': b'9999'
         })
-        self.db.sadd('ACL_TABLE_KEY_SET', b'DPDK')
-        self.db.sadd('ACL_RULE_TABLE_KEY_SET', b'DPDK:RULE_1', b'DPDK:RULE_2')
 
         r = self.delete_config_tunnel_decap_tunnel_type('vxlan')
         self.assertEqual(r.status_code, 204)
@@ -1426,9 +1433,10 @@ class msee_expected_tests(msee_client):
         keys = self.db.keys()
         self.assertEqual(sorted(keys), sorted([
             b'TUNNEL_TABLE_KEY_SET',
-            b'ACL_TABLE_KEY_SET',
-            b'ACL_RULE_TABLE_KEY_SET'
         ]))
+
+        keys = self.configdb.keys()
+        self.assertEqual(keys, [])
 
 class msee_invalid_input_tests(msee_client):
     """Invalid input tests"""
