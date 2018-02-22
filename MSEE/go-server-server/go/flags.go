@@ -12,6 +12,7 @@ var ARPHostFlag = flag.String("arpthrift", "localhost:9091", "hostname:port for 
 var LogLevelFlag = flag.String("loglevel", "info", "Set's minimum log level, valid values are: trace, debug, info, warning, error, alert")
 var LogFileFlag = flag.String("logfile", "/dev/stderr", "Set's the output for the log")
 var VlanStartFlag = flag.Int("vlanstart", 3840, "Starting number for port VLANs")
+var DpdkVlanFlag = flag.Int("dpdkvlan", 3904, "Vlan used for dpdk")
 var DpdkPortFlag = flag.String("dpdkport", "Ethernet0", "Port that DPDK server is attached to")
 var PortChannelPortsFlag = flag.String("pcports", "", "Comma separated list of ports used for port channels")
 var PortsFlag = flag.String("ports", "", "Comma separated list of ports to isolate")
