@@ -254,17 +254,17 @@ func GetPortsFromCounterDB() {
 
 func AddDPDKPort() {
     // Add swss configuration for DPDK port. Required by RedirectEgr ACL rule
-    PublishSWSS_SET("VLAN_TABLE", fmt.Sprintf("Vlan%d", *VlanStartFlag), map[string]string{
+    PublishSWSS_SET("VLAN_TABLE", fmt.Sprintf("Vlan%d", *DpdkVlanFlag), map[string]string{
         "admin_status": "up",
         "oper_status": "up",
         "mtu": DPDK_vlan_mtu,
     })
 
-    PublishSWSS_SET("VLAN_MEMBER_TABLE", fmt.Sprintf("Vlan%d:%s", *VlanStartFlag, *DpdkPortFlag), map[string]string{
+    PublishSWSS_SET("VLAN_MEMBER_TABLE", fmt.Sprintf("Vlan%d:%s", *DpdkVlanFlag, *DpdkPortFlag), map[string]string{
         "tagging_mode": "untagged",
     })
 
-    PublishSWSS_SET("INTF_TABLE", fmt.Sprintf("Vlan%d:%s/%s", *VlanStartFlag, DPDK_vlan_sw_ip, DPDK_vlan_sw_len), map[string]string{
+    PublishSWSS_SET("INTF_TABLE", fmt.Sprintf("Vlan%d:%s/%s", *DpdkVlanFlag, DPDK_vlan_sw_ip, DPDK_vlan_sw_len), map[string]string{
         "scope": "global",
         "family": "IPv4",
     })
@@ -276,12 +276,12 @@ func AddDPDKPort() {
 
     s_macAddr := macAddr.String()
     s_alt_macAddr := strings.Replace(s_macAddr, ":", "-", -1)
-    PublishSWSS_SET("FDB_TABLE", fmt.Sprintf("Vlan%d:%s", *VlanStartFlag, s_alt_macAddr), map[string]string{
+    PublishSWSS_SET("FDB_TABLE", fmt.Sprintf("Vlan%d:%s", *DpdkVlanFlag, s_alt_macAddr), map[string]string{
         "port": *DpdkPortFlag,
         "type": "static",
     })
 
-    PublishSWSS_SET("NEIGH_TABLE", fmt.Sprintf("Vlan%d:%s", *VlanStartFlag, DPDK_vlan_dpdk_ip), map[string]string{
+    PublishSWSS_SET("NEIGH_TABLE", fmt.Sprintf("Vlan%d:%s", *DpdkVlanFlag, DPDK_vlan_dpdk_ip), map[string]string{
         "neigh": s_macAddr,
         "family": "IPv4",
     })
