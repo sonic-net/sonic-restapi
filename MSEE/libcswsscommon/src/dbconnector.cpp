@@ -27,7 +27,7 @@ extern "C" redisContext *db_connector_get_context(db_connector_t db)
 
 extern "C" int db_connector_get_db(db_connector_t db)
 {
-    return static_cast<swss::DBConnector*>(db)->getDB();
+    return static_cast<swss::DBConnector*>(db)->getDbId();
 }
 
 extern "C" void db_connector_select(db_connector_t db)
