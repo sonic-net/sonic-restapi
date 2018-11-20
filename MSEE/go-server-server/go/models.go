@@ -17,7 +17,7 @@ type ServerSnapshotModel struct {
 }
 
 type VrfSnapshotModel struct {
-    VrfInfo     VirtualRouterModel    `json:"vrf_info,omitempty"`
+    VrfInfo     VnetModel             `json:"vrf_info,omitempty"`
     VxlanMap    map[int]TunnelModel   `json:"vxlan_map,omitempty"`
     PortMap     map[string]PortModel  `json:"port_map,omitempty"`
     QinQPortMap map[string]QInQModel  `json:"qinqport_map,omitempty"`
@@ -107,6 +107,15 @@ type TunnelModel struct {
 type TunnelReturnModel struct {
     Vnid int         `json:"vnid"`
     Attr TunnelModel `json:"attr"`
+}
+
+type VnetModel struct {
+    Vnid int `json:"vnid"`
+}
+
+type VnetReturnModel struct {
+    VrfID int         `json:"vrf_id"`
+    Attr VnetModel `json:"attr"`
 }
 
 type ErrorInner struct {
@@ -329,7 +338,7 @@ func (m *TunnelDecapModel) UnmarshalJSON(data []byte) (err error) {
 
     m.IPAddr = *required.IPAddr
 
-    if !IsValidIP(m.IPAddr) {
+    if !IsValidIPBoth(m.IPAddr) {
         err = &InvalidFormatError{Field: "ip_addr", Message: "Invalid IPv4 address"}
         return
     }
@@ -406,6 +415,32 @@ func (m *TunnelModel) UnmarshalJSON(data []byte) (err error) {
     }
 
     m.VrfID = *required.VrfID
+
+    return
+}
+
+func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
+    required := struct {
+        Vnid *int `json:"vnid"`
+    }{}
+
+    err = json.Unmarshal(data, &required)
+
+    if err != nil {
+        return
+    }
+
+    if required.Vnid == nil {
+        err = &MissingValueError{"vnid"}
+        return
+    }
+
+    if *required.Vnid >= 0x1000000 {
+        err = &InvalidFormatError{Field: "vnid", Message: "vnid must be < 2^24"}
+        return
+    }
+
+    m.Vnid = *required.Vnid
 
     return
 }

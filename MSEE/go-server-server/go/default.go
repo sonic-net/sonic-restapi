@@ -648,8 +648,7 @@ func ConfigTunnelDecapTunnelTypeDelete(w http.ResponseWriter, r *http.Request) {
     if err != nil {
         return
     }
-
-    kv, err := SwssGetKVs("TUNNEL_TABLE:decapsulation:" + vars["tunnel_type"])
+    kv, err := ConfigDBGetKVs("_VXLAN_TUNNEL|default_vxlan_tunnel")
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
@@ -660,30 +659,9 @@ func ConfigTunnelDecapTunnelTypeDelete(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    pt := swsscommon.NewProducerStateTable(swssDB, "TUNNEL_TABLE")
+    pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VXLAN_TUNNEL")
     defer pt.Delete()
-
-    pt.Del("decapsulation:"+vars["tunnel_type"], "DEL", "")
-
-    if vars["tunnel_type"] == "vxlan" {
-        err = ConfigDBDelKey("ACL_TABLE|DPDK");
-
-        if err != nil {
-            log.Printf("debug: delete key failed for %v", "ACL_TABLE|DPDK")
-        }
-
-        err = ConfigDBDelKey("ACL_RULE|DPDK|RULE_1");
-
-        if err != nil {
-            log.Printf("debug: delete key failed for %v", "ACL_RULE|DPDK|RULE_1")
-        }
-
-        err = ConfigDBDelKey("ACL_RULE|DPDK|RULE_2");
-
-        if err != nil {
-            log.Printf("debug: delete key failed for %v", "ACL_RULE|DPDK|RULE_2")
-        }
-    }
+    pt.Del("default_vxlan_tunnel", "DEL", "")
 
     configSnapshot.DecapModel = TunnelDecapModel{}
 
@@ -700,7 +678,7 @@ func ConfigTunnelDecapTunnelTypeGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    kv, err := SwssGetKVs("TUNNEL_TABLE:decapsulation:" + vars["tunnel_type"])
+    kv, err := ConfigDBGetKVs("_VXLAN_TUNNEL|default_vxlan_tunnel")
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
@@ -714,7 +692,7 @@ func ConfigTunnelDecapTunnelTypeGet(w http.ResponseWriter, r *http.Request) {
     output := TunnelDecapReturnModel{
         TunnelType: vars["tunnel_type"],
         Attr: TunnelDecapModel{
-            IPAddr: kv["local_termination_ip"],
+            IPAddr: kv["src_ip"],
         },
     }
 
@@ -731,17 +709,6 @@ func ConfigTunnelDecapTunnelTypePut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    kv, err := SwssGetKVs("TUNNEL_TABLE:decapsulation:" + vars["tunnel_type"])
-    if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-
-    if kv != nil {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"tunnel_type"}, "")
-        return
-    }
-
     var attr TunnelDecapModel
 
     err = ReadJSONBody(w, r, &attr)
@@ -750,49 +717,12 @@ func ConfigTunnelDecapTunnelTypePut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    pt := swsscommon.NewProducerStateTable(swssDB, "TUNNEL_TABLE")
+    pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VXLAN_TUNNEL")
     defer pt.Delete()
 
-    pt.Set("decapsulation:"+vars["tunnel_type"], map[string]string{
-        "local_termination_ip": attr.IPAddr,
+    pt.Set("default_vxlan_tunnel", map[string]string{
+        "src_ip": attr.IPAddr,
     }, "SET", "")
-
-    if vars["tunnel_type"] == "vxlan" {
-        err = ConfigDBSetKey("ACL_TABLE|DPDK", map[string]interface{}{
-            "policy_desc": "dpdk",
-            "ports@": *PortChannelPortsFlag,
-            "type": "L3",
-        })
-
-        if err != nil {
-            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "Failed to set ACL_TABLE|DPDK")
-            return
-        }
-
-        err = ConfigDBSetKey("ACL_RULE|DPDK|RULE_1", map[string]interface{}{
-            "dst_ip": *LoAddr4Flag + "/32",
-            "l4_dst_port": "4789",
-            "packet_action": "REDIRECT:" +  DPDK_vlan_dpdk_ip,
-            "priority": "9999",
-        })
-
-        if err != nil {
-            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "Failed to set ACL_RULE|DPDK|RULE_1")
-            return
-        }
-
-        err = ConfigDBSetKey("ACL_RULE|DPDK|RULE_2", map[string]interface{}{
-            "dst_ip": *LoAddr4Flag + "/32",
-            "l4_dst_port": "65330",
-            "packet_action": "REDIRECT:" +  DPDK_vlan_dpdk_ip,
-            "priority": "9999",
-        })
-
-        if err != nil {
-            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "Failed to set ACL_RULE|DPDK|RULE_2")
-            return
-        }
-    }
 
     configSnapshot.DecapModel = attr
 
@@ -985,22 +915,21 @@ func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    err = CacheDeleteVrfID(vrfID)
+    kv, err := ConfigDBGetKVs("_VNET|Vnet_" + vars["vrf_id"])
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
-    pt := swsscommon.NewProducerStateTable(swssDB, "VROUTER_TABLE")
+    if kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
+        return
+    }
+
+    pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VNET")
     defer pt.Delete()
 
-    pt.Del(vars["vrf_id"], "DEL", "")
-
-    err = CacheClearVrf(vars["vrf_id"])
-
-    if err != nil {
-        log.Printf("debug: CacheClearVrf failed for %v", vars["vrf_id"])
-    }
+    pt.Del("Vnet_"+vars["vrf_id"], "DEL", "")
 
     delete(configSnapshot.VrfMap, vrfID)
 
@@ -1017,16 +946,27 @@ func ConfigVrouterVrfIdGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    vrfName, err := CacheGetVrfName(vrfID)
+    kv, err := ConfigDBGetKVs("_VNET|Vnet_" + vars["vrf_id"])
     if err != nil {
-        WriteRequestError(w, http.StatusNotFound, "Virtual router is not found", []string{}, "")
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
-    output := VirtualRouterReturnModel{
+    if kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
+        return
+    }
+
+    vnid, err := strconv.Atoi(kv["vni"])
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error, Non numeric vnid found in db", []string{}, "")
+        return
+    }
+
+    output := VnetReturnModel{
         VrfID: vrfID,
-        Attr: VirtualRouterModel{
-            VrfName: vrfName,
+        Attr: VnetModel{
+            Vnid: vnid,
         },
     }
 
@@ -1043,7 +983,7 @@ func ConfigVrouterVrfIdPut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    var attr VirtualRouterModel
+    var attr VnetModel
 
     err = ReadJSONBody(w, r, &attr)
     if err != nil {
@@ -1051,29 +991,34 @@ func ConfigVrouterVrfIdPut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    vrfIDDB, err := CacheGetVrfID(attr.VrfName)
-    if err == nil {
-        if vrfIDDB == vrfID {
-            // Don't recreate the same VRouter
-            w.WriteHeader(http.StatusNoContent)
-            return
-        } else {
-            WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vrf_name"}, "vrf_name already exists")
-            return
-        }
-    }
-
-    err = CacheSetVrfName(vrfID, attr.VrfName)
+    kv, err := ConfigDBGetKVs("_VXLAN_TUNNEL|default_vxlan_tunnel")
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
-    pt := swsscommon.NewProducerStateTable(swssDB, "VROUTER_TABLE")
+    if kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Default VxLAN VTEP must be created prior to creating VRF", []string{"tunnel_type"}, "")
+        return
+    }
+
+    kv, err = ConfigDBGetKVs("_VNET|Vnet_" + vars["vrf_id"])
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if kv != nil {
+        WriteRequestError(w, http.StatusMethodNotAllowed, "Object already exists: Vnet_"+vars["vrf_id"], []string{}, "")
+        return
+    }
+
+    pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VNET")
     defer pt.Delete()
 
-    pt.Set(vars["vrf_id"], map[string]string{
-        "name": attr.VrfName,
+    pt.Set("Vnet_"+vars["vrf_id"], map[string]string{
+        "vxlan_tunnel": "default_vxlan_tunnel",
+        "vni": strconv.Itoa(attr.Vnid),
     }, "SET", "")
 
     configSnapshot.VrfMap[vrfID] = VrfSnapshotModel{

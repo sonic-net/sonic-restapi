@@ -24,6 +24,7 @@ var redisDB *redis.Client
 var mseeClient *msee.MSEEClient
 var arpClient *arp.ArpResponderClient
 var swssDB swsscommon.DBConnector
+var swss_conf_DB swsscommon.DBConnector
 var trustedertCommonNames []string
 
 var portIDMap map[string]int
@@ -116,6 +117,7 @@ func DBConnect(reset bool) {
     log.Printf("info: Redis connection established (%+v), %s", redisDB, cache_status)
 
     swssDB = swsscommon.NewDBConnector(APPL_DB, "localhost", 6379, SWSS_TIMEOUT)
+    swss_conf_DB = swsscommon.NewDBConnector(CONFIG_DB, "localhost", 6379, SWSS_TIMEOUT)
 }
 
 func DPDKThriftConnect() {

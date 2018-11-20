@@ -168,7 +168,7 @@ paths:
   '/config/vrouter/{vrf_id}':
     put:
       summary: Create a new virtual router
-      description: If a virtual router with specified vrf_id doesn't exist, new vrf_id with empty virtual table would be created. If a virtual router with specified vrf_id exists already, nothing will be changed.
+      description: If a virtual router with specified vrf_id doesn't exist, new vrf_id with empty virtual table would be created. If a virtual router with specified vrf_id exists already, it will return error '405'. /config/tunnel/decap/vxlan is a prerequisite for this, if it is called without a vxlan local vtep created, there will be a failure with code '404'.
       tags:
         - Shared
       parameters:
@@ -183,7 +183,7 @@ paths:
           required: true
           description: attributes for virtual router
           schema:
-            $ref: '#/definitions/VirtualRouterEntry'
+            $ref: '#/definitions/VnetEntry'
       responses:
         '204':
           description: OK
@@ -197,6 +197,14 @@ paths:
             $ref: '#/definitions/Error'
         '403':
           description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+           description: VxLAN VTEP not found
+           schema:
+             $ref: '#/definitions/Error'
+        '405':
+          description: VRF/VNET already exists
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -233,7 +241,7 @@ paths:
                 format: int32
                 description: virtual router id
               attr:
-                $ref: '#/definitions/VirtualRouterEntry'
+                $ref: '#/definitions/VnetEntry'
         '400':
           description: Malformed arguments for API call
           schema:
@@ -290,6 +298,7 @@ paths:
           schema:
             $ref: '#/definitions/Error'
   '/config/vrouter':
+  # Implementation is TBD as it does not seem to be used in BlueBird
     get:
       summary: Get a list of existing virtual routers
       description: Return a list of defined virtual router objects. If there're no virtual routers defined it returns an empty list.
@@ -328,6 +337,7 @@ paths:
 # vxlan tunnel object
 #----------------------------------------------
   '/config/tunnel/encap/vxlan/{vnid}':
+  # Implementation for encap is left in, but it will not be used by us in the new model 
     put:
       summary: Create a tunnel
       description: If a tunnel with vxlan "vnid" doesn't exist yet then create a new tunnel with "vnid". If the tunnel already exists, it's attributes will be updated.
@@ -1171,7 +1181,6 @@ paths:
       tags:
         - Shared
       description: >-
-          For ininip tunnel, the router will use the global virtual router to do L3 lookup after the decap.
           For vxlan tunnel, the router will use vnid to vrf_id mapping to determine subsequent virtual router to do L3 lookup after the decap.
       parameters:
         - name: tunnel_type
@@ -1179,9 +1188,7 @@ paths:
           required: true
           type: string
           enum:
-            - ipinip
             - vxlan
-            - nvgre
           description: type of a tunnel endpoint
         - name: attr
           in: body
@@ -1584,6 +1591,15 @@ definitions:
         type: array
         items:
           type: string
+  VnetEntry:
+    type: object
+    required:
+      - vrf_id
+    properties:
+      vrf_id:
+        type: integer
+        format: int32
+        description: virtual router id
   InterfaceEntry:
     type: object
     required:
@@ -1656,7 +1672,7 @@ definitions:
     type: object
     properties:
       vrf_info:
-        $ref: '#/definitions/VirtualRouterEntry'
+        $ref: '#/definitions/VnetEntry'
       vxlan_map:
         additionalProperties:
           $ref: '#/definitions/TunnelEntry'
