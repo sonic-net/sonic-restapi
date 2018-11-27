@@ -128,7 +128,7 @@ var routes = Routes{
 
     Route{
         "ConfigTunnelDecapTunnelTypePut",
-        "PUT",
+        "POST",
         "/v1/config/tunnel/decap/{tunnel_type}",
         ConfigTunnelDecapTunnelTypePut,
     },
@@ -184,7 +184,7 @@ var routes = Routes{
 
     Route{
         "ConfigVrouterVrfIdPut",
-        "PUT",
+        "POST",
         "/v1/config/vrouter/{vrf_id}",
         ConfigVrouterVrfIdPut,
     },

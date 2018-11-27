@@ -717,6 +717,17 @@ func ConfigTunnelDecapTunnelTypePut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    kv, err := ConfigDBGetKVs("_VXLAN_TUNNEL|default_vxlan_tunnel")
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if kv != nil {
+        WriteRequestError(w, http.StatusConflict, "Object already exists: Default Vxlan VTEP", []string{}, "")
+        return
+    }
+
     pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VXLAN_TUNNEL")
     defer pt.Delete()
 
@@ -1009,7 +1020,7 @@ func ConfigVrouterVrfIdPut(w http.ResponseWriter, r *http.Request) {
     }
 
     if kv != nil {
-        WriteRequestError(w, http.StatusMethodNotAllowed, "Object already exists: Vnet_"+vars["vrf_id"], []string{}, "")
+        WriteRequestError(w, http.StatusConflict, "Object already exists: Vnet_"+vars["vrf_id"], []string{}, "")
         return
     }
 
