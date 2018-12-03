@@ -9,10 +9,19 @@
 #   401 - Unauthorized.  Invalid authentication credentials 
 #   403 - Forbidden (capacity isssues)
 #   404 - Object is not found
-#   409 - Conflict
 #   405 - Method not allowed. Some attribute can not be updated.
+#   409 - Conflict. Data resource already exists.
 #   500 - Internal Server Error
 #   503 - Service Unavailable
+# patch:
+#   207 - Multi-Status. Consult object body to determine status on a per element basis for the Bulk API.
+#   400 - Bad Request. Malformed arguments for API call
+#   401 - Unauthorized.  Invalid authentication credentials 
+#   403 - Forbidden (capacity isssues)
+#   404 - Object is not found
+#   405 - Method not allowed. Some attribute can not be updated.
+#   409 - Conflict. Data resource already exists.
+#   500 - Internal Server Error
 # get:
 #   200 - OK
 #   400 - Bad Request. Malformed arguments for API call
@@ -23,6 +32,7 @@
 # delete:
 #   200 - OK
 #   204 - No Content
+#   207 - Multi-Status. Consult object body to determine status on a per element basis for the Bulk API.
 #   400 - Bad Request. Malformed arguments for API call
 #   401 - Unauthorized.  Invalid authentication credentials
 #   404 - Object is not found
@@ -171,7 +181,7 @@ paths:
   '/config/vrouter/{vrf_id}':
     post:
       summary: Create a new virtual router
-      description: If a virtual router with specified vrf_id doesn't exist, new vrf_id with empty virtual table would be created. If a virtual router with specified vrf_id exists already, it will return error '409'. /config/tunnel/decap/vxlan is a prerequisite for this, if it is called without a vxlan local vtep created, there will be a failure with code '404'.
+      description: If a virtual router with specified vrf_id doesn't exist, new vrf_id with empty virtual table would be created. If a virtual router with specified vrf_id exists already, it will return error '409'. /config/tunnel/decap/vxlan is a prerequisite for this, if it is called without a vxlan local vtep created, there will be a failure with code '409'.
       tags:
         - Shared
       parameters:
@@ -203,11 +213,11 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         '404':
-           description: VxLAN VTEP not found
+           description: Resource not found
            schema:
              $ref: '#/definitions/Error'
         '409':
-          description: VRF/VNET already exists
+          description: Resource Conflict. VRF/VNET already exists OR dependency VxLAN VTEP not found. 
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -342,7 +352,7 @@ paths:
     '/config/interface/vlan/{vlan_id}'
     post:
       summary: Create a new vlan interface
-      description: Create a new vlan interface with name Vlan{vlan_id} and vlanid set to vlan_id. If such a vlan interface already exists then this method returns the error '409'. If a vnet with specified vrf_id in attr does not exist this function will return error '404'.
+      description: Create a new vlan interface with name Vlan{vlan_id} and vlanid set to vlan_id. If such a vlan interface already exists then this method returns the error '409'. If a vnet with specified vrf_id in attr does not exist this function will return error '409'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       tags:
         - Shared
       parameters:
@@ -374,11 +384,11 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         '404':
-          description: VRF/VNET not found
+          description: Resource not found
           schema:
             $ref: '#/definitions/Error'
         '409':
-          description: VLAN already exists
+          description: Resource Conflict. VLAN already exists OR dependency VRF/VNET not found
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -391,7 +401,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get information about an existing vlan interface
-      description: Returns attributes for requested vlan. If the vlan is not defined it returns '404' error.
+      description: Returns attributes for requested vlan. If the vlan is not defined it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       tags:
         - Shared
       parameters:
@@ -438,7 +448,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove a vlan interface
-      description: Remove a vlan interface which is defined by vlan_id. If a vlan interface with 'vlan_id' is not defined the API will return '404'.
+      description: Remove a vlan interface which is defined by vlan_id. If a vlan interface with 'vlan_id' is not defined the API will return '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       tags:
         - Shared
       parameters:
@@ -477,7 +487,7 @@ paths:
     '/config/interface/vlan/{vlan_id}/member/{if_name}'
     post:
       summary: Add a physical port to a vlan interface
-      description: Add a member to interface Vlan{vlan_id}. If such a member already exists on this Vlan interface then this method returns the error '409'.
+      description: Add a member to interface Vlan{vlan_id}. If such a member is already present on any Vlan interface this returns '409'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If attr with tagging mode is provided it will be honored in config, if not, the default tagging mode will be set to 'untagged'.
       tags:
         - Shared
       parameters:
@@ -518,7 +528,7 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         '409':
-          description: VLAN member already exists on the interface
+          description: Resource Conflict. VLAN member already exists on this or another VLAN interface.
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -531,7 +541,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get information about an existing vlan port member on an existing vlan interface
-      description: Returns attributes for requested vlan member. If the vlan/vlan member is not defined/present it returns '404' error.
+      description: Returns attributes for requested vlan member. If the vlan/vlan member is not defined/present it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       tags:
         - Shared
       parameters:
@@ -587,7 +597,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove a vlan member from a vlan interface
-      description: Remove a vlan member from a vlan interface which is defined by vlan_id. If a vlan interface with 'vlan_id' is not defined OR a vlan member 'if_name' is not present on the interface the API will return '404'.
+      description: Remove a vlan member from a vlan interface which is defined by vlan_id. If a vlan interface with 'vlan_id' is not defined OR a vlan member 'if_name' is not present on the interface the API will return '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       tags:
         - Shared
       parameters:
@@ -631,7 +641,7 @@ paths:
     '/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}'
     post:
       summary: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery 
-      description: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery. If such a neighbor already exists on this Vlan interface then this method returns the error '409', if the Vlan interface doesn't exist this returns error '404'.
+      description: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery. If such a neighbor already exists on this Vlan interface then this method returns the error '409', if the Vlan interface doesn't exist this returns error '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       tags:
         - Shared
       parameters:
@@ -679,7 +689,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get information about an existing vlan neighbor on an existing vlan interface
-      description: Returns HTTP success/failure code for requested neighbor. If the vlan/vlan neighbor is not defined/present it returns '404' error.
+      description: Returns HTTP success/failure code for requested neighbor. If the vlan/vlan neighbor is not defined/present it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       tags:
         - Shared
       parameters:
@@ -719,7 +729,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove a vlan neighbor from a vlan interface
-      description: Remove a vlan neighbor from a vlan interface which is defined by vlan_id. If a vlan interface with 'vlan_id' is not defined OR a vlan neighbor 'ip_addr' is not present on the interface the API will return '404'.
+      description: Remove a vlan neighbor from a vlan interface which is defined by vlan_id. If a vlan interface with 'vlan_id' is not defined OR a vlan neighbor 'ip_addr' is not present on the interface the API will return '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       tags:
         - Shared
       parameters:
@@ -762,7 +772,6 @@ paths:
 # vxlan tunnel encap object
 #----------------------------------------------
   '/config/tunnel/encap/vxlan/{vnid}':
-  # Implementation for encap is left in for now, but it will not be used by us in the new model 
     put:
        description: Return success for now 
        responses:
@@ -804,8 +813,8 @@ paths:
             items:
               $ref: '#/definitions/RouteEntry'
       responses:
-        '200':
-          description: OK
+        '207':
+          description: Multi-Status
           schema:
             type: object
             required:
@@ -877,7 +886,7 @@ paths:
           format: int32
           description: vxlan id (24-bit). Allows to remove routes with defined vnid only. Applicable for routes with nexthop_type 'vxlan-tunnel'. Otherwise '400' error will be returned
       responses:
-        '200':
+        '207':
           description: OK
           schema:
             type: object
@@ -966,16 +975,284 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 #----------------------------------------------
-# QinQ interface object: Removed
+# QinQ interface object
 #----------------------------------------------
+  '/config/interface/qinq/{port}/{stag}/{ctag}':
+  # Implementation left in, should not be used by BB
+    put:
+      summary: Create/update QinQ router interface for a physical port
+      description: If the interface is already created, only attributes "peer_ip", "proxy_arp_ip" and "subnet" can be updated. If the port is already used for '/config/interface/port/{port}' API, '400' error will be returned. 
+      tags:
+        - MSEE
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: router interface name
+        - name: stag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ outer tag
+        - name: ctag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ inner tag
+        - in: body
+          name: attr
+          required: true
+          description: attributes for QinQ router interface
+          schema:
+            $ref: '#/definitions/QinQEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '405':
+          description: Method not allowed
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a QinQ router interface from a physical port
+      description: If the router interface doesn't exist, '404' error will be returned.
+      tags:
+        - MSEE
+      parameters:
+        - in: path
+          name: port
+          type: string
+          required: true
+          description: physical port that bound to the QinQ router interface
+        - name: stag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ outer tag
+        - name: ctag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ inner tag
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get QinQ router interface information
+      description: Return attributes for a given QinQ interface. If there're no interface with such parameters '404' error will be returned.
+      tags:
+        - MSEE
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: physical port that bound to the QinQ router interface
+        - name: stag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ outer tag
+        - name: ctag
+          in: path
+          type: integer
+          format: int16
+          required: true
+          description: QinQ inner tag
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - port
+              - stag
+              - ctag
+              - attr
+            properties:
+              port:
+                type: string
+                description: physical port that bound to the QinQ router interface
+              stag:
+                type: integer
+                format: int16
+                description: QinQ outer tag
+              ctag:
+                type: integer
+                format: int16
+                description: QinQ inner tag
+              attr:
+                $ref: '#/definitions/QinQEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/config/interface/qinq/{port}':
+  # Implementation left in, should not be used by BB
+    delete:
+      summary: Remove all QinQ router interfaces from a physical port
+      description: If "port" is not found on the device, '404' error will be returned. If "port" is found, but there're no QinQ interface defined, it will just return '204' reponse. 
+      tags:
+        - MSEE
+      parameters:
+        - in: path
+          name: port
+          type: string
+          required: true
+          description: physical port that bound to the QinQ router interface
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get a list of all QinQ router interfaces for a port
+      description: If there're no QinQ router interfaces for a port an empty list will be returned.
+      tags:
+        - MSEE
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: physical port that bound to the QinQ router interface
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              type: object
+              required:
+                - port
+                - stag
+                - ctag
+                - attr
+              properties:
+                port:
+                  type: string
+                  description: physical port that bound to the QinQ router interface
+                stag:
+                  type: integer
+                  format: int16
+                  description: QinQ outer tag
+                ctag:
+                  type: integer
+                  format: int16
+                  description: QinQ inner tag
+                attr:
+                  $ref: '#/definitions/QinQEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
 #----------------------------------------------
 # Port interface object
 #----------------------------------------------
   '/config/interface/port/{port}':
-  # The code is left in but will not be used
+  # Implementation left in, should not be used by BB
     put:
       summary: Create/update port router interface.
-      description: If the interface is already created, only attribute "spoof_guard" can be updated. If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400' error will be returned."
+      description: If the interface is already created, only attribute "spoof_guard" can be updated. If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400'" error will be returned.
       tags:
         - Baremetal
       parameters:
@@ -1019,7 +1296,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove port router interface
-      description: If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400' error will be returned."
+      description: If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400'" error will be returned.
       tags:
         - Baremetal
       parameters:
@@ -1053,7 +1330,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get port router interface information
-      description: If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400' error will be returned."
+      description: If the "port" was already used for "/config/interface/qinq/{port}/{stag}/{ctag}' API, '400'" error will be returned.
       tags:
         - Baremetal
       parameters:
@@ -1183,12 +1460,13 @@ paths:
 # tunnel decapsulation endpoint object
 #----------------------------------------------
   '/config/tunnel/decap/{tunnel_type}':
+  # This comes as a base config, BB should never call this. If it does, this should not cause any impact to DBs internally. 
     post:
       summary: Setup or update tunnel decapsulation parameters
       tags:
         - Shared
       description: >-
-          For vxlan tunnel, the router will use vnid to vrf_id mapping to determine subsequent virtual router to do L3 lookup after the decap.
+          For vxlan tunnel, the router will use vnid to vrf_id mapping to determine subsequent virtual router to do L3 lookup after the decap. If tunnel already exists error '409' will be returned. 
       parameters:
         - name: tunnel_type
           in: path
@@ -1282,7 +1560,7 @@ paths:
           schema:
             $ref: '#/definitions/Error'
     delete:
-      summary: Remove tunnel decapsulation information
+      summary: Remove tunnel decapsulation information. This will not delete the object, it will just return success in order to implement as no-op.
       tags:
         - Shared
       parameters:
@@ -1296,10 +1574,6 @@ paths:
       responses:
         '204':
           description: OK
-        '400':
-          description: Malformed arguments for API call
-          schema:
-            $ref: '#/definitions/Error'
         '401':
           description: Invalid authentication credentials
           schema:
@@ -1319,6 +1593,149 @@ paths:
 #----------------------------------------------
 # Monitor object
 #----------------------------------------------
+  '/state/counter/{group}':
+  # Implementation left in, should not be used by BB
+    get:
+      summary: Get a specific group of counters.
+      tags:
+        - Shared
+      parameters:
+        - name: group
+          in: path
+          type: string
+          required: true
+          enum:
+            - dpdk.total
+            - dpdk.switch_ports
+            - dpdk.nic
+          description: group name for a group of counters
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/GroupCounterMap'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/state/counter':
+  # Implementation left in, should not be used by BB
+    get:
+      summary: Get counters for all available groups.
+      tags:
+        - Shared
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/GroupCounterMap'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/state/statistics/{group}':
+  # Implementation left in, should not be used by BB
+    get:
+      summary: Get a specific group of statistics.
+      tags:
+        - Shared
+      parameters:
+        - name: group
+          in: path
+          type: string
+          required: true
+          enum:
+            - rings
+            - mempools
+            - fibs
+          description: group name for a group of counters
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/GroupStatisticsMap'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/state/statistics':
+  # Implementation left in, should not be used by BB
+    get:
+      summary: Get counters for all available groups.
+      tags:
+        - Shared
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/GroupStatisticsMap'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+  '/state/histogram':
+  # Implementation left in, should not be used by BB
+    get:
+      summary: Get histogram for queueId and burst size.
+      tags:
+        - Shared
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/QueueidHistogramMap'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
 #----------------------------------------------
 # Schema definitions
 #----------------------------------------------
@@ -1400,6 +1817,24 @@ definitions:
       error:
         type: string
         description: error which causes to the route to be upserted
+  QinQEntry:
+    type: object
+    required:
+      - vrf_id
+    properties:
+      vrf_id:
+        type: integer
+        format: int32
+        description: virtual router id
+      peer_ip:
+        type: string
+        description: interface peer IP address
+      proxy_arp_ip:
+        type: string
+        description: IP address to do proxy arp
+      subnet:
+        type: string
+        description: interface subnet
   PortEntry:
     type: object
     required:
@@ -1485,6 +1920,55 @@ definitions:
       tagging_mode:
         type: string
         description: tagged/untagged describes the vlan member's tagging mode, eg: HSM accepts only untagged traffic
+  TunnelEntry:
+    type: object
+    required:
+      - vrf_id
+    properties:
+      vrf_id:
+        type: integer
+        format: int32
+        description: virtual router id
+  CounterMap:
+    type: object
+    additionalProperties:
+      type: integer
+  GroupCounterMap:
+    type: object
+    additionalProperties:
+      $ref: '#/definitions/CounterMap'
+    example:
+      dpdk.total:
+        rx.rx_ok: 100
+        rx.tx_drops: 0
+  StatisticsMap:
+    type: object
+    additionalProperties:
+      type: integer
+  GroupStatisticsMap:
+    type: object
+    additionalProperties:
+      $ref: '#/definitions/StatisticsMap'
+    example:
+      fibs:
+        encap.vrf_table_entries: 10
+        encap.keys_entries: 5
+        encap.nh_keys_entries: 1
+  BurstHistogramMap:
+    type: object
+    additionalProperties:
+      type: number
+  QueueidHistogramMap:
+    type: object
+    additionalProperties:
+        $ref: '#/definitions/BurstHistogramMap'
+    example:
+      0:
+        1: 0.8
+        2: 0.5
+      1:
+        1: 0.8
+        2: 0.5
   ServerSnapshot:
     type: object
     properties:
@@ -1498,6 +1982,12 @@ definitions:
     properties:
       vrf_info:
         $ref: '#/definitions/VnetEntry'
+      vxlan_map:
+        additionalProperties:
+          $ref: '#/definitions/TunnelEntry'
+      qinqport_map:
+        additionalProperties:
+          $ref: '#/definitions/QinQEntry'
       port_map:
         additionalProperties:
           $ref: '#/definitions/PortEntry'
