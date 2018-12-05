@@ -114,8 +114,8 @@ type VnetModel struct {
 }
 
 type VnetReturnModel struct {
-    VrfID int         `json:"vrf_id"`
-    Attr VnetModel `json:"attr"`
+    VnetName string   `json:"vnet_name"`
+    Attr VnetModel    `json:"attr"`
 }
 
 type ErrorInner struct {

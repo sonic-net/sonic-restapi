@@ -648,6 +648,8 @@ func ConfigTunnelDecapTunnelTypeDelete(w http.ResponseWriter, r *http.Request) {
     if err != nil {
         return
     }
+/*
+    // TBD if Decap Delete needs to actually delete the tunnel in future; BB does not handle this today
     kv, err := ConfigDBGetKVs("_VXLAN_TUNNEL|default_vxlan_tunnel")
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
@@ -664,6 +666,7 @@ func ConfigTunnelDecapTunnelTypeDelete(w http.ResponseWriter, r *http.Request) {
     pt.Del("default_vxlan_tunnel", "DEL", "")
 
     configSnapshot.DecapModel = TunnelDecapModel{}
+*/
 
     w.WriteHeader(http.StatusNoContent)
 }
@@ -920,30 +923,36 @@ func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
     vars := mux.Vars(r)
-
+/*
     vrfID, err := ValidateVrfId(w, vars["vrf_id"])
     if err != nil {
         return
     }
-
-    kv, err := ConfigDBGetKVs("_VNET|Vnet_" + vars["vrf_id"])
+*/
+    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
+    if vnet_id == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
+        return
+    }
+    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
+    kv, err := ConfigDBGetKVs("_VNET|" + vnet_id_str)
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
     if kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
         return
     }
 
     pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VNET")
     defer pt.Delete()
 
-    pt.Del("Vnet_"+vars["vrf_id"], "DEL", "")
+    pt.Del(vnet_id_str, "DEL", "")
+    CacheDeleteVnetGuidId(vars["vnet_name"])
 
-    delete(configSnapshot.VrfMap, vrfID)
-
+    delete(configSnapshot.VrfMap, int(vnet_id))
     w.WriteHeader(http.StatusNoContent)
 }
 
@@ -951,13 +960,19 @@ func ConfigVrouterVrfIdGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
     vars := mux.Vars(r)
-
+/*
     vrfID, err := ValidateVrfId(w, vars["vrf_id"])
     if err != nil {
         return
     }
-
-    kv, err := ConfigDBGetKVs("_VNET|Vnet_" + vars["vrf_id"])
+*/
+    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
+    if vnet_id == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
+        return
+    }
+    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
+    kv, err := ConfigDBGetKVs("_VNET|" + vnet_id_str)
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
@@ -975,7 +990,7 @@ func ConfigVrouterVrfIdGet(w http.ResponseWriter, r *http.Request) {
     }
 
     output := VnetReturnModel{
-        VrfID: vrfID,
+        VnetName: vars["vnet_name"],
         Attr: VnetModel{
             Vnid: vnid,
         },
@@ -988,15 +1003,19 @@ func ConfigVrouterVrfIdPut(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
     vars := mux.Vars(r)
-
+/*
     vrfID, err := ValidateVrfId(w, vars["vrf_id"])
     if err != nil {
         return
     }
-
+*/
+    if vars["vnet_name"] == "" {
+        WriteRequestError(w, http.StatusNotFound, "VRF_ID/VNET_NAME cannot be NULL", []string{"tunnel_type"}, "")
+        return
+    }
     var attr VnetModel
 
-    err = ReadJSONBody(w, r, &attr)
+    err := ReadJSONBody(w, r, &attr)
     if err != nil {
         // The error is already handled in this case
         return
@@ -1013,26 +1032,36 @@ func ConfigVrouterVrfIdPut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    kv, err = ConfigDBGetKVs("_VNET|Vnet_" + vars["vrf_id"])
+    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
+    if vnet_id != 0 {
+        WriteRequestError(w, http.StatusConflict, "Object already exists: " + vars["vnet_name"], []string{}, "")
+        return
+    }
+
+    vnet_id = CacheGenAndSetVnetGuidId(vars["vnet_name"])
+    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
+
+    kv, err = ConfigDBGetKVs("_VNET|" + vnet_id_str)
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
     if kv != nil {
-        WriteRequestError(w, http.StatusConflict, "Object already exists: Vnet_"+vars["vrf_id"], []string{}, "")
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
         return
     }
 
     pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VNET")
     defer pt.Delete()
 
-    pt.Set("Vnet_"+vars["vrf_id"], map[string]string{
+    pt.Set(vnet_id_str, map[string]string{
         "vxlan_tunnel": "default_vxlan_tunnel",
         "vni": strconv.Itoa(attr.Vnid),
+        "guid": vars["vnet_name"],
     }, "SET", "")
 
-    configSnapshot.VrfMap[vrfID] = VrfSnapshotModel{
+    configSnapshot.VrfMap[int(vnet_id)] = VrfSnapshotModel{
         VrfInfo:     attr,
         VxlanMap:    make(map[int]TunnelModel),
         PortMap:     make(map[string]PortModel),

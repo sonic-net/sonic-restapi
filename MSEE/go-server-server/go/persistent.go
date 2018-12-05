@@ -31,6 +31,10 @@ var portIDMap map[string]int
 var portNameMap map[int]string
 var portCounterIDMap map[string]string
 
+var vnetGuidMap map[string]uint32
+var vnetGuidIdUsed []bool
+var nextGuidId uint32
+
 var configSnapshot *ServerSnapshotModel
 
 const APPL_DB int = 0
@@ -63,7 +67,9 @@ func Initialise() {
 
 func InitialiseVariables() {
     trustedertCommonNames = strings.Split(*ClientCertCommonNameFlag, ",")
-
+    vnetGuidMap = make(map[string]uint32)
+    vnetGuidIdUsed = make([]bool, 0, 30)   /* 30 HSM/rack? */
+    nextGuidId = 1
     //TODO: need to reload configSnapshot when RESET flag is not set after we have config DB
     configSnapshot = &ServerSnapshotModel{}
     configSnapshot.VrfMap = make(map[int]VrfSnapshotModel)
@@ -83,14 +89,21 @@ func InitialiseVariables() {
         if err != nil {
             log.Fatalf("error: could not save reset info to DB, error: %+v", err)
         }
-    
         log.Printf("info: set config reset Guid and Time to %v, %v", ServerResetGuid, ServerResetTime)
     } else if err == nil {
         log.Printf("info: find config reset Guid and Time in DB as %v, %v", ServerResetGuid, ServerResetTime)
     } else {     
         log.Fatalf("error: could not retrieve server reset info from DB, error: %+v", err)
-    } 
+    }
+ //   genVnetGuidMap()
 }
+/*
+func genVnetGuidMap() {
+    vnetGuidMap = make(map[string]uint32)
+    ConfigDBGetKVs();
+
+}
+*/
 
 func DBConnect(reset bool) {
     redisDB = redis.NewClient(&redis.Options{
@@ -752,4 +765,38 @@ func CacheSetConfigResetInfo(GUID string, time string) error {
     }
 
     return nil
+}
+
+
+func CacheGetVnetGuidId(GUID string) (val uint32) {
+    val = vnetGuidMap[GUID]
+    return
+}
+
+func CacheGenAndSetVnetGuidId(GUID string) (val uint32) {
+    vnetGuidMap[GUID] = nextGuidId
+    val = nextGuidId
+    if nextGuidId == (uint32)(len(vnetGuidIdUsed) + 1) {
+        vnetGuidIdUsed = append(vnetGuidIdUsed, true)
+        nextGuidId++
+    } else {
+        var i uint32
+        vnetGuidIdUsed[nextGuidId - 1] = true
+        for i = nextGuidId; i < (uint32) (len(vnetGuidIdUsed)); i++ {
+            if !vnetGuidIdUsed[i] {
+                break
+            }
+        }
+        nextGuidId = i + 1
+    }
+    return
+}
+
+func CacheDeleteVnetGuidId(GUID string) {
+      i := vnetGuidMap[GUID]
+      vnetGuidIdUsed[i - 1] = false
+      if i < nextGuidId {
+           nextGuidId = i
+      }
+      delete(vnetGuidMap, GUID)
 }

@@ -171,21 +171,21 @@ var routes = Routes{
     Route{
         "ConfigVrouterVrfIdDelete",
         "DELETE",
-        "/v1/config/vrouter/{vrf_id}",
+        "/v1/config/vrouter/{vnet_name}",
         ConfigVrouterVrfIdDelete,
     },
 
     Route{
         "ConfigVrouterVrfIdGet",
         "GET",
-        "/v1/config/vrouter/{vrf_id}",
+        "/v1/config/vrouter/{vnet_name}",
         ConfigVrouterVrfIdGet,
     },
 
     Route{
         "ConfigVrouterVrfIdPut",
         "POST",
-        "/v1/config/vrouter/{vrf_id}",
+        "/v1/config/vrouter/{vnet_name}",
         ConfigVrouterVrfIdPut,
     },
 
