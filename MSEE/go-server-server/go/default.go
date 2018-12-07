@@ -649,8 +649,9 @@ func ConfigTunnelDecapTunnelTypeDelete(w http.ResponseWriter, r *http.Request) {
         return
     }
 /*
-    // TBD if Decap Delete needs to actually delete the tunnel in future; BB does not handle this today
-    kv, err := ConfigDBGetKVs("_VXLAN_TUNNEL|default_vxlan_tunnel")
+    // Uncomment this code if we ever need to allow PA changes via REST API
+    db := &conf_db_ops
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VXLAN_TUNNEL", "default_vxlan_tunnel"))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
@@ -661,7 +662,7 @@ func ConfigTunnelDecapTunnelTypeDelete(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VXLAN_TUNNEL")
+    pt := swsscommon.NewProducerStateTable(db.swss_db, "VXLAN_TUNNEL")
     defer pt.Delete()
     pt.Del("default_vxlan_tunnel", "DEL", "")
 
@@ -673,6 +674,7 @@ func ConfigTunnelDecapTunnelTypeDelete(w http.ResponseWriter, r *http.Request) {
 
 func ConfigTunnelDecapTunnelTypeGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
 
     vars := mux.Vars(r)
 
@@ -681,7 +683,7 @@ func ConfigTunnelDecapTunnelTypeGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    kv, err := ConfigDBGetKVs("_VXLAN_TUNNEL|default_vxlan_tunnel")
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VXLAN_TUNNEL", "default_vxlan_tunnel"))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
@@ -702,8 +704,9 @@ func ConfigTunnelDecapTunnelTypeGet(w http.ResponseWriter, r *http.Request) {
     WriteRequestResponse(w, output, http.StatusOK)
 }
 
-func ConfigTunnelDecapTunnelTypePut(w http.ResponseWriter, r *http.Request) {
+func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
 
     vars := mux.Vars(r)
 
@@ -712,6 +715,8 @@ func ConfigTunnelDecapTunnelTypePut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    w.WriteHeader(http.StatusNoContent)
+/* Comment out all the code below this point in this fn once Day 0 config for VTEP is complete */
     var attr TunnelDecapModel
 
     err = ReadJSONBody(w, r, &attr)
@@ -720,18 +725,18 @@ func ConfigTunnelDecapTunnelTypePut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    kv, err := ConfigDBGetKVs("_VXLAN_TUNNEL|default_vxlan_tunnel")
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VXLAN_TUNNEL", "default_vxlan_tunnel"))
     if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        /* WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "") */
         return
     }
 
     if kv != nil {
-        WriteRequestError(w, http.StatusConflict, "Object already exists: Default Vxlan VTEP", []string{}, "")
+        /* WriteRequestError(w, http.StatusConflict, "0: Object already exists: Default Vxlan VTEP", []string{}, "") */
         return
     }
 
-    pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VXLAN_TUNNEL")
+    pt := swsscommon.NewProducerStateTable(db.swss_db, "VXLAN_TUNNEL")
     defer pt.Delete()
 
     pt.Set("default_vxlan_tunnel", map[string]string{
@@ -739,8 +744,6 @@ func ConfigTunnelDecapTunnelTypePut(w http.ResponseWriter, r *http.Request) {
     }, "SET", "")
 
     configSnapshot.DecapModel = attr
-
-    w.WriteHeader(http.StatusNoContent)
 }
 
 func ConfigTunnelEncapVxlanGet(w http.ResponseWriter, r *http.Request) {
@@ -921,21 +924,16 @@ func ConfigVrouterGet(w http.ResponseWriter, r *http.Request) {
 
 func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
+    db := &conf_db_ops
     vars := mux.Vars(r)
-/*
-    vrfID, err := ValidateVrfId(w, vars["vrf_id"])
-    if err != nil {
-        return
-    }
-*/
+
     vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
     if vnet_id == 0 {
         WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
         return
     }
     vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
-    kv, err := ConfigDBGetKVs("_VNET|" + vnet_id_str)
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET", vnet_id_str))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
@@ -946,7 +944,7 @@ func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VNET")
+    pt := swsscommon.NewProducerStateTable(db.swss_db, "VNET")
     defer pt.Delete()
 
     pt.Del(vnet_id_str, "DEL", "")
@@ -958,21 +956,16 @@ func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
 
 func ConfigVrouterVrfIdGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
+    db := &conf_db_ops
     vars := mux.Vars(r)
-/*
-    vrfID, err := ValidateVrfId(w, vars["vrf_id"])
-    if err != nil {
-        return
-    }
-*/
+
     vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
     if vnet_id == 0 {
         WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
         return
     }
     vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
-    kv, err := ConfigDBGetKVs("_VNET|" + vnet_id_str)
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET", vnet_id_str))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
@@ -999,16 +992,11 @@ func ConfigVrouterVrfIdGet(w http.ResponseWriter, r *http.Request) {
     WriteRequestResponse(w, output, http.StatusOK)
 }
 
-func ConfigVrouterVrfIdPut(w http.ResponseWriter, r *http.Request) {
+func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
 
     vars := mux.Vars(r)
-/*
-    vrfID, err := ValidateVrfId(w, vars["vrf_id"])
-    if err != nil {
-        return
-    }
-*/
     if vars["vnet_name"] == "" {
         WriteRequestError(w, http.StatusNotFound, "VRF_ID/VNET_NAME cannot be NULL", []string{"tunnel_type"}, "")
         return
@@ -1021,27 +1009,27 @@ func ConfigVrouterVrfIdPut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    kv, err := ConfigDBGetKVs("_VXLAN_TUNNEL|default_vxlan_tunnel")
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VXLAN_TUNNEL", "default_vxlan_tunnel"))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
     if kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Default VxLAN VTEP must be created prior to creating VRF", []string{"tunnel_type"}, "")
+        WriteRequestError(w, http.StatusConflict, "1: Default VxLAN VTEP must be created prior to creating VRF", []string{"tunnel_type"}, "")
         return
     }
 
     vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
     if vnet_id != 0 {
-        WriteRequestError(w, http.StatusConflict, "Object already exists: " + vars["vnet_name"], []string{}, "")
+        WriteRequestError(w, http.StatusConflict, "0: Object already exists: " + vars["vnet_name"], []string{}, "")
         return
     }
 
     vnet_id = CacheGenAndSetVnetGuidId(vars["vnet_name"])
     vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
 
-    kv, err = ConfigDBGetKVs("_VNET|" + vnet_id_str)
+    kv, err = GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET", vnet_id_str))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
@@ -1052,7 +1040,7 @@ func ConfigVrouterVrfIdPut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    pt := swsscommon.NewProducerStateTable(swss_conf_DB, "VNET")
+    pt := swsscommon.NewProducerStateTable(db.swss_db, "VNET")
     defer pt.Delete()
 
     pt.Set(vnet_id_str, map[string]string{

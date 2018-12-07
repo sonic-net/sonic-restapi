@@ -13,6 +13,7 @@ import (
     "strings"
     "swsscommon"
     "time"
+    "bytes"
     "github.com/satori/go.uuid"
 )
 
@@ -55,6 +56,15 @@ const DPDK_vlan_sw_ip   string = "1.1.1.1"
 const DPDK_vlan_sw_len  string = "31"
 const DPDK_vlan_dpdk_ip string = "1.1.1.2"
 
+type db_ops struct {
+   separator string
+   swss_db  swsscommon.DBConnector
+   db_num   int
+}
+
+var app_db_ops db_ops
+var conf_db_ops db_ops
+
 func Initialise() {
     DPDKThriftConnect()
     ARPThriftConnect()
@@ -67,9 +77,6 @@ func Initialise() {
 
 func InitialiseVariables() {
     trustedertCommonNames = strings.Split(*ClientCertCommonNameFlag, ",")
-    vnetGuidMap = make(map[string]uint32)
-    vnetGuidIdUsed = make([]bool, 0, 30)   /* 30 HSM/rack? */
-    nextGuidId = 1
     //TODO: need to reload configSnapshot when RESET flag is not set after we have config DB
     configSnapshot = &ServerSnapshotModel{}
     configSnapshot.VrfMap = make(map[int]VrfSnapshotModel)
@@ -92,18 +99,53 @@ func InitialiseVariables() {
         log.Printf("info: set config reset Guid and Time to %v, %v", ServerResetGuid, ServerResetTime)
     } else if err == nil {
         log.Printf("info: find config reset Guid and Time in DB as %v, %v", ServerResetGuid, ServerResetTime)
-    } else {     
+    } else {
         log.Fatalf("error: could not retrieve server reset info from DB, error: %+v", err)
     }
- //   genVnetGuidMap()
+    genVnetGuidMap()
 }
-/*
+
 func genVnetGuidMap() {
     vnetGuidMap = make(map[string]uint32)
-    ConfigDBGetKVs();
+    var max_ind, i uint32 = 0, 0
+    db := &conf_db_ops
+    kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VNET", "*"))
 
+    if (err != nil) || (len(kv) == 0) {
+        log.Printf("info: No VNET tables found to gen Vnet Guid Map, default init, err: %d len kv: %d", err, len(kv))
+        vnetGuidIdUsed = make([]bool, 0, 30) /* 30 HSM/rack? */
+        nextGuidId = 1
+        return
+    }
+
+    for k, v := range kv {
+         log.Printf("info: TABLE: %s TABLE_KVs: %#v", k, v)
+         vnet_id_str := k[len("_VNET|"):]
+         vnet_id_64, err_c := strconv.ParseUint(vnet_id_str, 10, 32)
+         if (err_c != nil) || (vnet_id_64 == 0) {
+             log.Printf("error: Found non integer vnet_id %s", vnet_id_str)
+         }
+         vnet_id := uint32(vnet_id_64)
+         if v["guid"] == "" {
+             log.Printf("error: Found nil guid %s", vnet_id_str)
+         }
+         log.Printf("info: storing vnet-guid: %s, vnet_id %d", v["guid"], vnet_id)
+         vnetGuidMap[v["guid"]] = vnet_id
+         if vnet_id > max_ind {
+             max_ind = vnet_id
+         }
+    }
+    vnetGuidIdUsed = make([]bool, max_ind, max_ind)
+    for _, v := range vnetGuidMap {
+        vnetGuidIdUsed[v - 1] = true
+    }
+    for i = 0; i < max_ind; i++ {
+        if !vnetGuidIdUsed[i] {
+             break
+        }
+    }
+    nextGuidId = i + 1
 }
-*/
 
 func DBConnect(reset bool) {
     redisDB = redis.NewClient(&redis.Options{
@@ -131,6 +173,8 @@ func DBConnect(reset bool) {
 
     swssDB = swsscommon.NewDBConnector(APPL_DB, "localhost", 6379, SWSS_TIMEOUT)
     swss_conf_DB = swsscommon.NewDBConnector(CONFIG_DB, "localhost", 6379, SWSS_TIMEOUT)
+    app_db_ops = db_ops{separator: ":", swss_db: swssDB, db_num: APPL_DB}
+    conf_db_ops = db_ops{separator: "|", swss_db: swss_conf_DB, db_num: CONFIG_DB}
 }
 
 func DPDKThriftConnect() {
@@ -608,6 +652,58 @@ func SwssGetKVsMulti(pattern string) (kv map[string]map[string]string, err error
     return
 }
 
+
+func GetKVs(DB int, key string) (kv map[string]string, err error) {
+    pipe := redisDB.TxPipeline()
+    pipe.Select(DB)
+    kvRes := pipe.HGetAll(key)
+    _, err = pipe.Exec()
+    if err != nil {
+        return
+    }
+
+    kv = kvRes.Val()
+    if len(kv) == 0 {
+        kv = nil
+    }
+
+    return
+}
+
+func GetKVsMulti(DB int, pattern string) (kv map[string]map[string]string, err error) {
+    var cursor uint64
+
+    kv = make(map[string]map[string]string)
+
+    for {
+        pipe := redisDB.TxPipeline()
+        pipe.Select(DB)
+        ret := pipe.Scan(cursor, pattern, 1)
+
+        _, err = pipe.Exec()
+        if err != nil {
+            return
+        }
+
+        var keys []string
+        keys, cursor = ret.Val()
+
+        for _, key := range keys {
+            kv[key], err = GetKVs(DB, key)
+            if err != nil {
+                return
+            }
+        }
+
+        if cursor == 0 {
+            break
+        }
+    }
+
+    return
+}
+
+
 func SwssGetVrouterRoutes(vrfID int, vnidMatch int, ipFilter string) (routes []RouteModel, err error) {
     vrfIDStr := strconv.Itoa(vrfID)
     pattern := "VROUTER_ROUTES_TABLE:" + vrfIDStr + ":" + ipFilter
@@ -799,4 +895,15 @@ func CacheDeleteVnetGuidId(GUID string) {
            nextGuidId = i
       }
       delete(vnetGuidMap, GUID)
+}
+
+func generateDBTableKey(separator string, vars ...string) (string) {
+     var buf bytes.Buffer
+     for i := 0; i < len(vars) ; i++ {
+         buf.WriteString(vars[i])
+         if i != (len(vars) - 1) {
+               buf.WriteString(separator)
+         }
+    }
+    return buf.String()
 }
