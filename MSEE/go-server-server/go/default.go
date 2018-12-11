@@ -13,6 +13,7 @@ import (
     "swsscommon"
     "regexp"
     "errors"
+    "time"
 
     "github.com/gorilla/mux"
 )
@@ -316,6 +317,195 @@ func ConfigInterfacePortPortPut(w http.ResponseWriter, r *http.Request) {
     }
 
     w.WriteHeader(http.StatusNoContent)
+}
+
+func ConfigInterfaceVlanGet(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+    var attr VlanModel
+
+    vlan_id, err := validateVlanID(vars["vlan_id"])
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return
+    }
+    vlan_name := "Vlan" + vars["vlan_id"]
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
+        return
+    }
+
+    vlan_if_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN_INTERFACE", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_if_kv != nil {
+            vnet_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET", vlan_if_kv["vnet_name"]))
+            if err != nil || vnet_kv == nil {
+                 WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+                 return
+            }
+            attr.Vnet_id = vnet_kv["guid"]
+    }
+
+    vlan_pref_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VLAN_INTERFACE", vlan_name, "*"))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if len(vlan_pref_kv) == 1 {
+        for k,_ := range vlan_pref_kv {
+            table_key := k[(len(generateDBTableKey(db.separator,"_VLAN_INTERFACE", vlan_name)) + 1):]
+            attr.IPPrefix = table_key
+        }
+    } else if len(vlan_pref_kv) > 1 {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    output := VlanReturnModel{
+        VlanID: vlan_id,
+        Attr: attr,
+    }
+
+    WriteRequestResponse(w, output, http.StatusOK)
+}
+
+func ConfigInterfaceVlanDelete(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+
+    _, err := validateVlanID(vars["vlan_id"])
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return
+    }
+    vlan_name := "Vlan" + vars["vlan_id"]
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
+        return
+    }
+
+    vlan_if_pt := swsscommon.NewProducerStateTable(db.swss_db, "VLAN_INTERFACE")
+    defer vlan_if_pt.Delete()
+
+    /* Delete sequence:  1. Vlan Interface IP prefix table, 2. Vlan Interface table, 3. Vlan */
+    /* Delete 1 */
+    vlan_pref_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VLAN_INTERFACE", vlan_name, "*"))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if len(vlan_pref_kv) == 1 {
+        for k,_ := range vlan_pref_kv {
+            table_key := k[len("_VLAN_INTERFACE|"):]
+            vlan_if_pt.Del(table_key, "DEL", "")
+        }
+    } else if len(vlan_pref_kv) > 1 {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    /* Delete 2 */
+    vlan_if_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN_INTERFACE", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_if_kv != nil {
+        if len(vlan_pref_kv) == 1 {
+            /* Sleep only if we previously deleted the VLAN_INTERFACE ip_prefix table */
+            time.Sleep(time.Second)
+        }
+        vlan_if_pt.Del(vlan_name, "DEL", "")
+    }
+
+    /* Delete 3 */
+    pt := swsscommon.NewProducerStateTable(db.swss_db, "VLAN")
+    defer pt.Delete()
+    pt.Del(vlan_name, "DEL", "")
+
+    w.WriteHeader(http.StatusNoContent)
+}
+
+func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+    var vnet_id uint32
+
+    _, err := validateVlanID(vars["vlan_id"])
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return
+    }
+
+    var attr VlanModel
+    err = ReadJSONBody(w, r, &attr)
+    if err != nil {
+        // The error is already handled in this case
+        return
+    }
+
+    /* Config validation and failure reporting */
+    vlan_name := "Vlan" + vars["vlan_id"]
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_kv != nil {
+        WriteRequestError(w, http.StatusConflict, "0: Object already exists: " + vlan_name, []string{}, "")
+        return
+    }
+
+    if attr.Vnet_id != "" {
+        vnet_id = CacheGetVnetGuidId(attr.Vnet_id)
+        if vnet_id == 0 {
+             WriteRequestError(w, http.StatusConflict, "1: VRF/VNET must be created prior to adding it to the VLAN interface" , []string{}, "")
+             return
+        }
+    }
+
+     /* Creation sequence:  1. Vlan, 2. Vlan Interface table, 3. Vlan Interface IP prefix table */
+     /* Create 1 */
+     vlan_pt := swsscommon.NewProducerStateTable(db.swss_db, "VLAN")
+     defer vlan_pt.Delete()
+     vlan_pt.Set(vlan_name, map[string]string{
+          "vlanid": vars["vlan_id"],
+     }, "SET", "")
+
+    vlan_if_pt := swsscommon.NewProducerStateTable(db.swss_db, "VLAN_INTERFACE")
+    defer vlan_if_pt.Delete()
+
+    /* Create 2 */
+    if attr.Vnet_id != "" {
+        vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
+        vlan_if_pt.Set(vlan_name, map[string]string{
+            "vnet_name": vnet_id_str,
+        }, "SET", "")
+    }
+
+    /* Create 3 */
+    if attr.IPPrefix != "" {
+        if attr.Vnet_id != "" {
+            time.Sleep(time.Second)
+        }
+        vlan_if_pt.Set(generateDBTableKey(db.separator, vlan_name, attr.IPPrefix), map[string]string{"":""}, "SET", "")
+    }
 }
 
 func ConfigInterfaceQinqPortDelete(w http.ResponseWriter, r *http.Request) {

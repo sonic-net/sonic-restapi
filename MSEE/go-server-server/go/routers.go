@@ -78,6 +78,27 @@ var routes = Routes{
     },
 
     Route{
+        "ConfigInterfaceVlanPost",
+        "POST",
+        "/v1/config/interface/vlan/{vlan_id}",
+        ConfigInterfaceVlanPost,
+    },
+
+    Route{
+        "ConfigInterfaceVlanGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}",
+        ConfigInterfaceVlanGet,
+    },
+
+    Route{
+        "ConfigInterfaceVlanDelete",
+        "DELETE",
+        "/v1/config/interface/vlan/{vlan_id}",
+        ConfigInterfaceVlanDelete,
+    },
+
+    Route{
         "ConfigInterfaceQinqPortDelete",
         "DELETE",
         "/v1/config/interface/qinq/{port}",

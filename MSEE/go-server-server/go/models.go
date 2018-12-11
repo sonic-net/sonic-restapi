@@ -72,6 +72,16 @@ type PortReturnModel struct {
     Attr PortModel `json:"attr"`
 }
 
+type VlanModel struct {
+    Vnet_id  string  `json:"vnet_id,omitempty"`
+    IPPrefix string  `json:"ip_prefix,omitempty"`
+}
+
+type VlanReturnModel struct {
+    VlanID    int         `json:"vlan_id"`
+    Attr      VlanModel   `json:"attr"`
+}
+
 type TunnelDecapModel struct {
     IPAddr string `json:"ip_addr"`
 }
@@ -114,7 +124,7 @@ type VnetModel struct {
 }
 
 type VnetReturnModel struct {
-    VnetName string   `json:"vnet_name"`
+    VnetName string   `json:"vnet_id"`
     Attr VnetModel    `json:"attr"`
 }
 
@@ -318,6 +328,30 @@ func (m *PortModel) UnmarshalJSON(data []byte) (err error) {
     }
 
     return
+}
+
+func (m *VlanModel) UnmarshalJSON(data []byte) (err error) {
+    required := struct {
+         Vnet_id  string  `json:"vnet_id,omitempty"`
+         IPPrefix string  `json:"ip_prefix,omitempty"`
+   }{}
+   err = json.Unmarshal(data, &required)
+   if err != nil {
+       return
+   }
+   m.Vnet_id = required.Vnet_id
+
+   if required.IPPrefix != "" {
+       _, _, err = ParseIPBothPrefix(required.IPPrefix)
+       if err != nil {
+             err = &InvalidFormatError{Field: "ip_prefix", Message: "Invalid IP prefix"}
+             return
+       }
+       m.IPPrefix = required.IPPrefix
+   } else {
+       m.IPPrefix = ""
+   }
+   return
 }
 
 func (m *TunnelDecapModel) UnmarshalJSON(data []byte) (err error) {

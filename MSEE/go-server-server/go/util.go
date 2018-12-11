@@ -281,3 +281,13 @@ func GetThriftIPAddress(ip net.IP) (ret msee.MseeIPAddressT) {
     }
     return
 }
+
+func validateVlanID(vlan_id_str string) (vlanID int, err error) {
+   vlanID, err = strconv.Atoi(vlan_id_str)
+   if err == nil {
+       if vlanID < 2 || vlanID > 4094 {
+           err = errors.New("vlanID out of range " + vlan_id_str)
+       }
+   }
+   return
+}
