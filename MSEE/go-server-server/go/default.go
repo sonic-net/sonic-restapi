@@ -508,6 +508,139 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+func ConfigInterfaceVlanMemberGet(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+
+    vlan_id, err := validateVlanID(vars["vlan_id"])
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return
+    }
+    vlan_name := "Vlan" + vars["vlan_id"]
+
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
+        return
+    }
+
+    vlan_member_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN_MEMBER", vlan_name, vars["if_name"]))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_member_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"if_name"}, "")
+        return
+    }
+
+    var attr VlanMemberModel
+    attr.Tagging = vlan_member_kv["tagging_mode"]
+    output := VlanMemberReturnModel{
+        VlanID: vlan_id,
+        If_name: vars["if_name"],
+        Attr: attr,
+    }
+
+    WriteRequestResponse(w, output, http.StatusOK)
+}
+
+func ConfigInterfaceVlanMemberDelete(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+
+    _, err := validateVlanID(vars["vlan_id"])
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return
+    }
+    vlan_name := "Vlan" + vars["vlan_id"]
+
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
+        return
+    }
+
+    vlan_member_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN_MEMBER", vlan_name, vars["if_name"]))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_member_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"if_name"}, "")
+        return
+    }
+
+    vlan_member_pt := swsscommon.NewProducerStateTable(db.swss_db, "VLAN_MEMBER")
+    defer vlan_member_pt.Delete()
+    vlan_member_pt.Del(generateDBTableKey(db.separator, vlan_name, vars["if_name"]), "DEL", "")
+    w.WriteHeader(http.StatusNoContent)
+}
+
+func ConfigInterfaceVlanMemberPost(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+
+    var attr VlanMemberModel
+    err := ReadJSONBody(w, r, &attr)
+    if err != nil {
+        // The error is already handled in this case
+        return
+    }
+
+    /* Config validation and failure reporting */
+    _, err = validateVlanID(vars["vlan_id"])
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return
+    }
+    vlan_name := "Vlan" + vars["vlan_id"]
+
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
+        return
+    }
+
+    vlan_members, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VLAN_MEMBER", "*"))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    for k, _ := range vlan_members {
+        if vars["if_name"] == k[len(generateDBTableKey(db.separator, "_VLAN_MEMBER", vlan_name)) + 1:] {
+            WriteRequestError(w, http.StatusConflict, "0: Object already a member of some vlan: " + vars["if_name"], []string{}, "")
+            return
+        }
+    }
+
+    /* Config update */
+    vlan_member_pt := swsscommon.NewProducerStateTable(db.swss_db, "VLAN_MEMBER")
+    defer vlan_member_pt.Delete()
+
+    vlan_member_pt.Set(generateDBTableKey(db.separator, vlan_name, vars["if_name"]),
+                       map[string]string{"tagging_mode": attr.Tagging}, "SET", "")
+
+    w.WriteHeader(http.StatusNoContent)
+}
+
 func ConfigInterfaceQinqPortDelete(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 

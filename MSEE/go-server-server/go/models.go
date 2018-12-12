@@ -82,6 +82,16 @@ type VlanReturnModel struct {
     Attr      VlanModel   `json:"attr"`
 }
 
+type VlanMemberModel struct {
+    Tagging   string      `json:"tagging_mode"`
+}
+
+type VlanMemberReturnModel struct {
+    VlanID    int              `json:"vlan_id"`
+    If_name   string           `json:"if_name"`
+    Attr      VlanMemberModel  `json:"attr"`
+}
+
 type TunnelDecapModel struct {
     IPAddr string `json:"ip_addr"`
 }
@@ -328,6 +338,25 @@ func (m *PortModel) UnmarshalJSON(data []byte) (err error) {
     }
 
     return
+}
+
+func (m *VlanMemberModel) UnmarshalJSON(data []byte) (err error) {
+    required := struct {
+         Tagging   string   `json:"tagging_mode,omitempty"`
+   }{}
+   err = json.Unmarshal(data, &required)
+   if err != nil {
+       return
+   }
+
+   if required.Tagging == "" {
+       required.Tagging = "untagged"
+   } else if required.Tagging != "untagged" && required.Tagging != "tagged" {
+       err = &InvalidFormatError{Field: "tagging_mode", Message: "Invalid tagging_mode, must be tagged/untagged"}
+       return
+   }
+   m.Tagging = required.Tagging
+   return
 }
 
 func (m *VlanModel) UnmarshalJSON(data []byte) (err error) {
