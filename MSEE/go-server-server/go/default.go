@@ -402,6 +402,16 @@ func ConfigInterfaceVlanDelete(w http.ResponseWriter, r *http.Request) {
     vlan_if_pt := swsscommon.NewProducerStateTable(db.swss_db, "VLAN_INTERFACE")
     defer vlan_if_pt.Delete()
 
+    neigh_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_NEIGH", vlan_name, "*"))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if len(neigh_kv) > 0 {
+        WriteRequestError(w, http.StatusConflict, "2: Deleting object that has child dependency, please delete the Vlan Neighbor child element first", []string{}, "")
+        return
+    }
+
     /* Delete sequence:  1. Vlan Interface IP prefix table, 2. Vlan Interface table, 3. Vlan */
     /* Delete 1 */
     vlan_pref_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VLAN_INTERFACE", vlan_name, "*"))
@@ -638,6 +648,148 @@ func ConfigInterfaceVlanMemberPost(w http.ResponseWriter, r *http.Request) {
     vlan_member_pt.Set(generateDBTableKey(db.separator, vlan_name, vars["if_name"]),
                        map[string]string{"tagging_mode": attr.Tagging}, "SET", "")
 
+    w.WriteHeader(http.StatusNoContent)
+}
+
+func ConfigInterfaceVlanNeighborGet(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+
+    vlan_id, err := validateVlanID(vars["vlan_id"])
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return
+    }
+
+    if !IsValidIPBoth(vars["ip_addr"]) {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"ip_addr"}, "")
+        return
+    }
+    vlan_name := "Vlan" + vars["vlan_id"]
+
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
+        return
+    }
+
+    neigh_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_NEIGH", vlan_name, vars["ip_addr"]))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if neigh_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"ip_addr"}, "")
+        return
+    }
+
+    output := VlanNeighborReturnModel{
+        VlanID: vlan_id,
+        Ip_addr: vars["ip_addr"],
+    }
+
+    WriteRequestResponse(w, output, http.StatusOK)
+}
+
+func ConfigInterfaceVlanNeighborDelete(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+
+    _, err := validateVlanID(vars["vlan_id"])
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return
+    }
+
+    if !IsValidIPBoth(vars["ip_addr"]) {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"ip_addr"}, "")
+        return
+    }
+    vlan_name := "Vlan" + vars["vlan_id"]
+
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
+        return
+    }
+
+    neigh_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_NEIGH", vlan_name, vars["ip_addr"]))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if neigh_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"ip_addr"}, "")
+        return
+    }
+
+    neigh_pt := swsscommon.NewProducerStateTable(db.swss_db, "NEIGH")
+    defer neigh_pt.Delete()
+    neigh_pt.Del(generateDBTableKey(db.separator, vlan_name, vars["ip_addr"]),"DEL", "")
+
+    w.WriteHeader(http.StatusNoContent)
+}
+
+func ConfigInterfaceVlanNeighborPost(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+    var family string
+
+    _, err := validateVlanID(vars["vlan_id"])
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return
+    }
+
+    if !IsValidIPBoth(vars["ip_addr"]) {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"ip_addr"}, "")
+        return
+    }
+
+    if IsValidIP(vars["ip_addr"]) {
+        family = "IPv4"
+    } else {
+        family = "IPv6"
+    }
+    vlan_name := "Vlan" + vars["vlan_id"]
+
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
+        return
+    }
+
+    neigh_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_NEIGH", vlan_name, vars["ip_addr"]))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if neigh_kv != nil {
+        WriteRequestError(w, http.StatusConflict, "0: Object already exists " + vars["ip_addr"], []string{}, "")
+        return
+    }
+
+    /* Config update */
+    neigh_pt := swsscommon.NewProducerStateTable(db.swss_db, "NEIGH")
+    defer neigh_pt.Delete()
+
+    neigh_pt.Set(generateDBTableKey(db.separator, vlan_name, vars["ip_addr"]),
+                       map[string]string{"family": family}, "SET", "")
     w.WriteHeader(http.StatusNoContent)
 }
 

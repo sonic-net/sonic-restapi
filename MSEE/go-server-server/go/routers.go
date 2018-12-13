@@ -78,10 +78,10 @@ var routes = Routes{
     },
 
     Route{
-        "ConfigInterfaceVlanPost",
-        "POST",
+        "ConfigInterfaceVlanDelete",
+        "DELETE",
         "/v1/config/interface/vlan/{vlan_id}",
-        ConfigInterfaceVlanPost,
+        ConfigInterfaceVlanDelete,
     },
 
     Route{
@@ -92,17 +92,17 @@ var routes = Routes{
     },
 
     Route{
-        "ConfigInterfaceVlanDelete",
-        "DELETE",
+        "ConfigInterfaceVlanPost",
+        "POST",
         "/v1/config/interface/vlan/{vlan_id}",
-        ConfigInterfaceVlanDelete,
+        ConfigInterfaceVlanPost,
     },
 
     Route{
-        "ConfigInterfaceVlanMemberPost",
-        "POST",
+        "ConfigInterfaceVlanMemberDelete",
+        "DELETE",
         "/v1/config/interface/vlan/{vlan_id}/member/{if_name}",
-        ConfigInterfaceVlanMemberPost,
+        ConfigInterfaceVlanMemberDelete,
     },
 
     Route{
@@ -113,10 +113,31 @@ var routes = Routes{
     },
 
     Route{
-        "ConfigInterfaceVlanMemberDelete",
-        "DELETE",
+        "ConfigInterfaceVlanMemberPost",
+        "POST",
         "/v1/config/interface/vlan/{vlan_id}/member/{if_name}",
-        ConfigInterfaceVlanMemberDelete,
+        ConfigInterfaceVlanMemberPost,
+    },
+
+    Route{
+        "ConfigInterfaceVlanNeighborDelete",
+        "DELETE",
+        "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
+        ConfigInterfaceVlanNeighborDelete,
+    },
+
+    Route{
+        "ConfigInterfaceVlanNeighborGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
+        ConfigInterfaceVlanNeighborGet,
+    },
+
+    Route{
+        "ConfigInterfaceVlanNeighborPost",
+        "POST",
+        "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
+        ConfigInterfaceVlanNeighborPost,
     },
 
     Route{

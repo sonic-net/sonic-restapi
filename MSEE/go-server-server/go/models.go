@@ -92,6 +92,11 @@ type VlanMemberReturnModel struct {
     Attr      VlanMemberModel  `json:"attr"`
 }
 
+type VlanNeighborReturnModel struct {
+    VlanID    int              `json:"vlan_id"`
+    Ip_addr   string           `json:"ip_addr"`
+}
+
 type TunnelDecapModel struct {
     IPAddr string `json:"ip_addr"`
 }
