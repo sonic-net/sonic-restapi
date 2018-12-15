@@ -1259,110 +1259,16 @@ func ConfigTunnelEncapVxlanGet(w http.ResponseWriter, r *http.Request) {
 
 func ConfigTunnelEncapVxlanVnidDelete(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-    vars := mux.Vars(r)
-
-    vnid, err := ValidateVnid(w, vars["vnid"])
-    if err != nil {
-        return
-    }
-
-    mseevnid := msee.MseeVniT(vnid)
-    ret, err := mseeClient.UnmapVniToVrf(mseevnid)
-    str := fmt.Sprintf("trace: thrift: unmap_vni_to_vrf(%v) = (%v, %v)", mseevnid, ret, err)
-    
-    if WriteRequestErrorForMSEEThrift(w, err, ret, str) {
-        return
-    }
-
-    pt := swsscommon.NewProducerStateTable(swssDB, "TUNNEL_TABLE")
-    defer pt.Delete()
-
-    pt.Del("encapsulation:vxlan:"+vars["vnid"], "DEL", "")
-
     w.WriteHeader(http.StatusNoContent)
 }
 
 func ConfigTunnelEncapVxlanVnidGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-    vars := mux.Vars(r)
-
-    vnid, err := ValidateVnid(w, vars["vnid"])
-    if err != nil {
-        return
-    }
-
-    kv, err := SwssGetKVs("TUNNEL_TABLE:encapsulation:vxlan:" + vars["vnid"])
-    if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-
-    if kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
-        return
-    }
-
-    vrfID, err := ValidateVrfId(w, kv["vrf_id"])
-    if err != nil {
-        return
-    }
-
-    output := TunnelReturnModel{
-        Vnid: vnid,
-        Attr: TunnelModel{
-            VrfID: vrfID,
-        },
-    }
-
-    WriteRequestResponse(w, output, http.StatusOK)
+    w.WriteHeader(http.StatusNoContent)
 }
 
-func ConfigTunnelEncapVxlanVnidPut(w http.ResponseWriter, r *http.Request) {
+func ConfigTunnelEncapVxlanVnidPost(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-    vars := mux.Vars(r)
-
-    vnid, err := ValidateVnid(w, vars["vnid"])
-    if err != nil {
-        return
-    }
-
-    var attr TunnelModel
-
-    err = ReadJSONBody(w, r, &attr)
-    if err != nil {
-        // The error is already handled in this case
-        return
-    }
-
-    _, err = CacheGetVrfName(attr.VrfID)
-    if err != nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vrf_id"}, "")
-        return
-    }
-
-    mseevnid := msee.MseeVniT(vnid)
-    mseeVrfID := msee.MseeVrfIDT(attr.VrfID)
-    ret, err := mseeClient.MapVniToVrf(mseevnid, mseeVrfID)
-    str := fmt.Sprintf("trace: thrift: map_vni_to_vrf(%v, %v) = (%v, %v)", mseevnid, mseeVrfID, ret, err)
-
-    if WriteRequestErrorForMSEEThrift(w, err, ret, str) {
-        return
-    }
-
-    pt := swsscommon.NewProducerStateTable(swssDB, "TUNNEL_TABLE")
-    defer pt.Delete()
-
-    pt.Set("encapsulation:vxlan:"+vars["vnid"], map[string]string{
-        "vrf_id": strconv.Itoa(attr.VrfID),
-    }, "SET", "")
-
-    if _, ok := configSnapshot.VrfMap[attr.VrfID]; ok {
-        configSnapshot.VrfMap[attr.VrfID].VxlanMap[vnid] = attr
-    }
-
     w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1537,22 +1443,25 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
 
 func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
+    db := &app_db_ops
     vars := mux.Vars(r)
 
-    vrfID, err := ValidateVrfId(w, vars["vrf_id"])
+    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
+    if vnet_id == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{vars["vnet_name"]}, "")
+        return
+    }
+    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
+    kv, err := GetKVs(conf_db_ops.db_num, generateDBTableKey(conf_db_ops.separator, "_VNET", vnet_id_str))
     if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
-    _, err = CacheGetVrfName(vrfID)
-    if err != nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vrf_id"}, "")
+    if kv == nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
         return
     }
-
-    mseeVrfID := msee.MseeVrfIDT(vrfID)
-
     vnidMatch := -1
     if len(r.URL.Query()["vnid"]) == 1 {
         vnid := r.URL.Query()["vnid"][0]
@@ -1565,64 +1474,22 @@ func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    var attr []RouteModel
-
-    if (*r).ContentLength > 0 {
-        err = ReadJSONBody(w, r, &attr)
-        if err != nil {
-            // The error is already handled in this case
-            return
-        }
-    } else {
-        attr, err = SwssGetVrouterRoutes(vrfID, vnidMatch, "*")
-        if err != nil {
-            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-            return
-        }
-    }
-
+    routes, err := SwssGetVrouterRoutes(vnet_id_str, vnidMatch, "*")
     var failed []RouteModel
     var removed []RouteModel
-
-    pt := swsscommon.NewProducerStateTable(swssDB, "VROUTER_ROUTES_TABLE")
+    pt := swsscommon.NewProducerStateTable(db.swss_db, "VNET_ROUTE_TUNNEL_TABLE")
     defer pt.Delete()
 
-    for _, r := range attr {
-        table := vars["vrf_id"] + ":" + r.IPPrefix
-        kv, err := SwssGetKVs("VROUTER_ROUTES_TABLE:" + table)
+    for _, r := range routes {
+        table := generateDBTableKey(db.separator, vnet_id_str, r.IPPrefix)
+        kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET_ROUTE_TUNNEL_TABLE", table))
         if err != nil || kv == nil {
+            r.Error = "Not found"
             failed = append(failed, r)
             continue
         }
-
-        mseeDstIPPrefix := GetThriftIPPrefix(r.IPPrefix)
-        if (r.NextHopType == "vxlan-tunnel") {
-            ret, err := mseeClient.DeleteEncapRoute(mseeVrfID, &mseeDstIPPrefix)
-            str := fmt.Sprintf("trace: thrift: delete_encap_route(%v, %v) = (%v, %v)", mseeVrfID, mseeDstIPPrefix, ret, err)
-
-            if WriteRequestErrorForMSEEThrift(w, err, ret, str) {
-                return
-            }
-        } else if (r.NextHopType == "ip") {
-            ret, err := mseeClient.DeleteDecapRoute(mseeVrfID, &mseeDstIPPrefix)
-            str := fmt.Sprintf("trace: thrift: delete_decap_route(%v, %v) = (%v, %v)", mseeVrfID, mseeDstIPPrefix, ret, err)
-
-            if WriteRequestErrorForMSEEThrift(w, err, ret, str) {
-                return
-            }
-        } else {
-            failed = append(failed, r)
-            r.Error = fmt.Sprintf("NextHopType is not supported %v", r.NextHopType)
-            log.Printf("warning: %v", r.Error)
-            continue
-        }   
-
         pt.Del(table, "DEL", "")
         removed = append(removed, r)
-
-        if _, ok := configSnapshot.VrfMap[vrfID]; ok {
-            delete(configSnapshot.VrfMap[vrfID].RoutesMap, r.IPPrefix)
-        }
     }
 
     output := RouteDeleteReturnModel{
@@ -1630,22 +1497,27 @@ func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
         Failed:  failed,
     }
 
-    WriteRequestResponse(w, output, http.StatusCreated)
+    WriteRequestResponse(w, output, http.StatusMultiStatus)
 }
 
 func ConfigVrouterVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
     vars := mux.Vars(r)
 
-    vrfID, err := ValidateVrfId(w, vars["vrf_id"])
+    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
+    if vnet_id == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{vars["vnet_name"]}, "")
+        return
+    }
+    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
+    kv, err := GetKVs(conf_db_ops.db_num, generateDBTableKey(conf_db_ops.separator, "_VNET", vnet_id_str))
     if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
-    _, err = CacheGetVrfName(vrfID)
-    if err != nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vrf_id"}, "")
+    if kv == nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
         return
     }
 
@@ -1674,7 +1546,7 @@ func ConfigVrouterVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    routes, err := SwssGetVrouterRoutes(vrfID, vnidMatch, ipprefix)
+    routes, err := SwssGetVrouterRoutes(vnet_id_str, vnidMatch, ipprefix)
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
@@ -1683,17 +1555,35 @@ func ConfigVrouterVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
     WriteRequestResponse(w, routes, http.StatusOK)
 }
 
-func ConfigVrouterVrfIdRoutesPut(w http.ResponseWriter, r *http.Request) {
+func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
+    db := &app_db_ops
     vars := mux.Vars(r)
 
-    vrfID, err := ValidateVrfId(w, vars["vrf_id"])
+    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
+    if vnet_id == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{vars["vnet_name"]}, "")
+        return
+    }
+    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
+    kv, err := GetKVs(conf_db_ops.db_num, generateDBTableKey(conf_db_ops.separator, "_VNET", vnet_id_str))
     if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
-    mseeVrfID := msee.MseeVrfIDT(vrfID)
+    if kv == nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
+        return
+    }
+
+    vlanPrefixArr, err := generateVlanPrefixInVnet(vnet_id_str)
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Error generating vlan prefix array", []string{}, "")
+        return
+    } else {
+        log.Printf("info: gen vlanPrefixArr is %v", vlanPrefixArr)
+    }
 
     var attr []RouteModel
 
@@ -1703,171 +1593,64 @@ func ConfigVrouterVrfIdRoutesPut(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    _, err = CacheGetVrfName(vrfID)
-    if err != nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vrf_id"}, "")
-        return
-    }
-
-    pt := swsscommon.NewProducerStateTable(swssDB, "VROUTER_ROUTES_TABLE")
+    pt := swsscommon.NewProducerStateTable(db.swss_db, "VNET_ROUTE_TUNNEL_TABLE")
     defer pt.Delete()
 
     var added []RouteModel
     var failed []RouteModel
     var updated []RouteModel
-
-    var arpRequest []*arp.ReqTuplesT
-
-    var i int32
-    i = -1
+    var deleted []RouteModel
 
     for _, r := range attr {
-        i++
-        if r.NextHopType == "ip" {
-            arpTuples, err := SwssGetVrfPorts(vars["vrf_id"])
-            if err != nil || len(arpTuples) == 0 {
-                continue
-            }
-
-            arpRequest = append(arpRequest, &arp.ReqTuplesT{
-                IP: arp.Ip4T(IpToInt32(net.ParseIP(r.NextHop))),
-                Index: i,
-                Tuples: arpTuples,
-            })
-
-        }
-    }
-
-    var arpResponse []*arp.RepTupleT
-    if len(arpRequest) > 0 {
-        var err error
-        arpResponse, err = arpClient.RequestMac(arpRequest)
-        str := fmt.Sprintf("trace: thrift: request_mac(%v) = (%v, %v)", arpRequest, arpResponse, err)
-        log.Print(str)
-
-        if err != nil {
-            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, str)
-            return
-        }
-    }
-
-    i = -1
-
-    for _, r := range attr {
-        i++
-
-        _, exist, err := SwssGetVrouterRoute(vrfID, r.IPPrefix)
+        bm_next_hop, err := isBMNextHop(r.IPPrefix, vlanPrefixArr)
         if err != nil {
             r.Error = "Internal service error"
             failed = append(failed, r)
             continue
         }
+	     if bm_next_hop {
+             log.Printf("Skipping route %v as it is a baremetal /32 route", r)
+		       continue
+		  }
+		  cur_route, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET_ROUTE_TUNNEL_TABLE", vnet_id_str, r.IPPrefix))
+		  if err != nil {
+		       r.Error = "Internal service error"
+		       failed = append(failed, r)
+		  }
+		  if r.Cmd == "delete" {
+		       if cur_route == nil {
+				      r.Error = "Not found"
+						failed = append(failed, r)
+			    } else {
+				      pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
+						deleted = append(deleted,r)
+				 }
+		  } else {
+		       route_map := make(map[string]string)
+				 route_map["endpoint"] = r.NextHop
+				 if(r.MACAddress != "") {
+				      route_map["mac_address"] = r.MACAddress
+				 }
+				 if(r.Vnid != 0) {
+				      route_map["vxlanid"] = strconv.Itoa(r.Vnid)
+				 }
+				 pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
+		       if cur_route == nil {
+				      added = append(added, r)
+				 } else {
+				      updated = append(updated, r)
+				 }
+		  }
+	 }
 
-        mseeDstIPPrefix := GetThriftIPPrefix(r.IPPrefix)
-        mseeDstIP := GetThriftIPAddress(net.ParseIP(r.NextHop))
-
-        kv := map[string]string{
-            "nexthop_type": r.NextHopType,
-            "nexthop":      r.NextHop,
-        }
-
-        if kv["nexthop_type"] == "vxlan-tunnel" {
-            kv["vxlanid"] = strconv.Itoa(r.Vnid)
-            kv["mac_address"] = r.MACAddress
-            kv["port"] = r.Port
-
-            if r.SrcIP != "" {
-                kv["src_ip"] = r.SrcIP
-            }
-
-            vnidkv, err := SwssGetKVs("TUNNEL_TABLE:encapsulation:vxlan:"+kv["vxlanid"])
-            if err != nil || vnidkv == nil {
-                failed = append(failed, r)
-                continue
-            }
-
-            mseeVni := msee.MseeVniT(r.Vnid)
-            mac, _ := net.ParseMAC(r.MACAddress)
-            mseeMACAddress := msee.MseeMacT(MacToInt64(mac))
-
-            vxlanPort := uint16(65330)
-            if r.Port == "standard" {
-                vxlanPort = uint16(4789)
-            }
-
-            mseeUDPPort := msee.MseeUDPPortT(vxlanPort)
-
-            ret, err := mseeClient.AddEncapRoute(mseeVrfID, &mseeDstIPPrefix, &mseeDstIP, mseeMACAddress, mseeVni, mseeUDPPort)
-            str := fmt.Sprintf("trace: thrift: add_encap_route(%v, %v, %v, %v, %v, %v) = (%v, %v)", mseeVrfID, mseeDstIPPrefix, mseeDstIP, mseeMACAddress, mseeVni, mseeUDPPort, ret, err)
-
-            if WriteRequestErrorForMSEEThrift(w, err, ret, str) {
-                 return
-            }
-        } else if kv["nexthop_type"] == "ip" {
-            for j, rep := range arpResponse {
-                if rep.Index == i {
-                    // Remove this element
-                    arpResponse = append(arpResponse[:j], arpResponse[j+1:]...)
-
-                    if !rep.IsFound {
-                        r.Error = "Nexthop not found"
-                        break
-                    }
-
-                    kv["mac_address"] = net.HardwareAddr(rep.Mac).String()
-
-                    mseeMACAddress := msee.MseeMacT(MacToInt64(net.HardwareAddr(rep.Mac)))
-                    portID, err := PortToPortID(rep.Request.IfaceName)
-                    if err != nil {
-                        r.Error = "Internal service error"
-                        break
-                    }
-
-                    mseePort := msee.MseePortT(portID)
-                    mseeStag := msee.MseeVlanT(rep.Request.Stag)
-                    mseeCtag := msee.MseeVlanT(rep.Request.Ctag)
-
-                    ret, err := mseeClient.AddDecapRoute(mseeVrfID, &mseeDstIPPrefix, mseeMACAddress, mseePort, mseeStag, mseeCtag)
-                    str := fmt.Sprintf("trace: thrift: add_decap_route(%v, %v, %v, %v, %v, %v) = (%v, %v)",
-                        mseeVrfID, mseeDstIPPrefix, mseeMACAddress, mseePort, mseeStag, mseeCtag, ret, err)
-
-                    if WriteRequestErrorForMSEEThrift(w, err, ret, str) {
-                        return
-                    }
-
-                    goto success
-                }
-            }
-
-            failed = append(failed, r)
-            continue
-        } else {
-            r.Error = "Not implemented"
-            failed = append(failed, r)
-            continue
-        }
-
-success:
-        pt.Set(vars["vrf_id"]+":"+r.IPPrefix, kv, "SET", "")
-
-        if !exist {
-            added = append(added, r)
-        } else {
-            updated = append(updated, r)
-        }
-
-        if _, ok := configSnapshot.VrfMap[vrfID]; ok {
-            configSnapshot.VrfMap[vrfID].RoutesMap[r.IPPrefix] = r
-        }
-    }
-
-    output := RoutePutReturnModel{
+    output := RoutePatchReturnModel{
         Added:   added,
         Updated: updated,
+		  Deleted: deleted,
         Failed:  failed,
     }
 
-    WriteRequestResponse(w, output, http.StatusCreated)
+    WriteRequestResponse(w, output, http.StatusMultiStatus)
 }
 
 func StateInterfaceGet(w http.ResponseWriter, r *http.Request) {

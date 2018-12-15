@@ -218,10 +218,10 @@ var routes = Routes{
     },
 
     Route{
-        "ConfigTunnelEncapVxlanVnidPut",
-        "PUT",
+        "ConfigTunnelEncapVxlanVnidPost",
+        "POST",
         "/v1/config/tunnel/encap/vxlan/{vnid}",
-        ConfigTunnelEncapVxlanVnidPut,
+        ConfigTunnelEncapVxlanVnidPost,
     },
 
     Route{
@@ -255,22 +255,22 @@ var routes = Routes{
     Route{
         "ConfigVrouterVrfIdRoutesDelete",
         "DELETE",
-        "/v1/config/vrouter/{vrf_id}/routes",
+        "/v1/config/vrouter/{vnet_name}/routes",
         ConfigVrouterVrfIdRoutesDelete,
     },
 
     Route{
         "ConfigVrouterVrfIdRoutesGet",
         "GET",
-        "/v1/config/vrouter/{vrf_id}/routes",
+        "/v1/config/vrouter/{vnet_name}/routes",
         ConfigVrouterVrfIdRoutesGet,
     },
 
     Route{
-        "ConfigVrouterVrfIdRoutesPut",
-        "PUT",
-        "/v1/config/vrouter/{vrf_id}/routes",
-        ConfigVrouterVrfIdRoutesPut,
+        "ConfigVrouterVrfIdRoutesPatch",
+        "PATCH",
+        "/v1/config/vrouter/{vnet_name}/routes",
+        ConfigVrouterVrfIdRoutesPatch,
     },
 
     Route{

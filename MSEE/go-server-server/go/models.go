@@ -25,13 +25,12 @@ type VrfSnapshotModel struct {
 }
 
 type RouteModel struct {
+    Cmd         string `json:"cmd,omitempty"`
     IPPrefix    string `json:"ip_prefix"`
     NextHopType string `json:"nexthop_type"`
     NextHop     string `json:"nexthop"`
-    MACAddress  string `json:"mac_address"`
+    MACAddress  string `json:"mac_address,omitempty"`
     Vnid        int    `json:"vnid,omitempty"`
-    SrcIP       string `json:"src_ip,omitempty"`
-    Port        string `json:"port,omitempty"`
     Error       string `json:"error,omitempty"`
 }
 
@@ -40,9 +39,10 @@ type RouteDeleteReturnModel struct {
     Failed  []RouteModel `json:"failed,omitempty"`
 }
 
-type RoutePutReturnModel struct {
+type RoutePatchReturnModel struct {
     Added   []RouteModel `json:"added,omitempty"`
     Updated []RouteModel `json:"updated,omitempty"`
+    Deleted []RouteModel `json:"deleted,omitempty"`
     Failed  []RouteModel `json:"failed,omitempty"`
 }
 
@@ -173,13 +173,12 @@ func (e *InvalidFormatError) Error() string {
 
 func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     required := struct {
+        Cmd         *string `json:"cmd"`
         IPPrefix    *string `json:"ip_prefix"`
         NextHopType *string `json:"nexthop_type"`
         NextHop     *string `json:"nexthop"`
         MACAddress  *string `json:"mac_address"`
         Vnid        int     `json:"vnid"`
-        SrcIP       string  `json:"src_ip"`
-        Port        string  `json:"port"`
         Error       string  `json:"error"`
     }{}
 
@@ -189,65 +188,48 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         return
     }
 
-    if required.IPPrefix == nil {
-        err = &MissingValueError{"ip_prefix"}
+    if required.Cmd == nil {
+        err = &MissingValueError{"cmd"}
         return
-    } else if required.NextHopType == nil {
-        err = &MissingValueError{"nexthop_type"}
+    } else if required.IPPrefix == nil {
+        err = &MissingValueError{"ip_prefix"}
         return
     } else if required.NextHop == nil {
         err = &MissingValueError{"nexthop"}
         return
     }
 
-    if *required.NextHopType == "vxlan-tunnel" {
-        if required.MACAddress == nil {
-            err = &MissingValueError{"mac_address"}
-            return
-        }
-        m.MACAddress = *required.MACAddress
+    if *required.Cmd != "add" && *required.Cmd != "delete" {
+        err = &InvalidFormatError{Field: "cmd", Message: "Must be add/delete"}
+        return
     }
 
-    m.IPPrefix = *required.IPPrefix
-    m.NextHopType = *required.NextHopType
-    m.NextHop = *required.NextHop
-    m.Vnid = required.Vnid
-    m.SrcIP = required.SrcIP
-    m.Port = required.Port
-    m.Error = required.Error
-
-    _, _, err = ParseIPPrefix(m.IPPrefix)
+    _, _, err = ParseIPBothPrefix(*required.IPPrefix)
     if err != nil {
         err = &InvalidFormatError{Field: "ip_prefix", Message: "Invalid IP prefix"}
         return
     }
 
-    if m.NextHopType != "vxlan-tunnel" && m.NextHopType != "ip" {
-        err = &InvalidFormatError{Field: "nexthop_type", Message: "nexthop_type may only be one of ip, vxlan-tunnel"}
-        return
-    }
-
-    if !IsValidIP(m.NextHop) {
+    if !IsValidIPBoth(*required.NextHop) {
         err = &InvalidFormatError{Field: "nexthop", Message: "Invalid IP address"}
         return
     }
 
-    if m.NextHopType == "vxlan-tunnel" {
-        _, err = net.ParseMAC(m.MACAddress)
+    if required.MACAddress != nil {
+        _, err = net.ParseMAC(*required.MACAddress)
+
         if err != nil {
             err = &InvalidFormatError{Field: "mac_address", Message: "Invalid MAC address"}
             return
         }
-
-        if m.Port == "" {
-            m.Port = "azure"
-        }
-
-        if m.Port != "azure" && m.Port != "standard" {
-            err = &InvalidFormatError{Field: "port", Message: "port may only be one of standard, azure"}
-            return
-        }
+        m.MACAddress = *required.MACAddress
     }
+
+    m.Cmd = *required.Cmd
+    m.IPPrefix = *required.IPPrefix
+    m.NextHop = *required.NextHop
+    m.Vnid = required.Vnid
+    m.Error = required.Error
 
     return
 }

@@ -703,24 +703,22 @@ func GetKVsMulti(DB int, pattern string) (kv map[string]map[string]string, err e
     return
 }
 
-
-func SwssGetVrouterRoutes(vrfID int, vnidMatch int, ipFilter string) (routes []RouteModel, err error) {
-    vrfIDStr := strconv.Itoa(vrfID)
-    pattern := "VROUTER_ROUTES_TABLE:" + vrfIDStr + ":" + ipFilter
+func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (routes []RouteModel, err error) {
+    db := &app_db_ops
+    pattern := generateDBTableKey(db.separator, "_VNET_ROUTE_TUNNEL_TABLE", vnet_id_str, ipFilter)
     routes = []RouteModel{}
 
-    kv, err := SwssGetKVsMulti(pattern)
+    kv, err := GetKVsMulti(db.db_num,pattern)
     if err != nil {
         return
     }
 
     for k, kvp := range kv {
-        ipprefix := strings.Split(k, ":")[2]
+        ipprefix := strings.Split(k, db.separator)[2]
 
         routeModel := RouteModel{
             IPPrefix:    ipprefix,
-            NextHopType: kvp["nexthop_type"],
-            NextHop:     kvp["nexthop"],
+            NextHop:     kvp["endpoint"],
         }
 
         if vnid, ok := kvp["vxlanid"]; ok {
@@ -728,74 +726,16 @@ func SwssGetVrouterRoutes(vrfID int, vnidMatch int, ipFilter string) (routes []R
         }
 
         if vnidMatch >= 0 {
-            // vnid only applicable for vxlan tunnels
-            if kvp["nexthop_type"] != "vxlan-tunnel" {
-                continue
-            }
-
             if vnidMatch != routeModel.Vnid {
                 continue
             }
-        }
-
-        if srcIP, ok := kvp["src_ip"]; ok {
-            routeModel.SrcIP = srcIP
-        }
-
-        if estr, ok := kvp["error"]; ok {
-            routeModel.Error = estr
         }
 
         if mac, ok := kvp["mac_address"]; ok {
             routeModel.MACAddress = mac
         }
 
-        if port, ok := kvp["port"]; ok {
-            routeModel.Port = port
-        }
-
         routes = append(routes, routeModel)
-    }
-
-    return
-}
-
-func SwssGetVrouterRoute(vrfID int, ipprefix string) (route RouteModel, exist bool, err error) {
-    vrfIDStr := strconv.Itoa(vrfID)
-    pattern := "VROUTER_ROUTES_TABLE:" + vrfIDStr + ":" + ipprefix
-
-    kv, err := SwssGetKVs(pattern)
-    if err != nil {
-        return
-    }
-
-    if kv == nil {
-        exist = false
-        return
-    } else {
-        exist = true
-    }
-
-    route = RouteModel{
-        IPPrefix:    ipprefix,
-        NextHopType: kv["nexthop_type"],
-        NextHop:     kv["nexthop"],
-    }
-
-    if vnid, ok := kv["vxlanid"]; ok {
-        route.Vnid, _ = strconv.Atoi(vnid)
-    }
-
-    if srcIP, ok := kv["src_ip"]; ok {
-        route.SrcIP = srcIP
-    }
-
-    if estr, ok := kv["error"]; ok {
-        route.Error = estr
-    }
-
-    if mac, ok := kv["mac_address"]; ok {
-        route.MACAddress = mac
     }
 
     return

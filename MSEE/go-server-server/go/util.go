@@ -9,6 +9,7 @@ import (
     "net"
     "net/http"
     "strconv"
+    "strings"
 )
 
 func WriteRequestErrorForMSEEThrift(w http.ResponseWriter, err error, r msee.ResultT, details string) bool {
@@ -290,4 +291,54 @@ func validateVlanID(vlan_id_str string) (vlanID int, err error) {
        }
    }
    return
+}
+
+func generateVlanPrefixInVnet(vnet_id string) (vlanPrefixArr []string, err error) {
+    db := &conf_db_ops
+    vlanInVnet :=  make([]string, 0, 5)
+    kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VLAN_INTERFACE", "Vlan*"))
+    if (err != nil) || (len(kv) == 0) {
+         return
+    }
+
+    for k, v := range kv {
+         if v["vnet_name"] == vnet_id {
+              vlanInVnet = append(vlanInVnet, k)
+         }
+    }
+    for _, vlan_table := range vlanInVnet {
+         kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator,vlan_table, "*"))
+         if err != nil {
+             return vlanPrefixArr, err
+         } else if len(kv) != 1 {
+             /* Should never come into this case */
+             continue
+         } else {
+             for k, _ := range kv {
+                 vlanPrefixArr = append(vlanPrefixArr, k[len(vlan_table) + 1:])
+             }
+         }
+    }
+    return
+}
+
+func isBMNextHop(ipprefix string, vlanPrefixArr []string) (bm_next_hop bool, err error) {
+    bm_next_hop = false
+    ip, _, err := net.ParseCIDR(ipprefix)
+    if err != nil {
+        return bm_next_hop, err
+    }
+	 if (ip.To4() == nil && strings.HasSuffix(ipprefix, "/128")) || (ip.To4() != nil && strings.HasSuffix(ipprefix, "/32"))  {
+        for _, vlan_prefix := range vlanPrefixArr {
+             vlan_ip, vlan_netw, err := net.ParseCIDR(vlan_prefix)
+		       if err != nil {
+		           return bm_next_hop, err
+		       }
+				 if ((ip.To4 == nil && vlan_ip.To4 == nil) || (ip.To4 != nil && vlan_ip.To4 != nil)) && vlan_netw.Contains(ip) {
+				     bm_next_hop = true
+                 return bm_next_hop, err
+			    }
+		  }
+    }
+	 return
 }
