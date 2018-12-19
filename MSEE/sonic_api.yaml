@@ -36,6 +36,7 @@
 #   400 - Bad Request. Malformed arguments for API call
 #   401 - Unauthorized.  Invalid authentication credentials
 #   404 - Object is not found
+#   409 - Conflict. Request cannot be completed due to conflict with current state of target resource. 
 #   500 - Internal Server Error
 #   503 - Service Unavailable
 #
@@ -62,20 +63,35 @@
 # 3. We have tunnels which represent "Azure" next hops for virtual routing tables.
 # 4. We have vlan specific APIs to define parameters for client ports
 #
+# POST Requests:
+# REST API creation(POST) dependency list:
+# 1. VxLAN VTEP: /config/tunnel/decap/vxlan OR Day 0 configuration. No dependency. 
+# 2. VRF/VNET: /config/vrouter/{vnet_id} depends on 1(VxLAN VTEP)
+# 3. VLAN: /config/interface/vlan Depends on 2(VNET) iff vlan needs association to vrf/vnet
+# 4. Vlan member: /config/interface/vlan/{vlan_id}/member Depends on 3(VLAN)
+# 5. Vlan Neighbor: /config/interface/vlan/{vlan_id}/neighbor Depends on 3(VLAN)
+# 6. VRF/VNET Routes: /config/vrouter/{vnet_id}/routes depends on 2(VNET)
+#
 # DELETE Requests:
 # All children/dependent elements must be deleted prior to deleting any parent config elements
 # This is required for data integrity and sanity of DBs.
 # eg: Vlan Neighbors and Vlan members should be deleted before deleting the Vlan itself 
-
+# REST API deletion(DELETE) dependency list:
+# 1. VRF/VNET Routes: /config/vrouter/{vnet_id}/routes. No dependency
+# 2. Vlan Neighbor: /config/interface/vlan/{vlan_id}/neighbor. No dependency
+# 3. Vlan member: /config/interface/vlan/{vlan_id}/member. No dependency
+# 4. VLAN: /config/interface/vlan Depends on 2(VNET). Dependes on successful deletion on all child elements 2(Vlan Neighbor) and 3(Vlan member)
+# 5. VRF/VNET: /config/vrouter/{vnet_id}. Depends on successful deletion of all child elements 4(Vlan) and 1(Routes)
+# 6. VxLAN VTEP: /config/tunnel/decap/vxlan. Depends on successful deletion of all child elements 5(VRF/VNET)
+#
 # Some details about '40X' error responses:
 # - '400' http error returns when there're one or more malformed arguments (wrong type, format, size) in the request.
 # - '404' http error returns when there're one or more references to non-existent values in the request.
 # - '409' HTTP Request cannot be completed due to conflict with current state of target resource:
-#       - Error sub-id 0: Conflict because the resource already exists
-#       - Error sub-id 1: Conflict because of a missing dependency/parent
-#       - Error format: 
-#               -sub-id 0: "0: <error_message>"
-#               -sub-id 1: "1: <error_message>"
+#       - Error sub-code 0: Conflict because the resource already exists
+#       - Error sub-code 1: Conflict because of a missing dependency/parent
+#       - Error sub-code 2: Conflict because the caller tries to delete a resource with a dependency/child
+#       - Error format:     '#/definitions/Error'
 # In case of bulk API (vroute API):
 # - If a request has a malformed argument (arguments) or a reference (references) to non-existent values
 #   in its path the API must return '400' or '404' respectively.
@@ -84,6 +100,8 @@
 #    - return '207' http status code to inform the caller to look within the body to confirm success/failure
 #      for each of the routes
 #    - put malformed attributes into the list of 'failed' attributes.
+ 
+
 
 swagger: '2.0'
 info:
@@ -168,7 +186,7 @@ paths:
   '/config/vrouter/{vnet_id}':
     post:
       summary: Create a new virtual router
-      description: If a virtual router/vnet with specified vnet_id doesn't exist, new vnet with empty virtual table would be created. If a vnet exists already, it will return error '409', sub-id '0'. If this API is called without a vxlan local vtep created(should be created as a Day 0 config), there will be a failure with code '409' sub-id '1'.
+      description: If a virtual router/vnet with specified vnet_id doesn't exist, new vnet with empty virtual table would be created. If a vnet exists already, it will return error '409', sub-code '0'. If this API is called without a vxlan local vtep created(should be created as a Day 0 config), there will be a failure with code '409' sub-code '1'.
       parameters:
         - name: vnet_id
           in: path
@@ -253,7 +271,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove a virtual router
-      description: Remove a virtual router which is defined by vnet_id. If a vnet with 'vnet_id' is not defined the API will return '404'.
+      description: Remove a virtual router which is defined by vnet_id. If a vnet with 'vnet_id' is not defined the API will return '404'. If the delete is called before all associated VNET routes or Vlans are deleted, it will return error '409' sub-code 2
       parameters:
         - name: vnet_id
           in: path
@@ -273,6 +291,10 @@ paths:
             $ref: '#/definitions/Error'
         '404':
           description: Virtual router is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Resource Conflict. Routes exist on VRF/VNET and Virtual router may not be deleted prior to deleting all routes.
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -325,7 +347,7 @@ paths:
     '/config/interface/vlan/{vlan_id}'
     post:
       summary: Create a new vlan interface
-      description: Create a new vlan interface with name Vlan{vlan_id} and vlanid set to vlan_id. If such a vlan interface already exists then this method returns the error '409' sub-id 0. If a vnet with specified vnet_id in attr does not exist this function will return error '409' subid 1. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      description: Create a new vlan interface with name Vlan{vlan_id} and vlanid set to vlan_id. If such a vlan interface already exists then this method returns the error '409' sub-code 0. If a vnet with specified vnet_id in attr does not exist this function will return error '409' sub-code 1. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       parameters:
         - name: vlan_id
           in: path
@@ -417,7 +439,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove a vlan interface
-      description: Remove a vlan interface which is defined by vlan_id. If the vlan interface does not exist on SONiC it returns a '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      description: Remove a vlan interface which is defined by vlan_id. If the vlan interface does not exist on SONiC it returns a '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If the delete is called before all associated vlan neighbors/members are deleted, this will return error '409' conflict with sub-code 2. 
       parameters:
         - name: vlan_id
           in: path
@@ -440,6 +462,10 @@ paths:
           description: Vlan interface is not found
           schema:
             $ref: '#/definitions/Error'
+        '409':
+          description:
+          schema:
+            $ref: '#/definitions/Error'
         '500':
           description: Internal service error
           schema:
@@ -454,7 +480,7 @@ paths:
     '/config/interface/vlan/{vlan_id}/member/{if_name}'
     post:
       summary: Add a physical port to a vlan interface
-      description: Add a member to interface Vlan{vlan_id}. If the vlan interface does not exist on SONiC it returns a '404' error. If such a member is already present on any Vlan interface this returns '409' subid 0. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If attr with tagging mode is provided it will be honored in config, if not, the default tagging mode will be set to 'untagged'.
+      description: Add a member to interface Vlan{vlan_id}. If the vlan interface does not exist on SONiC it returns a '404' error. If such a member is already present on any Vlan interface this returns '409' sub-code 0. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If attr with tagging mode is provided it will be honored in config, if not, the default tagging mode will be set to 'untagged'.
       parameters:
         - name: vlan_id
           in: path
@@ -469,7 +495,7 @@ paths:
           description: Physical port name
         - name: attr
           in: body
-          required: false
+          required: true
           description: attribute for vlan member
           schema:
             $ref: '#/definitions/VlanMemberEntry'
@@ -602,7 +628,7 @@ paths:
     '/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}'
     post:
       summary: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery 
-      description: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery. If such a neighbor already exists on this Vlan interface then this method returns the error '409' subid 0, if the Vlan interface doesn't exist on SONiC this returns error '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      description: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery. If such a neighbor already exists on this Vlan interface then this method returns the error '409' sub-code 0, if the Vlan interface doesn't exist on SONiC this returns error '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       parameters:
         - name: vlan_id
           in: path
@@ -727,7 +753,7 @@ paths:
 # vxlan tunnel encap object
 #----------------------------------------------
   '/config/tunnel/encap/vxlan/{vnid}':
-    put:
+    post:
        description: Return success for now 
        responses:
           '204':
@@ -749,7 +775,7 @@ paths:
   '/config/vrouter/{vnet_id}/routes':
     patch:
       summary: Update/modify IP routes for a virtual router
-      description: This API call receives a list of route entries to be added/modified/deleted from the virtual routing table defined by 'vnet_id'. If an object with vnet_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry already exists in the virtual routing table, the attributes of the rouing entry will be updated and the route entry will be returned as a member of the "updated" list. If a route entry doesn't exist in the routing table yet, it will be inserted there and returned as a member of "added" list. If something went wrong the route entry will be returned as member of "failed" list with "error" attribute set to an actual error for the route entry. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete succeeds it will be returned as a member of the "deleted" list, if the delete fails it will be returned as a member of the "failed" list.  
+      description: This API call receives a list of route entries to be added/modified/deleted from the virtual routing table defined by 'vnet_id'. If an object with vnet_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry already exists in the virtual routing table, the attributes of the rouing entry will be updated. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set
       parameters:
         - name: vnet_id
           in: path
@@ -765,31 +791,15 @@ paths:
             items:
               $ref: '#/definitions/RouteEntry'
       responses:
+        '204':
+          description: OK
         '207':
           description: Multi-Status
           schema:
             type: object
             required:
-              - added
-              - updated
-              - deleted
               - failed
             properties:
-              added:
-                description: list of added routes
-                type: array
-                items:
-                  $ref: '#/definitions/RouteEntry'
-              updated:
-                description: list of updated routes
-                type: array
-                items:
-                  $ref: '#/definitions/RouteEntry'
-               deleted:
-                 description: list of deleted routes
-                 type: array 
-                items:
-                  $ref: '#/definitions/RouteEntry'
               failed:
                 description: list of failed routes
                 type: array
@@ -821,7 +831,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove IP routes for a virtual router
-      description: This API call will remove all route entries from a virtual router defined by 'vnet_id'. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing went successfully the route entry will be added to "deleted" list in the response, otherwise it would be added to "failed" list.
+      description: This API call will remove all route entries from a virtual router defined by 'vnet_id'. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing was unsuccessful it will be added as a member of the "failed" list along with attributes for "error_code" and "error_msg" populated. 
       parameters:
         - name: vnet_id
           in: path
@@ -835,19 +845,15 @@ paths:
           format: int32
           description: vxlan id (24-bit). Allows to remove routes with defined vnid only. Applicable for routes with nexthop_type 'vxlan-tunnel'. Otherwise '400' error will be returned
       responses:
-        '207':
+        '204':
           description: OK
+        '207':
+          description: Multi-Status
           schema:
             type: object
             required:
-              - deleted
               - failed
             properties:
-              removed:
-                description: list of removed routes
-                type: array
-                items:
-                  $ref: '#/definitions/RouteEntry'
               failed:
                 description: list of failed routes
                 type: array
@@ -1421,6 +1427,9 @@ definitions:
           code:
             type: integer
             format: int32
+          sub-code:
+            type: integer
+            format: int32
           message:
             type: string
           fields:
@@ -1433,7 +1442,6 @@ definitions:
     type: object
     required:
       - ip_prefix
-      - nexthop_type
       - nexthop
     properties:
       cmd:
@@ -1443,8 +1451,7 @@ definitions:
       ip_prefix:
         description: >-
           destination IP address block, either customer advertised
-          on-premise IP prefix block or customer VM IP address. This
-          is limited to v4 IP address.
+          on-premise IP prefix block or customer VM IP address.
         type: string
       nexthop_type:
         type: string
@@ -1463,29 +1470,17 @@ definitions:
         description: >-
           when ip_prefix has a length == 32, then this is a mac address of the target host defined by the "ip_prefix"
           when ip_prefix has a length  < 32, then this is a mac address of a gateway for the "ip_prefix" network
-          this attrubute is required if nexthop_type=='vxlan-tunnel'.
       vnid:
         type: integer
         format: int32
         description: vxlan id for a tunnel. In case of vxlan tunnel it contains vxlan tunnel id (24-bit). Invalid for other next hop types. This parameter is required if nexthop_type=='vxlan-tunnel'
-      src_ip:
+      error_code:
+        type: integer
+        format: int32
+        description: HTTP error code for the failing route
+      error_msg:
         type: string
-        description: >-
-          tunnel source IP address. By default, it uses the
-          corresponding loopback IP. If the nexthop is v4, then use the
-          v4 loopback IP of the device. If the nexthop is v6, then use
-          the v6 loopback IP of the device.
-      port:
-        type: string
-        enum:
-          - standard
-          - azure
-        description: >-
-          port to use for VXLAN encapsulation standard = 4789 azure = 65330
-          will default to azure
-      error:
-        type: string
-        description: error which causes to the route to be upserted
+        description: error message for the failing route
   PortEntry:
     type: object
     required:
@@ -1552,9 +1547,6 @@ definitions:
         description: interface adminstrative state
   VlanEntry:
     type: object
-    required:
-      - vnet_id
-      - ip_prefix
     properties:
       vnet_id:
         type: string
