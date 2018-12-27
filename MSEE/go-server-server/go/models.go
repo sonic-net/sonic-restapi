@@ -27,11 +27,12 @@ type VrfSnapshotModel struct {
 type RouteModel struct {
     Cmd         string `json:"cmd,omitempty"`
     IPPrefix    string `json:"ip_prefix"`
-    NextHopType string `json:"nexthop_type"`
+    NextHopType string `json:"nexthop_type,omitempty"`
     NextHop     string `json:"nexthop"`
     MACAddress  string `json:"mac_address,omitempty"`
     Vnid        int    `json:"vnid,omitempty"`
-    Error       string `json:"error,omitempty"`
+    Error_code  int    `json:"error_code,omitempty"`
+    Error_msg   string `json:"error_msg,omitempty"`
 }
 
 type RouteDeleteReturnModel struct {
@@ -40,9 +41,6 @@ type RouteDeleteReturnModel struct {
 }
 
 type RoutePatchReturnModel struct {
-    Added   []RouteModel `json:"added,omitempty"`
-    Updated []RouteModel `json:"updated,omitempty"`
-    Deleted []RouteModel `json:"deleted,omitempty"`
     Failed  []RouteModel `json:"failed,omitempty"`
 }
 
@@ -145,6 +143,7 @@ type VnetReturnModel struct {
 
 type ErrorInner struct {
     Code    int      `json:"code"`
+    SubCode *int     `json:"sub-code,omitempty"`
     Message string   `json:"message"`
     Fields  []string `json:"fields,omitempty"`
     Details string   `json:"details,omitempty"`
@@ -229,8 +228,6 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     m.IPPrefix = *required.IPPrefix
     m.NextHop = *required.NextHop
     m.Vnid = required.Vnid
-    m.Error = required.Error
-
     return
 }
 

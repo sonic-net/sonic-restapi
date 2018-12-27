@@ -18,6 +18,10 @@ import (
     "github.com/gorilla/mux"
 )
 
+const RESRC_EXISTS int = 0
+const DEP_MISSING int  = 1
+const DELETE_DEP  int  = 2
+
 func StateHeartbeatGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
@@ -402,13 +406,14 @@ func ConfigInterfaceVlanDelete(w http.ResponseWriter, r *http.Request) {
     vlan_if_pt := swsscommon.NewProducerStateTable(db.swss_db, "VLAN_INTERFACE")
     defer vlan_if_pt.Delete()
 
-    neigh_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_NEIGH", vlan_name, "*"))
+    vlan_dep, err := vlan_dependencies_exist(vlan_name)
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
-    if len(neigh_kv) > 0 {
-        WriteRequestError(w, http.StatusConflict, "2: Deleting object that has child dependency, please delete the Vlan Neighbor child element first", []string{}, "")
+    if vlan_dep {
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, DELETE_DEP,
+             "Deleting object that has child dependency, child element must be deleted first", []string{}, "")
         return
     }
 
@@ -478,14 +483,16 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
         return
     }
     if vlan_kv != nil {
-        WriteRequestError(w, http.StatusConflict, "0: Object already exists: " + vlan_name, []string{}, "")
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+              "Object already exists: " + vlan_name, []string{}, "")
         return
     }
 
     if attr.Vnet_id != "" {
         vnet_id = CacheGetVnetGuidId(attr.Vnet_id)
         if vnet_id == 0 {
-             WriteRequestError(w, http.StatusConflict, "1: VRF/VNET must be created prior to adding it to the VLAN interface" , []string{}, "")
+             WriteRequestErrorWithSubCode(w, http.StatusConflict, DEP_MISSING,
+                   "VRF/VNET must be created prior to adding it to the VLAN interface" , []string{}, "")
              return
         }
     }
@@ -516,6 +523,8 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
         }
         vlan_if_pt.Set(generateDBTableKey(db.separator, vlan_name, attr.IPPrefix), map[string]string{"":""}, "SET", "")
     }
+
+    w.WriteHeader(http.StatusNoContent)
 }
 
 func ConfigInterfaceVlanMemberGet(w http.ResponseWriter, r *http.Request) {
@@ -635,8 +644,9 @@ func ConfigInterfaceVlanMemberPost(w http.ResponseWriter, r *http.Request) {
         return
     }
     for k, _ := range vlan_members {
-        if vars["if_name"] == k[len(generateDBTableKey(db.separator, "_VLAN_MEMBER", vlan_name)) + 1:] {
-            WriteRequestError(w, http.StatusConflict, "0: Object already a member of some vlan: " + vars["if_name"], []string{}, "")
+        if vars["if_name"] == strings.Split(k, db.separator)[2] {
+            WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+                  "Object already a member of some vlan: " + vars["if_name"], []string{}, "")
             return
         }
     }
@@ -780,7 +790,8 @@ func ConfigInterfaceVlanNeighborPost(w http.ResponseWriter, r *http.Request) {
         return
     }
     if neigh_kv != nil {
-        WriteRequestError(w, http.StatusConflict, "0: Object already exists " + vars["ip_addr"], []string{}, "")
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+              "Object already exists " + vars["ip_addr"], []string{}, "")
         return
     }
 
@@ -1207,7 +1218,8 @@ func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
     }
 
     if kv != nil {
-        /* WriteRequestError(w, http.StatusConflict, "0: Object already exists: Default Vxlan VTEP", []string{}, "") */
+        /* WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS, 
+               "Object already exists: Default Vxlan VTEP", []string{}, "") */
         return
     }
 
@@ -1325,6 +1337,17 @@ func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    vnet_dep, err := vnet_dependencies_exist(vnet_id_str)
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vnet_dep {
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, DELETE_DEP,
+              "Deleting object that has child dependency, child element must be deleted first", []string{}, "")
+        return
+    }
+
     pt := swsscommon.NewProducerStateTable(db.swss_db, "VNET")
     defer pt.Delete()
 
@@ -1397,13 +1420,15 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
     }
 
     if kv == nil {
-        WriteRequestError(w, http.StatusConflict, "1: Default VxLAN VTEP must be created prior to creating VRF", []string{"tunnel_type"}, "")
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, DEP_MISSING,
+              "Default VxLAN VTEP must be created prior to creating VRF", []string{"tunnel"}, "")
         return
     }
 
     vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
     if vnet_id != 0 {
-        WriteRequestError(w, http.StatusConflict, "0: Object already exists: " + vars["vnet_name"], []string{}, "")
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+              "Object already exists: " + vars["vnet_name"], []string{}, "")
         return
     }
 
@@ -1475,8 +1500,12 @@ func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
     }
 
     routes, err := SwssGetVrouterRoutes(vnet_id_str, vnidMatch, "*")
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
     var failed []RouteModel
-    var removed []RouteModel
     pt := swsscommon.NewProducerStateTable(db.swss_db, "VNET_ROUTE_TUNNEL_TABLE")
     defer pt.Delete()
 
@@ -1484,20 +1513,22 @@ func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
         table := generateDBTableKey(db.separator, vnet_id_str, r.IPPrefix)
         kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET_ROUTE_TUNNEL_TABLE", table))
         if err != nil || kv == nil {
-            r.Error = "Not found"
+            r.Error_code = http.StatusNotFound
+            r.Error_msg = "Not found"
             failed = append(failed, r)
             continue
         }
         pt.Del(table, "DEL", "")
-        removed = append(removed, r)
     }
 
-    output := RouteDeleteReturnModel{
-        Removed: removed,
-        Failed:  failed,
+    if len(failed) > 0 {
+        output := RoutePatchReturnModel{
+            Failed:  failed,
+        }
+        WriteRequestResponse(w, output, http.StatusMultiStatus)
+    } else {
+        w.WriteHeader(http.StatusNoContent)
     }
-
-    WriteRequestResponse(w, output, http.StatusMultiStatus)
 }
 
 func ConfigVrouterVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
@@ -1596,15 +1627,13 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     pt := swsscommon.NewProducerStateTable(db.swss_db, "VNET_ROUTE_TUNNEL_TABLE")
     defer pt.Delete()
 
-    var added []RouteModel
     var failed []RouteModel
-    var updated []RouteModel
-    var deleted []RouteModel
 
     for _, r := range attr {
         bm_next_hop, err := isBMNextHop(r.IPPrefix, vlanPrefixArr)
         if err != nil {
-            r.Error = "Internal service error"
+            r.Error_code = http.StatusInternalServerError
+            r.Error_msg = "Internal service error"
             failed = append(failed, r)
             continue
         }
@@ -1614,16 +1643,17 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
 		  }
 		  cur_route, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET_ROUTE_TUNNEL_TABLE", vnet_id_str, r.IPPrefix))
 		  if err != nil {
-		       r.Error = "Internal service error"
+             r.Error_code = http.StatusInternalServerError
+             r.Error_msg = "Internal service error"
 		       failed = append(failed, r)
 		  }
 		  if r.Cmd == "delete" {
 		       if cur_route == nil {
-				      r.Error = "Not found"
+                  r.Error_code = http.StatusNotFound
+				      r.Error_msg = "Not found"
 						failed = append(failed, r)
 			    } else {
 				      pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
-						deleted = append(deleted,r)
 				 }
 		  } else {
 		       route_map := make(map[string]string)
@@ -1635,22 +1665,17 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
 				      route_map["vxlanid"] = strconv.Itoa(r.Vnid)
 				 }
 				 pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
-		       if cur_route == nil {
-				      added = append(added, r)
-				 } else {
-				      updated = append(updated, r)
-				 }
 		  }
 	 }
 
-    output := RoutePatchReturnModel{
-        Added:   added,
-        Updated: updated,
-		  Deleted: deleted,
-        Failed:  failed,
+    if len(failed) > 0 {
+        output := RoutePatchReturnModel{
+            Failed:  failed,
+        }
+        WriteRequestResponse(w, output, http.StatusMultiStatus)
+    } else {
+        w.WriteHeader(http.StatusNoContent)
     }
-
-    WriteRequestResponse(w, output, http.StatusMultiStatus)
 }
 
 func StateInterfaceGet(w http.ResponseWriter, r *http.Request) {
@@ -1904,5 +1929,3 @@ func StateStatisticsGroupGet(w http.ResponseWriter, r *http.Request) {
 
     StateStatisticsGetHelper(w, group)
 }
-
-

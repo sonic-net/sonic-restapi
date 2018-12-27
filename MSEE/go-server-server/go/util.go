@@ -65,6 +65,38 @@ func WriteRequestError(w http.ResponseWriter, code int, message string, fields [
     w.Write(b)
 }
 
+
+func WriteRequestErrorWithSubCode(w http.ResponseWriter, code int, sub_code int, message string, fields []string, details string) {
+    e := ErrorInner{
+        Code:     code,
+        SubCode: &sub_code,
+        Message:  message,
+        Fields:   fields,
+        Details:  details,
+    }
+
+    b, err := json.Marshal(ErrorModel{e})
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        b = []byte(`
+{
+  "error": {
+    "code": 500,
+    "message": "Internal service error"
+  }
+}`)
+    } else {
+        w.WriteHeader(code)
+    }
+
+    log.Printf(
+        "error: Request ends with error message %s",
+        b,
+    )
+
+    w.Write(b)
+}
+
 func WriteJsonError(w http.ResponseWriter, err error) {
     switch t := err.(type) {
     case *json.SyntaxError:
@@ -341,4 +373,45 @@ func isBMNextHop(ipprefix string, vlanPrefixArr []string) (bm_next_hop bool, err
 		  }
     }
 	 return
+}
+
+func vlan_dependencies_exist(vlan_name string) (vlan_dep bool, err error) {
+    db := &conf_db_ops
+    vlan_dep = false
+    neigh_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_NEIGH", vlan_name, "*"))
+    if err != nil {
+        return
+    }
+    vlan_mem_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VLAN_MEMBER", vlan_name, "*"))
+    if err != nil {
+        return
+    }
+    if len(neigh_kv) > 0 || len(vlan_mem_kv) > 0 {
+        vlan_dep = true
+    }
+    return
+}
+
+
+func vnet_dependencies_exist(vnet_id_str string) (vnet_dep bool, err error) {
+     db := &app_db_ops
+     vnet_dep = false
+     routes_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VNET_ROUTE_TUNNEL_TABLE", vnet_id_str, "*"))
+     if err != nil {
+        return
+     } else if len(routes_kv) > 0 {
+        vnet_dep = true
+        return
+     }
+     vlan_if_kv, err := GetKVsMulti(conf_db_ops.db_num, generateDBTableKey(conf_db_ops.separator, "_VLAN_INTERFACE","*"))
+     if err != nil {
+        return
+     }
+     for _,v := range vlan_if_kv {
+        if v["vnet_name"] == vnet_id_str {
+            vnet_dep = true
+            return
+        }
+     }
+     return
 }
