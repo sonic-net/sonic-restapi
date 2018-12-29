@@ -321,4 +321,12 @@ var routes = Routes{
         "/v1/state/statistics/{group}",
         StateStatisticsGroupGet,
     },
+
+    // Required to run Unit tests
+    Route{
+        "InMemConfigRestart",
+        "POST",
+        "/v1/config/restartdb",
+        InMemConfigRestart,
+    },
 }

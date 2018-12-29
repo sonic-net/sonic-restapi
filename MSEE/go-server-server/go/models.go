@@ -35,12 +35,7 @@ type RouteModel struct {
     Error_msg   string `json:"error_msg,omitempty"`
 }
 
-type RouteDeleteReturnModel struct {
-    Removed []RouteModel `json:"removed,omitempty"`
-    Failed  []RouteModel `json:"failed,omitempty"`
-}
-
-type RoutePatchReturnModel struct {
+type RouteReturnModel struct {
     Failed  []RouteModel `json:"failed,omitempty"`
 }
 

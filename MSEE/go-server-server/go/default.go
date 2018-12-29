@@ -1522,7 +1522,7 @@ func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
     }
 
     if len(failed) > 0 {
-        output := RoutePatchReturnModel{
+        output := RouteReturnModel {
             Failed:  failed,
         }
         WriteRequestResponse(w, output, http.StatusMultiStatus)
@@ -1656,6 +1656,17 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
 				      pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
 				 }
 		  } else {
+             if cur_route != nil {
+                  if cur_route["endpoint"] != r.NextHop ||
+                     cur_route["mac_address"] != r.MACAddress ||
+                     cur_route["vxlanid"] != strconv.Itoa(r.Vnid) {
+                         /* Delete and re-add the route as it is not identical */
+                         pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
+                  } else {
+                         /* Identical route */
+                         continue
+                  }
+             }
 		       route_map := make(map[string]string)
 				 route_map["endpoint"] = r.NextHop
 				 if(r.MACAddress != "") {
@@ -1669,7 +1680,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
 	 }
 
     if len(failed) > 0 {
-        output := RoutePatchReturnModel{
+        output := RouteReturnModel {
             Failed:  failed,
         }
         WriteRequestResponse(w, output, http.StatusMultiStatus)
@@ -1928,4 +1939,11 @@ func StateStatisticsGroupGet(w http.ResponseWriter, r *http.Request) {
     group := msee.MseeGroupT(vars["group"])
 
     StateStatisticsGetHelper(w, group)
+}
+
+// Required to run Unit Tests
+func InMemConfigRestart(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    genVnetGuidMap()
+    w.WriteHeader(http.StatusNoContent)
 }
