@@ -329,21 +329,12 @@ func ConfigInterfaceVlanGet(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
     var attr VlanModel
 
-    vlan_id, err := validateVlanID(vars["vlan_id"])
+    vlan_id, err := vlan_validator(w, vars["vlan_id"])
     if err != nil {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        // Error is already handled in this case
         return
     }
     vlan_name := "Vlan" + vars["vlan_id"]
-    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
-    if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-    if vlan_kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
-        return
-    }
 
     vlan_if_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN_INTERFACE", vlan_name))
     if err != nil {
@@ -387,21 +378,12 @@ func ConfigInterfaceVlanDelete(w http.ResponseWriter, r *http.Request) {
     db := &conf_db_ops
     vars := mux.Vars(r)
 
-    _, err := validateVlanID(vars["vlan_id"])
+    _, err := vlan_validator(w, vars["vlan_id"])
     if err != nil {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        // Error is already handled in this case
         return
     }
     vlan_name := "Vlan" + vars["vlan_id"]
-    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
-    if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-    if vlan_kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
-        return
-    }
 
     vlan_if_pt := swsscommon.NewProducerStateTable(db.swss_db, "VLAN_INTERFACE")
     defer vlan_if_pt.Delete()
@@ -532,22 +514,12 @@ func ConfigInterfaceVlanMemberGet(w http.ResponseWriter, r *http.Request) {
     db := &conf_db_ops
     vars := mux.Vars(r)
 
-    vlan_id, err := validateVlanID(vars["vlan_id"])
+    vlan_id, err := vlan_validator(w, vars["vlan_id"])
     if err != nil {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        // Error is already handled in this case
         return
     }
     vlan_name := "Vlan" + vars["vlan_id"]
-
-    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
-    if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-    if vlan_kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
-        return
-    }
 
     vlan_member_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN_MEMBER", vlan_name, vars["if_name"]))
     if err != nil {
@@ -575,23 +547,12 @@ func ConfigInterfaceVlanMemberDelete(w http.ResponseWriter, r *http.Request) {
     db := &conf_db_ops
     vars := mux.Vars(r)
 
-    _, err := validateVlanID(vars["vlan_id"])
+    _, err := vlan_validator(w, vars["vlan_id"])
     if err != nil {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        // Error is already handled in this case
         return
     }
     vlan_name := "Vlan" + vars["vlan_id"]
-
-    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
-    if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-    if vlan_kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
-        return
-    }
-
     vlan_member_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN_MEMBER", vlan_name, vars["if_name"]))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
@@ -621,23 +582,13 @@ func ConfigInterfaceVlanMemberPost(w http.ResponseWriter, r *http.Request) {
     }
 
     /* Config validation and failure reporting */
-    _, err = validateVlanID(vars["vlan_id"])
+    _, err = vlan_validator(w, vars["vlan_id"])
     if err != nil {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        // Error is already handled in this case
         return
     }
+
     vlan_name := "Vlan" + vars["vlan_id"]
-
-    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
-    if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-    if vlan_kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
-        return
-    }
-
     vlan_members, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VLAN_MEMBER", "*"))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
@@ -666,27 +617,16 @@ func ConfigInterfaceVlanNeighborGet(w http.ResponseWriter, r *http.Request) {
     db := &conf_db_ops
     vars := mux.Vars(r)
 
-    vlan_id, err := validateVlanID(vars["vlan_id"])
-    if err != nil {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
-        return
-    }
-
     if !IsValidIPBoth(vars["ip_addr"]) {
         WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"ip_addr"}, "")
         return
     }
-    vlan_name := "Vlan" + vars["vlan_id"]
-
-    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    vlan_id, err := vlan_validator(w, vars["vlan_id"])
     if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        // Error is already handled in this case
         return
     }
-    if vlan_kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
-        return
-    }
+    vlan_name := "Vlan" + vars["vlan_id"]
 
     neigh_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_NEIGH", vlan_name, vars["ip_addr"]))
     if err != nil {
@@ -711,27 +651,17 @@ func ConfigInterfaceVlanNeighborDelete(w http.ResponseWriter, r *http.Request) {
     db := &conf_db_ops
     vars := mux.Vars(r)
 
-    _, err := validateVlanID(vars["vlan_id"])
-    if err != nil {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
-        return
-    }
-
     if !IsValidIPBoth(vars["ip_addr"]) {
         WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"ip_addr"}, "")
         return
     }
-    vlan_name := "Vlan" + vars["vlan_id"]
 
-    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    _, err := vlan_validator(w, vars["vlan_id"])
     if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        // Error is already handled in this case
         return
     }
-    if vlan_kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
-        return
-    }
+    vlan_name := "Vlan" + vars["vlan_id"]
 
     neigh_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_NEIGH", vlan_name, vars["ip_addr"]))
     if err != nil {
@@ -756,12 +686,6 @@ func ConfigInterfaceVlanNeighborPost(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
     var family string
 
-    _, err := validateVlanID(vars["vlan_id"])
-    if err != nil {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
-        return
-    }
-
     if !IsValidIPBoth(vars["ip_addr"]) {
         WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"ip_addr"}, "")
         return
@@ -772,17 +696,13 @@ func ConfigInterfaceVlanNeighborPost(w http.ResponseWriter, r *http.Request) {
     } else {
         family = "IPv6"
     }
-    vlan_name := "Vlan" + vars["vlan_id"]
 
-    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    _, err := vlan_validator(w, vars["vlan_id"])
     if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        // Error is already handled in this case
         return
     }
-    if vlan_kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
-        return
-    }
+    vlan_name := "Vlan" + vars["vlan_id"]
 
     neigh_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_NEIGH", vlan_name, vars["ip_addr"]))
     if err != nil {
@@ -1317,23 +1237,12 @@ func ConfigVrouterGet(w http.ResponseWriter, r *http.Request) {
 
 func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-    db := &conf_db_ops
     vars := mux.Vars(r)
+    db := &conf_db_ops
 
-    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
-    if vnet_id == 0 {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
-        return
-    }
-    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
-    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET", vnet_id_str))
+    vnet_id_str, _, err := get_and_validate_vnet_id(w, vars["vnet_name"])
     if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-
-    if kv == nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
+        // Error is already handled in this case
         return
     }
 
@@ -1354,29 +1263,20 @@ func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
     pt.Del(vnet_id_str, "DEL", "")
     CacheDeleteVnetGuidId(vars["vnet_name"])
 
-    delete(configSnapshot.VrfMap, int(vnet_id))
+    vnet_id, err := strconv.Atoi(vnet_id_str)
+    if err != nil {
+         delete(configSnapshot.VrfMap, vnet_id)
+    }
     w.WriteHeader(http.StatusNoContent)
 }
 
 func ConfigVrouterVrfIdGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-    db := &conf_db_ops
     vars := mux.Vars(r)
 
-    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
-    if vnet_id == 0 {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
-        return
-    }
-    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
-    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET", vnet_id_str))
+    _, kv, err := get_and_validate_vnet_id(w, vars["vnet_name"])
     if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-
-    if kv == nil {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{}, "")
+        // Error is already handled in this case
         return
     }
 
@@ -1471,22 +1371,12 @@ func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
     db := &app_db_ops
     vars := mux.Vars(r)
 
-    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
-    if vnet_id == 0 {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{vars["vnet_name"]}, "")
-        return
-    }
-    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
-    kv, err := GetKVs(conf_db_ops.db_num, generateDBTableKey(conf_db_ops.separator, "_VNET", vnet_id_str))
+    vnet_id_str, _, err := get_and_validate_vnet_id(w, vars["vnet_name"])
     if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        // Error is already handled in this case
         return
     }
 
-    if kv == nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
-        return
-    }
     vnidMatch := -1
     if len(r.URL.Query()["vnid"]) == 1 {
         vnid := r.URL.Query()["vnid"][0]
@@ -1511,13 +1401,6 @@ func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
 
     for _, r := range routes {
         table := generateDBTableKey(db.separator, vnet_id_str, r.IPPrefix)
-        kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET_ROUTE_TUNNEL_TABLE", table))
-        if err != nil || kv == nil {
-            r.Error_code = http.StatusNotFound
-            r.Error_msg = "Not found"
-            failed = append(failed, r)
-            continue
-        }
         pt.Del(table, "DEL", "")
     }
 
@@ -1535,20 +1418,9 @@ func ConfigVrouterVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     vars := mux.Vars(r)
 
-    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
-    if vnet_id == 0 {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{vars["vnet_name"]}, "")
-        return
-    }
-    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
-    kv, err := GetKVs(conf_db_ops.db_num, generateDBTableKey(conf_db_ops.separator, "_VNET", vnet_id_str))
+    vnet_id_str, _, err := get_and_validate_vnet_id(w, vars["vnet_name"])
     if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-
-    if kv == nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
+        // Error is already handled in this case
         return
     }
 
@@ -1591,20 +1463,9 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     db := &app_db_ops
     vars := mux.Vars(r)
 
-    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
-    if vnet_id == 0 {
-        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{vars["vnet_name"]}, "")
-        return
-    }
-    vnet_id_str := strconv.FormatUint(uint64(vnet_id), 10)
-    kv, err := GetKVs(conf_db_ops.db_num, generateDBTableKey(conf_db_ops.separator, "_VNET", vnet_id_str))
+    vnet_id_str, _, err := get_and_validate_vnet_id(w, vars["vnet_name"])
     if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-
-    if kv == nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
+        // Error is already handled in this case
         return
     }
 

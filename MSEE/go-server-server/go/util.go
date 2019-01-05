@@ -415,3 +415,45 @@ func vnet_dependencies_exist(vnet_id_str string) (vnet_dep bool, err error) {
      }
      return
 }
+
+func vlan_validator(w http.ResponseWriter, vlan_id_str string) (vlan_id int, err error) {
+    db := &conf_db_ops
+    vlan_id, err = validateVlanID(vlan_id_str)
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return vlan_id, err
+    }
+    vlan_name := "Vlan" + vlan_id_str
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{"vlan_id"}, "")
+        return vlan_id, errors.New("Internal service err")
+    }
+    if vlan_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
+        return vlan_id, errors.New("Vlan obj not found")
+    }
+    return
+}
+
+func get_and_validate_vnet_id(w http.ResponseWriter, vnet_name string) (vnet_id_str string, kv map[string]string, err error) {
+    db := &conf_db_ops
+    vnet_id := CacheGetVnetGuidId(vnet_name)
+    if vnet_id == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{vnet_name}, "")
+        err = errors.New("Vnet obj not found")
+        return
+    }
+    vnet_id_str = strconv.FormatUint(uint64(vnet_id), 10)
+    kv, err = GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET", vnet_id_str))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if kv == nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
+        return
+    }
+    return
+}
