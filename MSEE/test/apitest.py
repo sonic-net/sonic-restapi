@@ -485,29 +485,71 @@ class ra_client_positive_tests(rest_api_client):
 
 
 # Vlan Member
+    def test_vlan_member_tagged_untagged_interop(self):
+        vlan0 = 2
+        vlans = [3,4]
+        members = ["Ethernet2", "Ethernet3", "Ethernet4"]
+        self.post_generic_vrouter_and_deps()
+        r = self.post_config_vlan(vlan0, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        self.assertEqual(r.status_code, 204)
+        for member in members:
+           r = self.post_config_vlan_member(vlan0, member, {'tagging_mode' : 'untagged'})
+           self.assertEqual(r.status_code, 204)
+           r = self.get_config_vlan_member(vlan0,  member)
+           self.assertEqual(r.status_code, 200)
+           j = json.loads(r.text)
+           self.assertEqual(j, {
+                      'vlan_id': vlan0,
+                      'if_name': member,
+                      'attr': {'tagging_mode' : 'untagged'}
+           })
+        for vlan in vlans:
+             r = self.post_config_vlan(vlan, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+             self.assertEqual(r.status_code, 204)
+             # post
+             for member in members:
+                 r = self.post_config_vlan_member(vlan, member, {'tagging_mode' : 'tagged'})
+                 self.assertEqual(r.status_code, 204)
+
+                 # get
+                 r = self.get_config_vlan_member(vlan,  member)
+                 self.assertEqual(r.status_code, 200)
+                 j = json.loads(r.text)
+                 self.assertEqual(j, {
+                      'vlan_id': vlan,
+                      'if_name': member,
+                      'attr': {'tagging_mode' : 'tagged'}
+                 })
+
     def test_vlan_member_tagging_all_verbs(self):
-        # post
-        self.post_generic_vlan_and_deps()
-        r = self.post_config_vlan_member(2, "Ethernet2", {'tagging_mode' : 'tagged'})
-        self.assertEqual(r.status_code, 204)
+        vlans = [2,3]
+        members = ['Ethernet2', 'Ethernet3']
+        self.post_generic_vrouter_and_deps()
+        for vlan in vlans:
+             r = self.post_config_vlan(vlan, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+             self.assertEqual(r.status_code, 204)
+             # post
+             for member in members:
+                 r = self.post_config_vlan_member(vlan, member, {'tagging_mode' : 'tagged'})
+                 self.assertEqual(r.status_code, 204)
 
-        # get
-        r = self.get_config_vlan_member(2, "Ethernet2")
-        self.assertEqual(r.status_code, 200)
-        j = json.loads(r.text)
-        self.assertEqual(j, {
-            'vlan_id': 2,
-            'if_name': 'Ethernet2',
-            'attr': {'tagging_mode' : 'tagged'}
-        })
-        vlan_mem_table = self.configdb.hgetall('_VLAN_MEMBER|Vlan2|Ethernet2')
-        self.assertEqual(vlan_mem_table, {b'tagging_mode':b'tagged'})
+                 # get
+                 r = self.get_config_vlan_member(vlan,  member)
+                 self.assertEqual(r.status_code, 200)
+                 j = json.loads(r.text)
+                 self.assertEqual(j, {
+                      'vlan_id': vlan,
+                      'if_name': member,
+                      'attr': {'tagging_mode' : 'tagged'}
+                 })
+                 vlan_mem_table = self.configdb.hgetall('_VLAN_MEMBER|Vlan'+str(vlan)+'|'+member)
+                 self.assertEqual(vlan_mem_table, {b'tagging_mode':b'tagged'})
 
-        # delete
-        r = self.delete_config_vlan_member(2, "Ethernet2")
-        self.assertEqual(r.status_code, 204)
-        vlan_mem_table = self.configdb.hgetall('_VLAN_MEMBER|Vlan2|Ethernet2')
-        self.assertEqual(vlan_mem_table, {})
+                 # delete
+                 r = self.delete_config_vlan_member(vlan, member)
+                 self.assertEqual(r.status_code, 204)
+                 vlan_mem_table = self.configdb.hgetall('_VLAN_MEMBER|'+ str(vlan) + "|" +  member)
+                 self.assertEqual(vlan_mem_table, {})
 
     def test_vlan_member_notagging_all_verbs(self):
         # post
@@ -961,22 +1003,50 @@ class ra_client_negative_tests(rest_api_client):
         self.assertEqual(r.status_code, 204)
 
 # Vlan Member
-    def test_post_vlan_mem_which_exists(self):
+    def test_post_vlan_mem_which_exists_tagged(self):
         self.post_generic_vlan_and_deps()
         r = self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix' : '10.1.1.0/24'})
         self.assertEqual(r.status_code, 204)
-        r = self.post_config_vlan_member(2, "Ethernet1", {})
+        attr = {'tagging_mode' : 'tagged'}
+        r = self.post_config_vlan_member(2, "Ethernet1", attr)
         self.assertEqual(r.status_code, 204)
 
-        r = self.post_config_vlan_member(2, "Ethernet1", {})
+        r = self.post_config_vlan_member(2, "Ethernet1", attr)
         self.assertEqual(r.status_code, 409)
         j = json.loads(r.text)
         self.assertEqual(RESRC_EXISTS, j['error']['sub-code'])
 
-        r = self.post_config_vlan_member(3, "Ethernet1", {})
+        r = self.post_config_vlan_member(3, "Ethernet1", attr)
+        self.assertEqual(r.status_code, 204)
+
+        
+    def test_post_vlan_mem_which_exists_untagged(self):
+        self.post_generic_vlan_and_deps()
+        r = self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix' : '10.1.1.0/24'})
+        self.assertEqual(r.status_code, 204)
+        attr = {'tagging_mode' : 'untagged'}
+
+        r = self.post_config_vlan_member(2, "Ethernet1", attr)
+        self.assertEqual(r.status_code, 204)
+
+        r = self.post_config_vlan_member(2, "Ethernet1", attr)
         self.assertEqual(r.status_code, 409)
         j = json.loads(r.text)
         self.assertEqual(RESRC_EXISTS, j['error']['sub-code'])
+
+        r = self.post_config_vlan_member(3, "Ethernet1", attr)
+        self.assertEqual(r.status_code, 409)
+        j = json.loads(r.text)
+        self.assertEqual(RESRC_EXISTS, j['error']['sub-code'])
+
+        r = self.delete_config_vlan_member(2, "Ethernet1")
+        self.assertEqual(r.status_code, 204)
+        r = self.post_config_vlan_member(3, "Ethernet1", attr)
+        self.assertEqual(r.status_code, 204)
+
+        attr = {'tagging_mode' : 'tagged'}
+        r = self.post_config_vlan_member(2, "Ethernet1", attr)
+        self.assertEqual(r.status_code, 204)
 
     def test_get_vlan_member_not_created(self):
         self.post_generic_vlan_and_deps()

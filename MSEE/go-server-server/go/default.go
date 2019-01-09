@@ -594,12 +594,25 @@ func ConfigInterfaceVlanMemberPost(w http.ResponseWriter, r *http.Request) {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
-    for k, _ := range vlan_members {
-        if vars["if_name"] == strings.Split(k, db.separator)[2] {
-            WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
-                  "Object already a member of some vlan: " + vars["if_name"], []string{}, "")
-            return
+    if attr.Tagging == "untagged" {
+        for k, v := range vlan_members {
+            if vars["if_name"] == strings.Split(k, db.separator)[2] && v["tagging_mode"] == "untagged" {
+                WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+                  "Object already an untagged member of some vlan: " + vars["if_name"], []string{}, "")
+                return
+            }
         }
+    }
+
+    vlan_member_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN_MEMBER", vlan_name, vars["if_name"]))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if vlan_member_kv != nil {
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+                  "Object already a member of this vlan: " + vars["if_name"], []string{}, "")
+        return
     }
 
     /* Config update */
