@@ -51,13 +51,13 @@
 # Baremetal scenario description:
 # Every "baremetal server" port is connected to one baremetal server. Baremetals that reside on 
 # the same subnet+vnet are defined to be on a particular vlan interface. The vlan interface acts
-# as the gateway and as such must be programmed wuth the gateway IP. Traffic inbound/outbound 
+# as the gateway and as such must be programmed with the gateway IP. Traffic inbound/outbound
 # from the TOR is via a VxLAN tunnel. Customer separation is provided using Vnet, vrf and unique vxlan vnid.
 #
 # Our dataplane is designed as follow
 # 1. We have virtual routers which represents a "virtual network" for a customer. Virtual networks are
-#    defined using a string vnet_id, this internally creates a Virtual routers to maintain separate routing/forwarding.
-#    The virtual routers are used to bind the customer's unique vnid and customer's local baremeal device ports 
+#    defined using a string vnet_id, this internally creates a virtual router to maintain separate routing/forwarding domain.
+#    The virtual routers are used to bind the customer's unique vnid and customer's local baremetal device ports
 #    and as a result provide Virtual Network connectivity with the rest of Azure
 # 2. We have a virtual routing table which is unique and separated for every virtual router.
 # 3. We have tunnels which represent "Azure" next hops for virtual routing tables.
@@ -67,7 +67,7 @@
 # REST API creation(POST) dependency list:
 # 1. VxLAN VTEP: /config/tunnel/decap/vxlan OR Day 0 configuration. No dependency. 
 # 2. VRF/VNET: /config/vrouter/{vnet_id} depends on 1(VxLAN VTEP)
-# 3. VLAN: /config/interface/vlan Depends on 2(VNET) iff vlan needs association to vrf/vnet
+# 3. VLAN: /config/interface/vlan Depends on 2(VNET) if vlan needs association to vrf/vnet
 # 4. Vlan member: /config/interface/vlan/{vlan_id}/member Depends on 3(VLAN)
 # 5. Vlan Neighbor: /config/interface/vlan/{vlan_id}/neighbor Depends on 3(VLAN)
 # 6. VRF/VNET Routes: /config/vrouter/{vnet_id}/routes depends on 2(VNET)
@@ -480,7 +480,7 @@ paths:
     '/config/interface/vlan/{vlan_id}/member/{if_name}'
     post:
       summary: Add a physical port to a vlan interface
-      description: Add a member to interface Vlan{vlan_id}. If the vlan interface does not exist on SONiC it returns a '404' error. If such a member is already present on any Vlan interface this returns '409' sub-code 0. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If attr with tagging mode is provided it will be honored in config, if not, the default tagging mode will be set to 'untagged'.
+      description: Add a member to interface Vlan{vlan_id}. If the vlan interface does not exist on SONiC it returns a '404' error. If such a member is already present on this Vlan interface the API returns '409' sub-code 0. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If attr with tagging mode is provided it will be honored in config, if not, the default tagging mode will be set to 'untagged'. Vlan members may be tagged or untagged, but, the Vlan member port may be untagged in only one Vlan interface, deviations from this will cause the API to return '409' sub-code 0. 
       parameters:
         - name: vlan_id
           in: path
@@ -519,7 +519,7 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         '409':
-          description: Resource Conflict. VLAN member already exists on this or another VLAN interface.
+          description: Resource Conflict. VLAN member already exists on this VLAN interface OR Vlan member is being added to 2nd Vlan inteface as an untagged member.
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -1467,13 +1467,11 @@ definitions:
           When nexthop_type is 'vxlan_tunnel', the next hop is the PA address of the customer VM
       mac_address:
         type: string
-        description: >-
-          when ip_prefix has a length == 32, then this is a mac address of the target host defined by the "ip_prefix"
-          when ip_prefix has a length  < 32, then this is a mac address of a gateway for the "ip_prefix" network
+        description: mac_address of the target VM
       vnid:
         type: integer
         format: int32
-        description: vxlan id for a tunnel. In case of vxlan tunnel it contains vxlan tunnel id (24-bit). Invalid for other next hop types. This parameter is required if nexthop_type=='vxlan-tunnel'
+        description: vxlan id to be used for the tunnel. Optional arg. If it isn't provided the default vxlan id defined for the vnet/vrf will be used as the destination vnid.
       error_code:
         type: integer
         format: int32
