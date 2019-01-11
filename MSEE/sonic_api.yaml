@@ -9,7 +9,6 @@
 #   401 - Unauthorized.  Invalid authentication credentials 
 #   403 - Forbidden (capacity isssues)
 #   404 - Object is not found
-#   405 - Method not allowed. Some attribute can not be updated.
 #   409 - Conflict. Request cannot be completed due to conflict with current state of target resource. 
 #   500 - Internal Server Error
 #   503 - Service Unavailable
@@ -19,7 +18,6 @@
 #   401 - Unauthorized.  Invalid authentication credentials 
 #   403 - Forbidden (capacity isssues)
 #   404 - Object is not found
-#   405 - Method not allowed. Some attribute can not be updated.
 #   500 - Internal Server Error
 #   503 - Service Unavailable
 # get:
