@@ -22,4 +22,5 @@ var ClientCertFlag = flag.String("clientcert", "", "Client cert file")
 var ClientCertCommonNameFlag = flag.String("clientcertcommonname", "SonicCLient", "Comma separated list of trusted common names in the client cert file")
 var ServerCertFlag = flag.String("servercert", "", "Server cert file")
 var ServerKeyFlag = flag.String("serverkey", "", "Server key file")
+var RunApiAsLocalTestDocker = flag.Bool("localapitestdocker", false, "Defines whether Rest API is to be run as an independent test docker or with other SONiC components")
 

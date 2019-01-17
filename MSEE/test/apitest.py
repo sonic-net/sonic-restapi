@@ -14,12 +14,27 @@ TEST_HOST = 'http://localhost:8080/'
 logging.basicConfig(filename='test.log', filemode='w', level=logging.INFO)
 l = logging.getLogger('rest_api_test')
 
+# DB Names
+VXLAN_TUNNEL_TB   = "VXLAN_TUNNEL"
+VNET_TB           = "VNET"
+VLAN_TB           = "VLAN"
+VLAN_INTF_TB      = "VLAN_INTERFACE"
+VLAN_MEMB_TB      = "VLAN_MEMBER"
+VLAN_NEIGH_TB     = "NEIGH"
+ROUTE_TUN_TB      = "_VNET_ROUTE_TUNNEL_TABLE"
+LOCAL_ROUTE_TB    = "_VNET_ROUTE_TABLE"
+
+# DB Helper constants
+VNET_NAME_PREF    = "vnet_"
+VLAN_NAME_PREF    = "Vlan"
+
 RESRC_EXISTS = 0
 DEP_MISSING = 1
 DELETE_DEP = 2
 
 class rest_api_client(unittest.TestCase):
     maxDiff = None
+
     def post(self, url, body = []):
         if body == None:
             data = None
@@ -175,16 +190,16 @@ class rest_api_client(unittest.TestCase):
 
     def check_routes_exist_in_db(self, vnet_num_mapped, routes_arr):
        for route in routes_arr:
-           route_table = self.db.hgetall('_VNET_ROUTE_TUNNEL_TABLE:'+str(vnet_num_mapped)+':'+route['ip_prefix'])
+           route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(vnet_num_mapped)+':'+route['ip_prefix'])
            self.assertEqual(route_table, {
                             b'endpoint' : route['nexthop'],
                             b'mac_address' : route['mac_address'],
-                            b'vxlanid' : str(route['vnid'])
+                            b'vni' : str(route['vnid'])
                           })
 
     def check_routes_dont_exist_in_db(self, vnet_num_mapped, routes_arr):
        for route in routes_arr:
-           route_table = self.db.hgetall('_VNET_ROUTE_TUNNEL_TABLE:'+str(vnet_num_mapped)+':'+route['ip_prefix'])
+           route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(vnet_num_mapped)+':'+route['ip_prefix'])
            self.assertEqual(route_table, {})
 
     # Test setup
@@ -264,7 +279,7 @@ class ra_client_positive_tests(rest_api_client):
         })
         self.assertEqual(r.status_code, 204)
 
-        tunnel_table = self.configdb.hgetall('_VXLAN_TUNNEL|default_vxlan_tunnel')
+        tunnel_table = self.configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel')
         self.assertEqual(tunnel_table, {b'src_ip': b'34.53.1.0'})
         l.info("Tunnel table is %s", tunnel_table)
         self.helper_get_config_tunnel_decap_tunnel_type()
@@ -274,7 +289,7 @@ class ra_client_positive_tests(rest_api_client):
         r = self.delete_config_tunnel_decap_tunnel_type('vxlan')
         self.assertEqual(r.status_code, 204)
         # The delete is a no-op and should return 204, moreover the tunnel should not be deleted 
-        tunnel_table = self.configdb.hgetall('_VXLAN_TUNNEL|default_vxlan_tunnel')
+        tunnel_table = self.configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel')
         self.assertEqual(tunnel_table, {b'src_ip': b'34.53.1.0'})
         self.helper_get_config_tunnel_decap_tunnel_type()
 
@@ -303,11 +318,11 @@ class ra_client_positive_tests(rest_api_client):
         })
         self.assertEqual(r.status_code, 204)
 
-        vrouter_table = self.configdb.hgetall('_VNET|1')
+        vrouter_table = self.configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         self.assertEqual(vrouter_table, {
 							b'vxlan_tunnel': b'default_vxlan_tunnel',
 							b'vni': b'1001',
-							b'guid': b'vnet-guid-1'
+							# TODO: b'guid': b'vnet-guid-1'
 							})
 
     def  test_get_vrouter(self):
@@ -318,7 +333,7 @@ class ra_client_positive_tests(rest_api_client):
         self.post_generic_vrouter_and_deps()
         r = self.delete_config_vrouter_vrf_id("vnet-guid-1")
         self.assertEqual(r.status_code, 204)
-        vrouter_table = self.configdb.hgetall('_VNET|1')
+        vrouter_table = self.configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         self.assertEqual(vrouter_table, {})
 
     def test_guid_persistence(self):
@@ -340,11 +355,11 @@ class ra_client_positive_tests(rest_api_client):
              r = self.post_config_vrouter_vrf_id("vnet-guid-"+str(i), {'vnid': 1000+i})
              self.assertEqual(r.status_code, 204)
              self.check_vrouter_exists("vnet-guid-"+str(i), 1000+i)
-             vrouter_table = self.configdb.hgetall('_VNET|'+str(i))
+             vrouter_table = self.configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i))
              self.assertEqual(vrouter_table, {
                      b'vxlan_tunnel': b'default_vxlan_tunnel',
                      b'vni': b'100'+str(i),
-                     b'guid': b'vnet-guid-'+str(i)
+                     # TODO: b'guid': b'vnet-guid-'+str(i)
                      })
 
         for i in range (1,4):
@@ -353,21 +368,21 @@ class ra_client_positive_tests(rest_api_client):
              r = self.post_config_vrouter_vrf_id("vnet-guid-"+str(i+3), {'vnid': 1003+i})
              self.assertEqual(r.status_code, 204)
              self.check_vrouter_exists("vnet-guid-"+str(i+3), 1003+i)
-             vrouter_table = self.configdb.hgetall('_VNET|'+str(i))
+             vrouter_table = self.configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i))
              self.assertEqual(vrouter_table, {
                      b'vxlan_tunnel': b'default_vxlan_tunnel',
                      b'vni': b'100'+str(i+3),
-                     b'guid': b'vnet-guid-'+str(i+3)
+                     # TODO: b'guid': b'vnet-guid-'+str(i+3)
                      })
 
              r = self.post_config_vrouter_vrf_id("vnet-guid-"+str(i+6), {'vnid': 1006+i})
              self.assertEqual(r.status_code, 204)
              self.check_vrouter_exists("vnet-guid-"+str(i+6), 1006+i)
-             vrouter_table = self.configdb.hgetall('_VNET|'+str(i+3))
+             vrouter_table = self.configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i+3))
              self.assertEqual(vrouter_table, {
                      b'vxlan_tunnel': b'default_vxlan_tunnel',
                      b'vni': b'100'+str(i+6),
-                     b'guid': b'vnet-guid-'+str(i+6)
+                     # TODO: b'guid': b'vnet-guid-'+str(i+6)
                      })
              
 
@@ -385,15 +400,15 @@ class ra_client_positive_tests(rest_api_client):
             'vlan_id': 2,
             'attr': {}
         })
-        vlan_table = self.configdb.hgetall('_VLAN|Vlan2')
+        vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {b'vlanid': b'2'})
-        vlan_intf_table = self.configdb.hgetall('_VLAN_INTERFACE|Vlan2')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_intf_table, {})
 
         # delete
         r = self.delete_config_vlan(2)
         self.assertEqual(r.status_code, 204)
-        vlan_table = self.configdb.hgetall('_VLAN|Vlan2')
+        vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {})
 
     def test_vlan_with_vnetid_all_verbs(self):
@@ -410,17 +425,17 @@ class ra_client_positive_tests(rest_api_client):
             'vlan_id': 2,
             'attr': {'vnet_id':'vnet-guid-1'}
         })
-        vlan_table = self.configdb.hgetall('_VLAN|Vlan2')
+        vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {b'vlanid': b'2'})
-        vlan_intf_table = self.configdb.hgetall('_VLAN_INTERFACE|Vlan2')
-        self.assertEqual(vlan_intf_table, {b'vnet_name':b'1'})
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
+        self.assertEqual(vlan_intf_table, {b'vnet_name': VNET_NAME_PREF + '1'})
 
         # delete
         r = self.delete_config_vlan(2)
         self.assertEqual(r.status_code, 204)
-        vlan_table = self.configdb.hgetall('_VLAN|Vlan2')
+        vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {})
-        vlan_intf_table = self.configdb.hgetall('_VLAN_INTERFACE|Vlan2')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_intf_table, {})
 
     def test_vlan_with_ippref_all_verbs(self):
@@ -437,19 +452,19 @@ class ra_client_positive_tests(rest_api_client):
             'vlan_id': 2,
             'attr': {'ip_prefix':'10.0.1.1/24'}
         })
-        vlan_table = self.configdb.hgetall('_VLAN|Vlan2')
+        vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {b'vlanid': b'2'})
-        vlan_intf_table = self.configdb.hgetall('_VLAN_INTERFACE|Vlan2|10.0.1.1/24')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
         self.assertEqual(vlan_intf_table, {b'':b''})
-        vlan_intf_table = self.configdb.hgetall('_VLAN_INTERFACE|Vlan2')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_intf_table, {})
 
         # delete
         r = self.delete_config_vlan(2)
         self.assertEqual(r.status_code, 204)
-        vlan_table = self.configdb.hgetall('_VLAN|Vlan2')
+        vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {})
-        vlan_intf_table = self.configdb.hgetall('_VLAN_INTERFACE|Vlan2|10.0.1.1/24')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
         self.assertEqual(vlan_intf_table, {})
 
     def test_vlan_all_args_all_verbs(self):
@@ -466,21 +481,21 @@ class ra_client_positive_tests(rest_api_client):
             'vlan_id': 2,
             'attr': {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'}
         })
-        vlan_table = self.configdb.hgetall('_VLAN|Vlan2')
+        vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {b'vlanid': b'2'})
-        vlan_intf_table = self.configdb.hgetall('_VLAN_INTERFACE|Vlan2|10.0.1.1/24')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
         self.assertEqual(vlan_intf_table, {b'':b''})
-        vlan_intf_table = self.configdb.hgetall('_VLAN_INTERFACE|Vlan2')
-        self.assertEqual(vlan_intf_table, {b'vnet_name':b'1'})
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
+        self.assertEqual(vlan_intf_table, {b'vnet_name': VNET_NAME_PREF+'1'})
 
         # delete
         r = self.delete_config_vlan(2)
         self.assertEqual(r.status_code, 204)
-        vlan_table = self.configdb.hgetall('_VLAN|Vlan2')
+        vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {})
-        vlan_intf_table = self.configdb.hgetall('_VLAN_INTERFACE|Vlan2')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_intf_table, {})
-        vlan_intf_table = self.configdb.hgetall('_VLAN_INTERFACE|Vlan2|10.0.1.1/24')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
         self.assertEqual(vlan_intf_table, {})
 
 
@@ -542,13 +557,13 @@ class ra_client_positive_tests(rest_api_client):
                       'if_name': member,
                       'attr': {'tagging_mode' : 'tagged'}
                  })
-                 vlan_mem_table = self.configdb.hgetall('_VLAN_MEMBER|Vlan'+str(vlan)+'|'+member)
+                 vlan_mem_table = self.configdb.hgetall(VLAN_MEMB_TB + '|' + VLAN_NAME_PREF +str(vlan)+'|'+member)
                  self.assertEqual(vlan_mem_table, {b'tagging_mode':b'tagged'})
 
                  # delete
                  r = self.delete_config_vlan_member(vlan, member)
                  self.assertEqual(r.status_code, 204)
-                 vlan_mem_table = self.configdb.hgetall('_VLAN_MEMBER|'+ str(vlan) + "|" +  member)
+                 vlan_mem_table = self.configdb.hgetall(VLAN_MEMB_TB + '|' + VLAN_NAME_PREF + str(vlan) + "|" +  member)
                  self.assertEqual(vlan_mem_table, {})
 
     def test_vlan_member_notagging_all_verbs(self):
@@ -566,7 +581,7 @@ class ra_client_positive_tests(rest_api_client):
             'if_name': 'Ethernet2',
             'attr': {'tagging_mode' : 'untagged'}
         })
-        vlan_mem_table = self.configdb.hgetall('_VLAN_MEMBER|Vlan2|Ethernet2')
+        vlan_mem_table = self.configdb.hgetall(VLAN_MEMB_TB + '|' + VLAN_NAME_PREF + '2|Ethernet2')
         self.assertEqual(vlan_mem_table, {b'tagging_mode':b'untagged'})
 
 
@@ -585,13 +600,13 @@ class ra_client_positive_tests(rest_api_client):
             'vlan_id': 2,
             'ip_addr': '10.10.10.10'
         })
-        vlan_neigh_table = self.configdb.hgetall('_NEIGH|Vlan2|10.10.10.10')
+        vlan_neigh_table = self.configdb.hgetall(VLAN_NEIGH_TB + '|' + VLAN_NAME_PREF + '2|10.10.10.10')
         self.assertEqual(vlan_neigh_table, {b'family':b'IPv4'})
 
         # delete
         r = self.delete_config_vlan_neighbor(2, "10.10.10.10")
         self.assertEqual(r.status_code, 204)
-        vlan_neigh_table = self.configdb.hgetall('_NEIGH|Vlan2|10.10.10.10')
+        vlan_neigh_table = self.configdb.hgetall(VLAN_NEIGH_TB + '|' + VLAN_NAME_PREF + '2|10.10.10.10')
         self.assertEqual(vlan_neigh_table, {})
 
 # Routes
@@ -604,7 +619,7 @@ class ra_client_positive_tests(rest_api_client):
                 }
         r = self.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         self.assertEqual(r.status_code, 204)
-        route_table = self.db.hgetall('_VNET_ROUTE_TUNNEL_TABLE:'+str(1)+':'+route['ip_prefix'])
+        route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         self.assertEqual(route_table, {b'endpoint' : route['nexthop']})
         del route['cmd']
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
@@ -617,9 +632,9 @@ class ra_client_positive_tests(rest_api_client):
         route['cmd'] = 'add'
         r = self.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         self.assertEqual(r.status_code, 204)
-        route_table = self.db.hgetall('_VNET_ROUTE_TUNNEL_TABLE:'+str(1)+':'+route['ip_prefix'])
+        route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         self.assertEqual(route_table, {b'endpoint' : route['nexthop'],
-                                       b'vxlanid' : str(route['vnid'])
+                                       b'vni' : str(route['vnid'])
                                       })
         del route['cmd']
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
@@ -633,7 +648,7 @@ class ra_client_positive_tests(rest_api_client):
         route['cmd'] = 'add'
         r = self.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         self.assertEqual(r.status_code, 204)
-        route_table = self.db.hgetall('_VNET_ROUTE_TUNNEL_TABLE:'+str(1)+':'+route['ip_prefix'])
+        route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         self.assertEqual(route_table, {b'endpoint' : route['nexthop'],
                                        b'mac_address' : route['mac_address']
                                       })
@@ -792,6 +807,14 @@ class ra_client_positive_tests(rest_api_client):
         j = json.loads(r.text)
         self.assertItemsEqual(j, routes)
         
+    def test_local_subnet_route_addition(self):
+        self.post_generic_vlan_and_deps()
+        local_route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
+        self.assertEqual(local_route_table, {b'ifname' : VLAN_NAME_PREF + '2'})
+        r = self.delete_config_vlan(2)
+        self.assertEqual(r.status_code, 204)
+        local_route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
+        self.assertEqual(local_route_table, {})
         
 
 class ra_client_negative_tests(rest_api_client):

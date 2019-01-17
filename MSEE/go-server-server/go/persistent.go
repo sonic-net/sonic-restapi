@@ -38,6 +38,8 @@ var nextGuidId uint32
 
 var configSnapshot *ServerSnapshotModel
 
+const REDIS_SOCK string = "/var/run/redis/redis.sock"
+
 const APPL_DB int = 0
 const COUNTER_DB int = 2
 const CONFIG_DB int = 4
@@ -56,6 +58,20 @@ const DPDK_vlan_sw_ip   string = "1.1.1.1"
 const DPDK_vlan_sw_len  string = "31"
 const DPDK_vlan_dpdk_ip string = "1.1.1.2"
 
+// DB Table names
+const VXLAN_TUNNEL_TB   string = "VXLAN_TUNNEL"
+const VNET_TB           string = "VNET"
+const VLAN_TB           string = "VLAN"
+const VLAN_INTF_TB      string = "VLAN_INTERFACE"
+const VLAN_MEMB_TB      string = "VLAN_MEMBER"
+const VLAN_NEIGH_TB     string = "NEIGH"
+const ROUTE_TUN_TB      string = "VNET_ROUTE_TUNNEL_TABLE"
+const LOCAL_ROUTE_TB    string = "VNET_ROUTE_TABLE"
+
+// DB Helper constants
+const VNET_NAME_PREF  string = "vnet_"
+const VLAN_NAME_PREF  string = "Vlan"
+
 type db_ops struct {
    separator string
    swss_db  swsscommon.DBConnector
@@ -66,12 +82,12 @@ var app_db_ops db_ops
 var conf_db_ops db_ops
 
 func Initialise() {
-    DPDKThriftConnect()
-    ARPThriftConnect()
+    //DPDKThriftConnect()
+    //ARPThriftConnect()
     DBConnect(*ResetFlag)
-    AddPortsToVLANs()
+    //AddPortsToVLANs()
     GetPortsFromCounterDB()
-    AddDPDKPort()
+    //AddDPDKPort()
     InitialiseVariables()
 }
 
@@ -102,14 +118,20 @@ func InitialiseVariables() {
     } else {
         log.Fatalf("error: could not retrieve server reset info from DB, error: %+v", err)
     }
-    genVnetGuidMap()
+    // TODO: uncomment once guid attr is added to VNET table
+    /* genVnetGuidMap() */
+    // TODO: delete below code once guid attr is added to VNET table
+    vnetGuidMap = make(map[string]uint32)
+    vnetGuidIdUsed = make([]bool, 0, 30) /* 30 HSM/rack? */
+    nextGuidId = 1
 }
+
 
 func genVnetGuidMap() {
     vnetGuidMap = make(map[string]uint32)
     var max_ind, i uint32 = 0, 0
     db := &conf_db_ops
-    kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VNET", "*"))
+    kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VNET_TB, "*"))
 
     if (err != nil) || (len(kv) == 0) {
         log.Printf("info: No VNET tables found to gen Vnet Guid Map, default init, err: %d len kv: %d", err, len(kv))
@@ -120,14 +142,16 @@ func genVnetGuidMap() {
 
     for k, v := range kv {
          log.Printf("info: TABLE: %s TABLE_KVs: %#v", k, v)
-         vnet_id_str := k[len("_VNET|"):]
+         tb_key_len := len(generateDBTableKey(db.separator, VNET_TB, VNET_NAME_PREF))
+         vnet_id_str := k[tb_key_len:]
          vnet_id_64, err_c := strconv.ParseUint(vnet_id_str, 10, 32)
          if (err_c != nil) || (vnet_id_64 == 0) {
              log.Printf("error: Found non integer vnet_id %s", vnet_id_str)
          }
          vnet_id := uint32(vnet_id_64)
          if v["guid"] == "" {
-             log.Printf("error: Found nil guid %s", vnet_id_str)
+             log.Printf("error: Found nil guid %s %s", k, vnet_id_str)
+             continue
          }
          log.Printf("info: storing vnet-guid: %s, vnet_id %d", v["guid"], vnet_id)
          vnetGuidMap[v["guid"]] = vnet_id
@@ -148,10 +172,18 @@ func genVnetGuidMap() {
 }
 
 func DBConnect(reset bool) {
-    redisDB = redis.NewClient(&redis.Options{
-        Addr:     "localhost:6379",
-        Password: "",
-    })
+    if *RunApiAsLocalTestDocker {
+        redisDB = redis.NewClient(&redis.Options{
+            Addr:     "localhost:6379",
+            Password: "",
+        })
+    } else {
+        redisDB = redis.NewClient(&redis.Options{
+            Network:  "unix",
+            Addr:     REDIS_SOCK,
+            Password: "",
+        })
+    }
 
     if reset {
         pipe := redisDB.TxPipeline()
@@ -171,8 +203,13 @@ func DBConnect(reset bool) {
 
     log.Printf("info: Redis connection established (%+v), %s", redisDB, cache_status)
 
-    swssDB = swsscommon.NewDBConnector(APPL_DB, "localhost", 6379, SWSS_TIMEOUT)
-    swss_conf_DB = swsscommon.NewDBConnector(CONFIG_DB, "localhost", 6379, SWSS_TIMEOUT)
+    if *RunApiAsLocalTestDocker {
+	     swssDB = swsscommon.NewDBConnector(APPL_DB, "localhost", 6379, SWSS_TIMEOUT)
+	     swss_conf_DB = swsscommon.NewDBConnector(CONFIG_DB, "localhost", 6379, SWSS_TIMEOUT)
+    } else {
+        swssDB = swsscommon.NewDBConnector2(APPL_DB, REDIS_SOCK, SWSS_TIMEOUT)
+	     swss_conf_DB = swsscommon.NewDBConnector2(CONFIG_DB, REDIS_SOCK, SWSS_TIMEOUT)
+    }
     app_db_ops = db_ops{separator: ":", swss_db: swssDB, db_num: APPL_DB}
     conf_db_ops = db_ops{separator: "|", swss_db: swss_conf_DB, db_num: CONFIG_DB}
 }
@@ -705,7 +742,13 @@ func GetKVsMulti(DB int, pattern string) (kv map[string]map[string]string, err e
 
 func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (routes []RouteModel, err error) {
     db := &app_db_ops
-    pattern := generateDBTableKey(db.separator, "_VNET_ROUTE_TUNNEL_TABLE", vnet_id_str, ipFilter)
+    var pattern string
+    // TODO: Keep only else statement code in production
+    if *RunApiAsLocalTestDocker {
+        pattern = generateDBTableKey(db.separator, "_"+ROUTE_TUN_TB, vnet_id_str, ipFilter)
+    } else {
+        pattern = generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, ipFilter)
+    }
     routes = []RouteModel{}
 
     kv, err := GetKVsMulti(db.db_num,pattern)
@@ -721,7 +764,7 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
             NextHop:     kvp["endpoint"],
         }
 
-        if vnid, ok := kvp["vxlanid"]; ok {
+        if vnid, ok := kvp["vni"]; ok {
             routeModel.Vnid, _ = strconv.Atoi(vnid)
         }
 
@@ -803,6 +846,14 @@ func CacheSetConfigResetInfo(GUID string, time string) error {
     return nil
 }
 
+func CacheGetVnetGuid(ID uint32) (string) {
+    for k, v := range vnetGuidMap {
+        if v == ID {
+            return k
+        }
+    }
+    return ""
+}
 
 func CacheGetVnetGuidId(GUID string) (val uint32) {
     val = vnetGuidMap[GUID]

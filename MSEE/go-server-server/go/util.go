@@ -325,37 +325,31 @@ func validateVlanID(vlan_id_str string) (vlanID int, err error) {
    return
 }
 
-func generateVlanPrefixInVnet(vnet_id string) (vlanPrefixArr []string, err error) {
-    db := &conf_db_ops
-    vlanInVnet :=  make([]string, 0, 5)
-    kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VLAN_INTERFACE", "Vlan*"))
-    if (err != nil) || (len(kv) == 0) {
-         return
+func generateVlanPrefixInVnet(vnet_id_str string) (vlanPrefixArr []string, err error) {
+    db := &app_db_ops
+    // TODO: Remove if else and correct getkvs in production code
+    var rt_tb_key string
+    if *RunApiAsLocalTestDocker {
+        rt_tb_key = generateDBTableKey(db.separator, "_"+LOCAL_ROUTE_TB, vnet_id_str, "*")
+    } else {
+        rt_tb_key = generateDBTableKey(db.separator, LOCAL_ROUTE_TB, vnet_id_str, "*")
     }
-
-    for k, v := range kv {
-         if v["vnet_name"] == vnet_id {
-              vlanInVnet = append(vlanInVnet, k)
-         }
+    kv, err := GetKVsMulti(db.db_num, rt_tb_key)
+    if err != nil {
+        return vlanPrefixArr, err
     }
-    for _, vlan_table := range vlanInVnet {
-         kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator,vlan_table, "*"))
-         if err != nil {
-             return vlanPrefixArr, err
-         } else if len(kv) != 1 {
-             /* Should never come into this case */
-             continue
-         } else {
-             for k, _ := range kv {
-                 vlanPrefixArr = append(vlanPrefixArr, k[len(vlan_table) + 1:])
-             }
-         }
+    for k, _ := range kv {
+        ipprefix := strings.Split(k, db.separator)[2]
+        vlanPrefixArr = append(vlanPrefixArr, ipprefix)
     }
     return
 }
 
 func isBMNextHop(ipprefix string, vlanPrefixArr []string) (bm_next_hop bool, err error) {
     bm_next_hop = false
+    if (vlanPrefixArr == nil || len(vlanPrefixArr) == 0) {
+        return
+    }
     ip, _, err := net.ParseCIDR(ipprefix)
     if err != nil {
         return bm_next_hop, err
@@ -378,11 +372,11 @@ func isBMNextHop(ipprefix string, vlanPrefixArr []string) (bm_next_hop bool, err
 func vlan_dependencies_exist(vlan_name string) (vlan_dep bool, err error) {
     db := &conf_db_ops
     vlan_dep = false
-    neigh_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_NEIGH", vlan_name, "*"))
+    neigh_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_NEIGH_TB, vlan_name, "*"))
     if err != nil {
         return
     }
-    vlan_mem_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VLAN_MEMBER", vlan_name, "*"))
+    vlan_mem_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_MEMB_TB, vlan_name, "*"))
     if err != nil {
         return
     }
@@ -395,15 +389,22 @@ func vlan_dependencies_exist(vlan_name string) (vlan_dep bool, err error) {
 
 func vnet_dependencies_exist(vnet_id_str string) (vnet_dep bool, err error) {
      db := &app_db_ops
+     var rt_tb_key string
      vnet_dep = false
-     routes_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, "_VNET_ROUTE_TUNNEL_TABLE", vnet_id_str, "*"))
+     // TODO: Remove if else and correct getkvs in production code
+     if *RunApiAsLocalTestDocker {
+        rt_tb_key = generateDBTableKey(db.separator, "_"+ROUTE_TUN_TB, vnet_id_str, "*")
+     } else {
+        rt_tb_key = generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, "*")
+     }
+     routes_kv, err := GetKVsMulti(db.db_num, rt_tb_key)/* generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, "*"))*/
      if err != nil {
         return
      } else if len(routes_kv) > 0 {
         vnet_dep = true
         return
      }
-     vlan_if_kv, err := GetKVsMulti(conf_db_ops.db_num, generateDBTableKey(conf_db_ops.separator, "_VLAN_INTERFACE","*"))
+     vlan_if_kv, err := GetKVsMulti(conf_db_ops.db_num, generateDBTableKey(conf_db_ops.separator, VLAN_INTF_TB,"*"))
      if err != nil {
         return
      }
@@ -423,8 +424,8 @@ func vlan_validator(w http.ResponseWriter, vlan_id_str string) (vlan_id int, err
         WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
         return vlan_id, err
     }
-    vlan_name := "Vlan" + vlan_id_str
-    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, "_VLAN", vlan_name))
+    vlan_name := VLAN_NAME_PREF + vlan_id_str
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VLAN_TB, vlan_name))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{"vlan_id"}, "")
         return vlan_id, errors.New("Internal service err")
@@ -444,8 +445,8 @@ func get_and_validate_vnet_id(w http.ResponseWriter, vnet_name string) (vnet_id_
         err = errors.New("Vnet obj not found")
         return
     }
-    vnet_id_str = strconv.FormatUint(uint64(vnet_id), 10)
-    kv, err = GetKVs(db.db_num, generateDBTableKey(db.separator, "_VNET", vnet_id_str))
+    vnet_id_str = VNET_NAME_PREF + strconv.FormatUint(uint64(vnet_id), 10)
+    kv, err = GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vnet_id_str))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
