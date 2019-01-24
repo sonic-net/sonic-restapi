@@ -25,7 +25,7 @@ ROUTE_TUN_TB      = "_VNET_ROUTE_TUNNEL_TABLE"
 LOCAL_ROUTE_TB    = "_VNET_ROUTE_TABLE"
 
 # DB Helper constants
-VNET_NAME_PREF    = "vnet_"
+VNET_NAME_PREF    = "Vnet"
 VLAN_NAME_PREF    = "Vlan"
 
 RESRC_EXISTS = 0

@@ -69,7 +69,7 @@ const ROUTE_TUN_TB      string = "VNET_ROUTE_TUNNEL_TABLE"
 const LOCAL_ROUTE_TB    string = "VNET_ROUTE_TABLE"
 
 // DB Helper constants
-const VNET_NAME_PREF  string = "vnet_"
+const VNET_NAME_PREF  string = "Vnet"
 const VLAN_NAME_PREF  string = "Vlan"
 
 type db_ops struct {

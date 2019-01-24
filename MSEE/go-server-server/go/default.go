@@ -419,7 +419,7 @@ func ConfigInterfaceVlanDelete(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    /* Delete sequence:  1. Vlan Interface IP prefix table, 2. Vlan Interface table, 3. Vlan */
+    /* Delete sequence:  1. Vlan Interface IP prefix table, 2. Vlan Interface table, 3. local subnet route 4. Vlan */
     /* Delete 1 */
     vlan_pref_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB, vlan_name, "*"))
     if err != nil {
@@ -507,7 +507,7 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
         }
     }
 
-     /* Creation sequence:  1. Vlan, 2. Vlan Interface table, 3. Vlan Interface IP prefix table */
+     /* Creation sequence:  1. Vlan, 2. Vlan Interface table, 3. Vlan Interface IP prefix table 4. Add local subnet route */
      /* Create 1 */
      vlan_pt := swsscommon.NewTable(db.swss_db, VLAN_TB)
      defer vlan_pt.Delete()
@@ -535,8 +535,10 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
         if attr.Vnet_id != "" {
              local_subnet_route_pt := swsscommon.NewProducerStateTable(app_db_ops.swss_db, LOCAL_ROUTE_TB)
              defer local_subnet_route_pt.Delete()
+             // No error check for IPPrefix since it is already checked in unmarshal
+             _, vlan_netw, _ := net.ParseCIDR(attr.IPPrefix)
              local_subnet_route_pt.Set(
-                 generateDBTableKey(app_db_ops.separator, vnet_id_str, attr.IPPrefix),
+                 generateDBTableKey(app_db_ops.separator, vnet_id_str, vlan_netw.String()),
                  map[string]string{"ifname": vlan_name},
              "SET", "")
         }
