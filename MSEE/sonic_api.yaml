@@ -1,0 +1,1096 @@
+#
+# Current rules
+# 1. All requests are sync.
+#
+# responses:
+# post:
+#   201 - Created
+#   400 - Bad Request. Malformed arguments for API call
+#   401 - Unauthorized.  Invalid authentication credentials 
+#   403 - Forbidden (capacity isssues)
+#   404 - Object is not found
+#   409 - Conflict. Request cannot be completed due to conflict with current state of target resource. 
+#   500 - Internal Server Error
+#   503 - Service Unavailable
+# patch:
+#   207 - Multi-Status. Consult object body to determine status on a per element basis for the Bulk API.
+#   400 - Bad Request. Malformed arguments for API call
+#   401 - Unauthorized.  Invalid authentication credentials 
+#   403 - Forbidden (capacity isssues)
+#   404 - Object is not found
+#   500 - Internal Server Error
+#   503 - Service Unavailable
+# get:
+#   200 - OK
+#   400 - Bad Request. Malformed arguments for API call
+#   401 - Unauthorized.  Invalid authentication credentials
+#   404 - Object is not found
+#   500 - Internal Server Error
+#   503 - Service Unavailable
+# delete:
+#   200 - OK
+#   204 - No Content
+#   207 - Multi-Status. Consult object body to determine status on a per element basis for the Bulk API.
+#   400 - Bad Request. Malformed arguments for API call
+#   401 - Unauthorized.  Invalid authentication credentials
+#   404 - Object is not found
+#   409 - Conflict. Request cannot be completed due to conflict with current state of target resource. 
+#   500 - Internal Server Error
+#   503 - Service Unavailable
+#
+# dictionary:
+#   vnet_id
+#   vnid
+#   vlan_id
+#   ip_prefix
+#   ip_addr
+#
+# SONiC REST API v1. Defines API for controlling data path on the SONiC TOR for Baremetal scenarios.
+# Baremetal scenario description:
+# Every "baremetal server" port is connected to one baremetal server. Baremetals that reside on 
+# the same subnet+vnet are defined to be on a particular vlan interface. The vlan interface acts
+# as the gateway and as such must be programmed with the gateway IP. Traffic inbound/outbound
+# from the TOR is via a VxLAN tunnel. Customer separation is provided using Vnet, vrf and unique vxlan vnid.
+#
+# Our dataplane is designed as follow
+# 1. We have virtual routers which represents a "virtual network" for a customer. Virtual networks are
+#    defined using a string vnet_id, this internally creates a virtual router to maintain separate routing/forwarding domain.
+#    The virtual routers are used to bind the customer's unique vnid and customer's local baremetal device ports
+#    and as a result provide Virtual Network connectivity with the rest of Azure
+# 2. We have a virtual routing table which is unique and separated for every virtual router.
+# 3. We have tunnels which represent "Azure" next hops for virtual routing tables.
+# 4. We have vlan specific APIs to define parameters for client ports
+#
+# POST Requests:
+# REST API creation(POST) dependency list:
+# 1. VxLAN VTEP: /config/tunnel/decap/vxlan OR Day 0 configuration. No dependency. 
+# 2. VRF/VNET: /config/vrouter/{vnet_id} depends on 1(VxLAN VTEP)
+# 3. VLAN: /config/interface/vlan Depends on 2(VNET) if vlan needs association to vrf/vnet
+# 4. Vlan member: /config/interface/vlan/{vlan_id}/member Depends on 3(VLAN)
+# 5. Vlan Neighbor: /config/interface/vlan/{vlan_id}/neighbor Depends on 3(VLAN)
+# 6. VRF/VNET Routes: /config/vrouter/{vnet_id}/routes depends on 2(VNET)
+#
+# DELETE Requests:
+# All children/dependent elements must be deleted prior to deleting any parent config elements
+# This is required for data integrity and sanity of DBs.
+# eg: Vlan Neighbors and Vlan members should be deleted before deleting the Vlan itself 
+# REST API deletion(DELETE) dependency list:
+# 1. VRF/VNET Routes: /config/vrouter/{vnet_id}/routes. No dependency
+# 2. Vlan Neighbor: /config/interface/vlan/{vlan_id}/neighbor. No dependency
+# 3. Vlan member: /config/interface/vlan/{vlan_id}/member. No dependency
+# 4. VLAN: /config/interface/vlan Depends on 2(VNET). Dependes on successful deletion on all child elements 2(Vlan Neighbor) and 3(Vlan member)
+# 5. VRF/VNET: /config/vrouter/{vnet_id}. Depends on successful deletion of all child elements 4(Vlan) and 1(Routes)
+# 6. VxLAN VTEP: /config/tunnel/decap/vxlan. Depends on successful deletion of all child elements 5(VRF/VNET)
+#
+# Some details about '40X' error responses:
+# - '400' http error returns when there're one or more malformed arguments (wrong type, format, size) in the request.
+# - '404' http error returns when there're one or more references to non-existent values in the request.
+# - '409' HTTP Request cannot be completed due to conflict with current state of target resource:
+#       - Error sub-code 0: Conflict because the resource already exists
+#       - Error sub-code 1: Conflict because of a missing dependency/parent
+#       - Error sub-code 2: Conflict because the caller tries to delete a resource with a dependency/child
+#       - Error format:     '#/definitions/Error'
+# In case of bulk API (vroute API):
+# - If a request has a malformed argument (arguments) or a reference (references) to non-existent values
+#   in its path the API must return '400' or '404' respectively.
+# - if a request has the same error in the attributes of the request, the API must:
+#    - run the request with the valid attributes
+#    - return '207' http status code to inform the caller to look within the body to confirm success/failure
+#      for each of the routes
+#    - put malformed attributes into the list of 'failed' attributes.
+ 
+
+
+swagger: '2.0'
+info:
+  title: SONiC REST API
+  description: SONiC REST API for Baremetal Scenarios
+  version: 1.0.0
+schemes:
+  - http
+  - https
+basePath: /v1
+produces:
+  - application/json
+consumes:
+  - application/json
+paths:
+#----------------------------------------------
+# Server level API
+#----------------------------------------------
+  '/state/heartbeat':
+    get:
+      summary: the heartbeat API for caller to check the status of the server
+      description: Returns Ok when server is live. Also returns API version and config reset time info of the server.
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - server_version
+              - reset_GUID
+              - reset_time
+            properties:
+              server_version:
+                type: string
+                description: version of the restful server.
+              reset_GUID:
+                type: string
+                description: a GUID which will change after each time server restart from scratch.
+              reset_time:
+                type: string
+                format: date-time
+                description: time of server restartting from scratch, in a human readable format.
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# Virtual router object
+#----------------------------------------------
+  '/config/vrouter/{vnet_id}':
+    post:
+      summary: Create a new virtual router
+      description: If a virtual router/vnet with specified vnet_id doesn't exist, new vnet with empty virtual table would be created. If a vnet exists already, it will return error '409', sub-code '0'. If this API is called without a vxlan local vtep created(should be created as a Day 0 config), there will be a failure with code '409' sub-code '1'.
+      parameters:
+        - name: vnet_id
+          in: path
+          required: true
+          type: string
+          description: vnet_id containing the vnet guid as a string
+        - name: attr
+          in: body
+          required: true
+          description: attributes for virtual router
+          schema:
+            $ref: '#/definitions/VnetEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Resource Conflict. VRF/VNET already exists OR dependency VxLAN VTEP not found. 
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get information about an existing virtual router
+      description: Returns attributes for requested vnet_id. If the vnet is not defined it returns '404' error.
+      parameters:
+        - name: vnet_id
+          in: path
+          required: true
+          type: string
+          description: vnet_id containing the vnet guid as a string
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - vnet_id
+              - attr
+            properties:
+              vnet_id:
+                type: string
+                description: vnet_id containing the vnet guid as a string
+              attr:
+                $ref: '#/definitions/VnetEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Virtual router is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a virtual router
+      description: Remove a virtual router which is defined by vnet_id. If a vnet with 'vnet_id' is not defined the API will return '404'. If the delete is called before all associated VNET routes or Vlans are deleted, it will return error '409' sub-code 2
+      parameters:
+        - name: vnet_id
+          in: path
+          required: true
+          type: string
+          description: vnet_id containing the vnet guid as a string
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Virtual router is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Resource Conflict. Routes exist on VRF/VNET and Virtual router may not be deleted prior to deleting all routes.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# VLAN interface 
+#----------------------------------------------
+    '/config/interface/vlan/{vlan_id}'
+    post:
+      summary: Create a new vlan interface
+      description: Create a new vlan interface with name Vlan{vlan_id} and vlanid set to vlan_id. If such a vlan interface already exists then this method returns the error '409' sub-code 0. If a vnet with specified vnet_id in attr does not exist this function will return error '409' sub-code 1. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlan_id
+        - name: attr
+          in: body
+          required: true
+          description: attributes for vlan interface
+          schema:
+            $ref: '#/definitions/VlanEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Resource not found
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Resource Conflict. VLAN already exists OR dependency VRF/VNET not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get information about an existing vlan interface
+      description: Returns attributes for requested vlan. If the vlan interface does not exist on SONiC it returns a '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlan_id
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - vlan_id
+              - attr
+            properties:
+              vlan_id:
+                type: integer
+                format: int12
+                description: vlan id
+              attr:
+                $ref: '#/definitions/VlanEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a vlan interface
+      description: Remove a vlan interface which is defined by vlan_id. If the vlan interface does not exist on SONiC it returns a '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If the delete is called before all associated vlan neighbors/members are deleted, this will return error '409' conflict with sub-code 2. 
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlanid
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description:
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# VLAN interface member 
+#----------------------------------------------
+    '/config/interface/vlan/{vlan_id}/member/{if_name}'
+    post:
+      summary: Add a physical port to a vlan interface
+      description: Add a member to interface Vlan{vlan_id}. If the vlan interface does not exist on SONiC it returns a '404' error. If such a member is already present on this Vlan interface the API returns '409' sub-code 0. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If attr with tagging mode is provided it will be honored in config, if not, the default tagging mode will be set to 'untagged'. Vlan members may be tagged or untagged, but, the Vlan member port may be untagged in only one Vlan interface, deviations from this will cause the API to return '409' sub-code 0. 
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlan_id
+        - name: if_name
+          in: path
+          required: true
+          type: string
+          description: Physical port name
+        - name: attr
+          in: body
+          required: true
+          description: attribute for vlan member
+          schema:
+            $ref: '#/definitions/VlanMemberEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not defined
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Resource Conflict. VLAN member already exists on this VLAN interface OR Vlan member is being added to 2nd Vlan inteface as an untagged member.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get information about an existing vlan port member on an existing vlan interface
+      description: Returns attributes for requested vlan member. If the vlan/vlan member is not defined/present on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlan_id
+        - name: if_name
+          in: path
+          required: true
+          type: string
+          description: Physical port name
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+               - vlan_id
+               - if_name
+               - attr
+            properties:
+               vlan_id:
+                 type: integer
+                 format: int32
+                 description: 12 bit vlan_id
+               if_name:
+                 type: string
+                 description: Physical port name
+               attr:
+                 $ref: '#/definitions/VlanMemberEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not defined/Vlan member is not found on this interface. 
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a vlan member from a vlan interface
+      description: Remove a vlan member from a vlan interface which is defined by vlan_id. If the Vlan interface does not exist on SONiC OR a vlan member 'if_name' is not present on the interface the API will return '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlan_id
+        - name: if_name
+          in: path
+          required: true
+          type: string
+          description: Physical port name
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not defined/Vlan member is not found on this Vlan interface
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# VLAN interface neighbor 
+#----------------------------------------------
+    '/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}'
+    post:
+      summary: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery 
+      description: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery. If such a neighbor already exists on this Vlan interface then this method returns the error '409' sub-code 0, if the Vlan interface doesn't exist on SONiC this returns error '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlan_id
+        - name: ip_addr
+          in: path
+          required: true
+          type: string
+          description: Connected end device IP address 
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: VLAN neighbor already exists on the interface
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get information about an existing vlan neighbor on an existing vlan interface
+      description: Returns HTTP success/failure code for requested neighbor. If the vlan interface/vlan neighbor does not exist on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlan_id
+        - name: ip_addr
+          in: path
+          required: true
+          type: string
+          description: Connected end device IP address
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not found/Vlan neighbor is not found on this interface. 
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a vlan neighbor from a vlan interface
+      description: Remove a vlan neighbor from a vlan interface which is defined by vlan_id. If a vlan interface with 'vlan_id' is not present on SONiC OR a vlan neighbor 'ip_addr' is not present on the interface the API will return '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlan_id
+        - name: ip_addr
+          in: path
+          required: true
+          type: string
+          description: Connected end device IP address
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not found/Vlan neighbor is not found on this Vlan interface
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+
+#----------------------------------------------
+# vxlan tunnel encap object
+#----------------------------------------------
+  '/config/tunnel/encap/vxlan/{vnid}':
+    post:
+       description: Return success for now 
+       responses:
+          '204':
+            description: OK
+       description: Return success for now
+    get:
+       responses:
+          '204':
+            description: OK
+    delete:
+       description: Return success for now
+       responses:
+          '204':
+            description: OK
+
+#----------------------------------------------
+# route object
+#----------------------------------------------
+  '/config/vrouter/{vnet_id}/routes':
+    patch:
+      summary: Update/modify IP routes for a virtual router
+      description: This API call receives a list of route entries to be added/modified/deleted from the virtual routing table defined by 'vnet_id'. If an object with vnet_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry already exists in the virtual routing table, the attributes of the rouing entry will be updated. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set
+      parameters:
+        - name: vnet_id
+          in: path
+          type: string
+          required: true
+          description: vnet_id containing the vnet guid as a string
+        - name: attr
+          in: body
+          required: true
+          description: attributes for virtual router IP prefix
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteEntry'
+      responses:
+        '204':
+          description: OK
+        '207':
+          description: Multi-Status
+          schema:
+            type: object
+            required:
+              - failed
+            properties:
+              failed:
+                description: list of failed routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: VRF/VNET not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove IP routes for a virtual router
+      description: This API call will remove all route entries from a virtual router defined by 'vnet_id'. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing was unsuccessful it will be added as a member of the "failed" list along with attributes for "error_code" and "error_msg" populated. 
+      parameters:
+        - name: vnet_id
+          in: path
+          type: string
+          required: true
+          description: vnet_id containing the vnet guid as a string
+        - name: vnid
+          in: query
+          required: false
+          type: integer
+          format: int32
+          description: vxlan id (24-bit). Allows to remove routes with defined vnid only. Applicable for routes with nexthop_type 'vxlan-tunnel'. Otherwise '400' error will be returned
+      responses:
+        '204':
+          description: OK
+        '207':
+          description: Multi-Status
+          schema:
+            type: object
+            required:
+              - failed
+            properties:
+              failed:
+                description: list of failed routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get IP routes for a given virtual router
+      description: Return a list of routing entries for a given virtual router defined by "vnet_id" parameter. If there're no routing entries an empty list would be returned. The output list could be filterd by "vnid" and "ip_prefix" parameters. If one of the parameters is defined for the request, the output will contain only routing entries which have this parameter in their attributes.
+      parameters:
+        - name: vnet_id
+          in: path
+          required: true
+          type: string
+          description: vnet_id containing the vnet guid as a string
+        - name: vnid
+          in: query
+          required: false
+          type: integer
+          format: int32
+          description: vxlan id (24-bit). Allows to output routes with defined vnid only. Applicable for routes with nexthop_type 'vxlan-tunnel'. Otherwise '400' error will be returned
+        - name: ip_prefix
+          in: query
+          required: false
+          type: string
+          description: destination IP address block. If presented, get will return information about only this ip prefix
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# tunnel decapsulation endpoint object
+#----------------------------------------------
+  '/config/tunnel/decap/{tunnel_type}':
+  # VxLan VTEP comes as a base config, BB should never call this. Invoking it will trigger no effective configuration changes, calling POST or DELETE will reult in success with return code '204', calling GET will return the VTEP IP configured at day 0.
+    post:
+      summary: Setup or update tunnel decapsulation parameters
+      description: >-
+          For vxlan tunnel, this defines the Virtual Tunnel End point IP address used in all L3 vxlan traffic to/from SONiC. For now, this will return '204' in order to implement as a no-op. 
+      parameters:
+        - name: tunnel_type
+          in: path
+          required: true
+          type: string
+          enum:
+            - vxlan
+          description: type of a tunnel endpoint
+        - name: attr
+          in: body
+          required: true
+          description: attributes for TunnelDecapsulator
+          schema:
+            $ref: '#/definitions/TunnelDecapEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Object already exists
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get tunnel decapsulation parameters
+      parameters:
+        - name: tunnel_type
+          in: path
+          required: true
+          type: string
+          enum:
+            - vxlan
+          description: type of a tunnel endpoint
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - tunnel_type
+              - attr
+            properties:
+              tunnel_type:
+                type: string
+                enum:
+                  - vxlan
+              attr:
+                $ref: '#/definitions/TunnelDecapEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove tunnel decapsulation information. For now, this will not delete the object, it will just return success '204' in order to implement as no-op.
+      parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
+          description: type of a tunnel endpoint
+      responses:
+        '204':
+          description: OK
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# Schema definitions
+#----------------------------------------------
+definitions:
+  Error:
+    type: object
+    properties:
+      error:
+        type: object
+        required:
+          - code
+          - message
+        properties:
+          code:
+            type: integer
+            format: int32
+          sub-code:
+            type: integer
+            format: int32
+          message:
+            type: string
+          fields:
+            type: array
+            items:
+              type: string
+          details:
+            type: string
+  RouteEntry:
+    type: object
+    required:
+      - ip_prefix
+      - nexthop
+    properties:
+      cmd:
+        description: >-
+          add/delete, this defines the operation to perform on the route for the PATCH function.
+          note, this is REQUIRED for PATCH and will not be populated for GET/DELETE 
+      ip_prefix:
+        description: >-
+          destination IP address block, either customer advertised
+          on-premise IP prefix block or customer VM IP address.
+        type: string
+      nexthop_type:
+        type: string
+        enum:
+          - ip
+          - vxlan-tunnel
+        description: next hop type. ip nexthop or vxlan tunnel nexthop. For future, we can more tunnel nexthop such as vxlan-gpe,nvgre, etc. on
+      nexthop:
+        type: string
+        description: >-
+          ip address of nexthop.
+          When nexthop_type is 'ip', then nexthop is the CE IP address;
+          When nexthop_type is 'vxlan_tunnel', the next hop is the PA address of the customer VM
+      mac_address:
+        type: string
+        description: mac_address of the target VM
+      vnid:
+        type: integer
+        format: int32
+        description: vxlan id to be used for the tunnel. Optional arg. If it isn't provided the default vxlan id defined for the vnet/vrf will be used as the destination vnid.
+      error_code:
+        type: integer
+        format: int32
+        description: HTTP error code for the failing route
+      error_msg:
+        type: string
+        description: error message for the failing route
+  TunnelDecapEntry:
+    type: object
+    required:
+      - ip_addr
+    properties:
+      ip_addr:
+        type: string
+        description: tunnel local termination IP address
+  VnetEntry:
+    type: object
+    required:
+      - vnid
+    properties:
+      vnid:
+        type: integer
+        format: int32
+        description: vnid
+  VlanEntry:
+    type: object
+    properties:
+      vnet_id:
+        type: string
+        description: vnet_id containing the vnet guid as a string
+      ip_prefix:
+        description: >-
+          Vlan interface IP address and prefix, this will act as
+          the default gateway to/from the HSM. 
+        type: string
+  VlanMemberEntry:
+    type: object
+    properties:
+      tagging_mode:
+        type: string
+        description: tagged/untagged describes the vlan member's tagging mode, eg: HSM accepts only untagged traffic
