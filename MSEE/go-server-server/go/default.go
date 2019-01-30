@@ -342,31 +342,12 @@ func ConfigInterfaceVlanGet(w http.ResponseWriter, r *http.Request) {
         return
     }
     if vlan_if_kv != nil {
-            // TODO: uncomment once guid attr is added to VNET table
-            /*
             vnet_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vlan_if_kv["vnet_name"]))
             if err != nil || vnet_kv == nil {
                  WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
                  return
             }
             attr.Vnet_id = vnet_kv["guid"]
-            */
-            // TODO: delete below code once guid attr is added to VNET table
-            vnet_id_str := vlan_if_kv["vnet_name"][len(VNET_NAME_PREF):]
-            vnet_id_64, err_c := strconv.ParseUint(vnet_id_str, 10, 32)
-            if (err_c != nil) || (vnet_id_64 == 0) {
-                 log.Printf("error: Found non integer vnet_id %s", vnet_id_str)
-                 WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-                 return
-            }
-            vnet_id := uint32(vnet_id_64)
-            guid := CacheGetVnetGuid(vnet_id)
-            if guid == "" {
-                 log.Printf("error: guid corresponding to vnet %s not found", vnet_id_str)
-                 WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-                 return
-            }
-            attr.Vnet_id = guid
     }
 
     vlan_pref_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB, vlan_name, "*"))
@@ -396,7 +377,6 @@ func ConfigInterfaceVlanDelete(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     db := &conf_db_ops
     vars := mux.Vars(r)
-    var ip_pref string
 
     _, err := vlan_validator(w, vars["vlan_id"])
     if err != nil {
@@ -419,45 +399,47 @@ func ConfigInterfaceVlanDelete(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    /* Delete sequence:  1. Vlan Interface IP prefix table, 2. Vlan Interface table, 3. local subnet route 4. Vlan */
-    /* Delete 1 */
     vlan_pref_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB, vlan_name, "*"))
-    if err != nil {
+    if err != nil ||  len(vlan_pref_kv) > 1 {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
-    if len(vlan_pref_kv) == 1 {
-        for k,_ := range vlan_pref_kv {
-            table_key := k[len(VLAN_INTF_TB)+ 1:]
-            vlan_if_pt.Del(table_key, "DEL", "")
-            ip_pref = k[(len(generateDBTableKey(db.separator,VLAN_INTF_TB, vlan_name)) + 1):]
-        }
-    } else if len(vlan_pref_kv) > 1 {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
-    }
-
-    /* Delete 2 */
     vlan_if_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB, vlan_name))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
+    /* Delete sequence: 1. local subnet route 2. Vlan Interface IP prefix table, 3. Vlan Interface table, 4. Vlan */
+    /* Delete 1 */
+    if len(vlan_pref_kv) == 1 && vlan_if_kv != nil {
+        for k,_ := range vlan_pref_kv {
+            ip_pref := k[(len(generateDBTableKey(db.separator,VLAN_INTF_TB, vlan_name)) + 1):]
+             _, vlan_netw, _ := net.ParseCIDR(ip_pref)
+            vnet_id_str := vlan_if_kv["vnet_name"]
+            local_subnet_route_pt := swsscommon.NewProducerStateTable(app_db_ops.swss_db, LOCAL_ROUTE_TB)
+            defer local_subnet_route_pt.Delete()
+            local_subnet_route_pt.Del(generateDBTableKey(app_db_ops.separator, vnet_id_str, vlan_netw.String()), "DEL", "")
+        }
+    }
+
+    /* Delete 2 */
+    if len(vlan_pref_kv) == 1 {
+        for k,_ := range vlan_pref_kv {
+            table_key := k[len(VLAN_INTF_TB)+ 1:]
+            vlan_if_pt.Del(table_key, "DEL", "")
+        }
+    }
+
+    /* Delete 3 */
     if vlan_if_kv != nil {
         if len(vlan_pref_kv) == 1 {
             /* Sleep only if we previously deleted the VLAN_INTERFACE ip_prefix table */
             time.Sleep(time.Second)
         }
         vlan_if_pt.Del(vlan_name, "DEL", "")
-        if len(vlan_pref_kv) == 1 {
-             vnet_id_str := vlan_if_kv["vnet_name"]
-             local_subnet_route_pt := swsscommon.NewProducerStateTable(app_db_ops.swss_db, LOCAL_ROUTE_TB)
-             defer local_subnet_route_pt.Delete()
-             local_subnet_route_pt.Del(generateDBTableKey(app_db_ops.separator, vnet_id_str, ip_pref), "DEL", "")
-        }
     }
 
-    /* Delete 3 */
+    /* Delete 4 */
     pt := swsscommon.NewTable(db.swss_db, VLAN_TB)
     defer pt.Delete()
     pt.Del(vlan_name, "DEL", "")
@@ -1403,8 +1385,7 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
     pt.Set(vnet_id_str, map[string]string{
         "vxlan_tunnel": "default_vxlan_tunnel",
         "vni": strconv.Itoa(attr.Vnid),
-        // TODO: uncomment below once guid is added to the VNET table
-        /* "guid": vars["vnet_name"], */
+        "guid": vars["vnet_name"],
     }, "SET", "")
 
     configSnapshot.VrfMap[int(vnet_id)] = VrfSnapshotModel{
@@ -1864,6 +1845,8 @@ func StateStatisticsGroupGet(w http.ResponseWriter, r *http.Request) {
 // Required to run Unit Tests
 func InMemConfigRestart(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-    genVnetGuidMap()
+    if *RunApiAsLocalTestDocker {
+        genVnetGuidMap()
+    }
     w.WriteHeader(http.StatusNoContent)
 }

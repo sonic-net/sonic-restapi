@@ -15,6 +15,7 @@ import (
     "time"
     "bytes"
     "github.com/satori/go.uuid"
+    "sync"
 )
 
 const ServerAPIVersion string = "1.0.0"
@@ -35,6 +36,7 @@ var portCounterIDMap map[string]string
 var vnetGuidMap map[string]uint32
 var vnetGuidIdUsed []bool
 var nextGuidId uint32
+var GuidMapMutex sync.RWMutex
 
 var configSnapshot *ServerSnapshotModel
 
@@ -118,12 +120,7 @@ func InitialiseVariables() {
     } else {
         log.Fatalf("error: could not retrieve server reset info from DB, error: %+v", err)
     }
-    // TODO: uncomment once guid attr is added to VNET table
-    /* genVnetGuidMap() */
-    // TODO: delete below code once guid attr is added to VNET table
-    vnetGuidMap = make(map[string]uint32)
-    vnetGuidIdUsed = make([]bool, 0, 30) /* 30 HSM/rack? */
-    nextGuidId = 1
+    genVnetGuidMap()
 }
 
 
@@ -846,21 +843,16 @@ func CacheSetConfigResetInfo(GUID string, time string) error {
     return nil
 }
 
-func CacheGetVnetGuid(ID uint32) (string) {
-    for k, v := range vnetGuidMap {
-        if v == ID {
-            return k
-        }
-    }
-    return ""
-}
-
 func CacheGetVnetGuidId(GUID string) (val uint32) {
+    GuidMapMutex.RLock()
+    defer GuidMapMutex.RUnlock()
     val = vnetGuidMap[GUID]
     return
 }
 
 func CacheGenAndSetVnetGuidId(GUID string) (val uint32) {
+    GuidMapMutex.Lock()
+    defer GuidMapMutex.Unlock()
     vnetGuidMap[GUID] = nextGuidId
     val = nextGuidId
     if nextGuidId == (uint32)(len(vnetGuidIdUsed) + 1) {
@@ -880,12 +872,14 @@ func CacheGenAndSetVnetGuidId(GUID string) (val uint32) {
 }
 
 func CacheDeleteVnetGuidId(GUID string) {
-      i := vnetGuidMap[GUID]
-      vnetGuidIdUsed[i - 1] = false
-      if i < nextGuidId {
-           nextGuidId = i
-      }
-      delete(vnetGuidMap, GUID)
+    GuidMapMutex.Lock()
+    defer GuidMapMutex.Unlock()
+    i := vnetGuidMap[GUID]
+    vnetGuidIdUsed[i - 1] = false
+    if i < nextGuidId {
+         nextGuidId = i
+    }
+    delete(vnetGuidMap, GUID)
 }
 
 func generateDBTableKey(separator string, vars ...string) (string) {

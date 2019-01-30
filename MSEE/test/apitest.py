@@ -237,6 +237,7 @@ class rest_api_client(unittest.TestCase):
         l.info("Starting: {0} - {1}".format(cls.__name__, cls.__doc__))
         l.info('------------------------------------------------------------')
 
+
 class ra_client_positive_tests(rest_api_client):
     """Normal behaviour tests"""
 # Helper func
@@ -264,7 +265,6 @@ class ra_client_positive_tests(rest_api_client):
                 'ip_addr': '34.53.1.0'
             }
         })
-
 
 # Decap
     def test_post_config_tunnel_decap_tunnel_type(self):
@@ -322,7 +322,7 @@ class ra_client_positive_tests(rest_api_client):
         self.assertEqual(vrouter_table, {
 							b'vxlan_tunnel': b'default_vxlan_tunnel',
 							b'vni': b'1001',
-							# TODO: b'guid': b'vnet-guid-1'
+							b'guid': b'vnet-guid-1'
 							})
 
     def  test_get_vrouter(self):
@@ -359,7 +359,7 @@ class ra_client_positive_tests(rest_api_client):
              self.assertEqual(vrouter_table, {
                      b'vxlan_tunnel': b'default_vxlan_tunnel',
                      b'vni': b'100'+str(i),
-                     # TODO: b'guid': b'vnet-guid-'+str(i)
+                     b'guid': b'vnet-guid-'+str(i)
                      })
 
         for i in range (1,4):
@@ -372,7 +372,7 @@ class ra_client_positive_tests(rest_api_client):
              self.assertEqual(vrouter_table, {
                      b'vxlan_tunnel': b'default_vxlan_tunnel',
                      b'vni': b'100'+str(i+3),
-                     # TODO: b'guid': b'vnet-guid-'+str(i+3)
+                     b'guid': b'vnet-guid-'+str(i+3)
                      })
 
              r = self.post_config_vrouter_vrf_id("vnet-guid-"+str(i+6), {'vnid': 1006+i})
@@ -382,7 +382,7 @@ class ra_client_positive_tests(rest_api_client):
              self.assertEqual(vrouter_table, {
                      b'vxlan_tunnel': b'default_vxlan_tunnel',
                      b'vni': b'100'+str(i+6),
-                     # TODO: b'guid': b'vnet-guid-'+str(i+6)
+                     b'guid': b'vnet-guid-'+str(i+6)
                      })
              
 
