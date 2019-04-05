@@ -27,9 +27,9 @@ RUN apt-get update \
 COPY debs /debs
 RUN dpkg -i /debs/libhiredis0.13_0.13.3-2_amd64.deb \
  && dpkg -i /debs/libhiredis-dev_0.13.3-2_amd64.deb \
- && dpkg -i /debs/libnl-3-200_3.2.27-1_amd64.deb \
- && dpkg -i /debs/libnl-genl-3-200_3.2.27-1_amd64.deb \
- && dpkg -i /debs/libnl-route-3-200_3.2.27-1_amd64.deb \
+ && dpkg -i /debs/libnl-3-200_3.2.27-2_amd64.deb \
+ && dpkg -i /debs/libnl-genl-3-200_3.2.27-2_amd64.deb \
+ && dpkg -i /debs/libnl-route-3-200_3.2.27-2_amd64.deb \
  && dpkg -i /debs/libswsscommon_1.0.0_amd64.deb \
  && dpkg -i /debs/libswsscommon-dev_1.0.0_amd64.deb
 RUN rm -fr /debs
@@ -55,6 +55,6 @@ ENV GOROOT=/usr/local/go
 ENV PATH=$PATH:$GOROOT/bin
 ENV GOPATH=/go
 
-RUN git clone https://git-wip-us.apache.org/repos/asf/thrift.git $GOPATH/src/git.apache.org/thrift.git \
+RUN git clone https://github.com/apache/thrift.git $GOPATH/src/git.apache.org/thrift.git \
  && cd $GOPATH/src/git.apache.org/thrift.git \
  && git checkout 0dd823580c78a79ae9696eb9b3650e400fff140f

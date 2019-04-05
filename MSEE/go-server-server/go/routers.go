@@ -78,6 +78,69 @@ var routes = Routes{
     },
 
     Route{
+        "ConfigInterfaceVlanDelete",
+        "DELETE",
+        "/v1/config/interface/vlan/{vlan_id}",
+        ConfigInterfaceVlanDelete,
+    },
+
+    Route{
+        "ConfigInterfaceVlanGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}",
+        ConfigInterfaceVlanGet,
+    },
+
+    Route{
+        "ConfigInterfaceVlanPost",
+        "POST",
+        "/v1/config/interface/vlan/{vlan_id}",
+        ConfigInterfaceVlanPost,
+    },
+
+    Route{
+        "ConfigInterfaceVlanMemberDelete",
+        "DELETE",
+        "/v1/config/interface/vlan/{vlan_id}/member/{if_name}",
+        ConfigInterfaceVlanMemberDelete,
+    },
+
+    Route{
+        "ConfigInterfaceVlanMemberGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}/member/{if_name}",
+        ConfigInterfaceVlanMemberGet,
+    },
+
+    Route{
+        "ConfigInterfaceVlanMemberPost",
+        "POST",
+        "/v1/config/interface/vlan/{vlan_id}/member/{if_name}",
+        ConfigInterfaceVlanMemberPost,
+    },
+
+    Route{
+        "ConfigInterfaceVlanNeighborDelete",
+        "DELETE",
+        "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
+        ConfigInterfaceVlanNeighborDelete,
+    },
+
+    Route{
+        "ConfigInterfaceVlanNeighborGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
+        ConfigInterfaceVlanNeighborGet,
+    },
+
+    Route{
+        "ConfigInterfaceVlanNeighborPost",
+        "POST",
+        "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
+        ConfigInterfaceVlanNeighborPost,
+    },
+
+    Route{
         "ConfigInterfaceQinqPortDelete",
         "DELETE",
         "/v1/config/interface/qinq/{port}",
@@ -127,10 +190,10 @@ var routes = Routes{
     },
 
     Route{
-        "ConfigTunnelDecapTunnelTypePut",
-        "PUT",
+        "ConfigTunnelDecapTunnelTypePost",
+        "POST",
         "/v1/config/tunnel/decap/{tunnel_type}",
-        ConfigTunnelDecapTunnelTypePut,
+        ConfigTunnelDecapTunnelTypePost,
     },
 
     Route{
@@ -155,10 +218,10 @@ var routes = Routes{
     },
 
     Route{
-        "ConfigTunnelEncapVxlanVnidPut",
-        "PUT",
+        "ConfigTunnelEncapVxlanVnidPost",
+        "POST",
         "/v1/config/tunnel/encap/vxlan/{vnid}",
-        ConfigTunnelEncapVxlanVnidPut,
+        ConfigTunnelEncapVxlanVnidPost,
     },
 
     Route{
@@ -171,43 +234,43 @@ var routes = Routes{
     Route{
         "ConfigVrouterVrfIdDelete",
         "DELETE",
-        "/v1/config/vrouter/{vrf_id}",
+        "/v1/config/vrouter/{vnet_name}",
         ConfigVrouterVrfIdDelete,
     },
 
     Route{
         "ConfigVrouterVrfIdGet",
         "GET",
-        "/v1/config/vrouter/{vrf_id}",
+        "/v1/config/vrouter/{vnet_name}",
         ConfigVrouterVrfIdGet,
     },
 
     Route{
-        "ConfigVrouterVrfIdPut",
-        "PUT",
-        "/v1/config/vrouter/{vrf_id}",
-        ConfigVrouterVrfIdPut,
+        "ConfigVrouterVrfIdPost",
+        "POST",
+        "/v1/config/vrouter/{vnet_name}",
+        ConfigVrouterVrfIdPost,
     },
 
     Route{
         "ConfigVrouterVrfIdRoutesDelete",
         "DELETE",
-        "/v1/config/vrouter/{vrf_id}/routes",
+        "/v1/config/vrouter/{vnet_name}/routes",
         ConfigVrouterVrfIdRoutesDelete,
     },
 
     Route{
         "ConfigVrouterVrfIdRoutesGet",
         "GET",
-        "/v1/config/vrouter/{vrf_id}/routes",
+        "/v1/config/vrouter/{vnet_name}/routes",
         ConfigVrouterVrfIdRoutesGet,
     },
 
     Route{
-        "ConfigVrouterVrfIdRoutesPut",
-        "PUT",
-        "/v1/config/vrouter/{vrf_id}/routes",
-        ConfigVrouterVrfIdRoutesPut,
+        "ConfigVrouterVrfIdRoutesPatch",
+        "PATCH",
+        "/v1/config/vrouter/{vnet_name}/routes",
+        ConfigVrouterVrfIdRoutesPatch,
     },
 
     Route{
@@ -257,5 +320,13 @@ var routes = Routes{
         "GET",
         "/v1/state/statistics/{group}",
         StateStatisticsGroupGet,
+    },
+
+    // Required to run Unit tests
+    Route{
+        "InMemConfigRestart",
+        "POST",
+        "/v1/config/restartdb",
+        InMemConfigRestart,
     },
 }

@@ -7,7 +7,7 @@ INCLUDES= \
 CPPFLAGS=-g -std=c++11 -D_GLIBCXX_USE_CXX11_ABI=0 $(INCLUDES)
 LDFLAGS=-g -shared
 
-SRCS=src/dbconnector.cpp src/producertable.cpp src/producerstatetable.cpp
+SRCS=src/dbconnector.cpp src/producertable.cpp src/producerstatetable.cpp src/table.cpp
 OBJS=$(subst .cpp,.o,$(SRCS))
 
 .PHONY: all swsscommon clean install

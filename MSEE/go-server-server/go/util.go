@@ -9,6 +9,7 @@ import (
     "net"
     "net/http"
     "strconv"
+    "strings"
 )
 
 func WriteRequestErrorForMSEEThrift(w http.ResponseWriter, err error, r msee.ResultT, details string) bool {
@@ -40,6 +41,38 @@ func WriteRequestError(w http.ResponseWriter, code int, message string, fields [
         Message: message,
         Fields:  fields,
         Details: details,
+    }
+
+    b, err := json.Marshal(ErrorModel{e})
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        b = []byte(`
+{
+  "error": {
+    "code": 500,
+    "message": "Internal service error"
+  }
+}`)
+    } else {
+        w.WriteHeader(code)
+    }
+
+    log.Printf(
+        "error: Request ends with error message %s",
+        b,
+    )
+
+    w.Write(b)
+}
+
+
+func WriteRequestErrorWithSubCode(w http.ResponseWriter, code int, sub_code int, message string, fields []string, details string) {
+    e := ErrorInner{
+        Code:     code,
+        SubCode: &sub_code,
+        Message:  message,
+        Fields:   fields,
+        Details:  details,
     }
 
     b, err := json.Marshal(ErrorModel{e})
@@ -278,6 +311,150 @@ func GetThriftIPAddress(ip net.IP) (ret msee.MseeIPAddressT) {
         var ip6 msee.MseeIp6T
         ret.IP.Ip6 = &ip6
         ret.Type = msee.IPTypeT_v6
+    }
+    return
+}
+
+func validateVlanID(vlan_id_str string) (vlanID int, err error) {
+   vlanID, err = strconv.Atoi(vlan_id_str)
+   if err == nil {
+       if vlanID < 2 || vlanID > 4094 {
+           err = errors.New("vlanID out of range " + vlan_id_str)
+       }
+   }
+   return
+}
+
+func generateVlanPrefixInVnet(vnet_id_str string) (vlanPrefixArr []string, err error) {
+    db := &app_db_ops
+    // TODO: Remove if else and correct getkvs in production code
+    var rt_tb_key string
+    if *RunApiAsLocalTestDocker {
+        rt_tb_key = generateDBTableKey(db.separator, "_"+LOCAL_ROUTE_TB, vnet_id_str, "*")
+    } else {
+        rt_tb_key = generateDBTableKey(db.separator, LOCAL_ROUTE_TB, vnet_id_str, "*")
+    }
+    kv, err := GetKVsMulti(db.db_num, rt_tb_key)
+    if err != nil {
+        return vlanPrefixArr, err
+    }
+    for k, _ := range kv {
+        ipprefix := strings.Split(k, db.separator)[2]
+        vlanPrefixArr = append(vlanPrefixArr, ipprefix)
+    }
+    return
+}
+
+func isBMNextHop(ipprefix string, vlanPrefixArr []string) (bm_next_hop bool, err error) {
+    bm_next_hop = false
+    if (vlanPrefixArr == nil || len(vlanPrefixArr) == 0) {
+        return
+    }
+    ip, _, err := net.ParseCIDR(ipprefix)
+    if err != nil {
+        return bm_next_hop, err
+    }
+	 if (ip.To4() == nil && strings.HasSuffix(ipprefix, "/128")) || (ip.To4() != nil && strings.HasSuffix(ipprefix, "/32"))  {
+        for _, vlan_prefix := range vlanPrefixArr {
+             vlan_ip, vlan_netw, err := net.ParseCIDR(vlan_prefix)
+		       if err != nil {
+		           return bm_next_hop, err
+		       }
+				 if ((ip.To4 == nil && vlan_ip.To4 == nil) || (ip.To4 != nil && vlan_ip.To4 != nil)) && vlan_netw.Contains(ip) {
+				     bm_next_hop = true
+                 return bm_next_hop, err
+			    }
+		  }
+    }
+	 return
+}
+
+func vlan_dependencies_exist(vlan_name string) (vlan_dep bool, err error) {
+    db := &conf_db_ops
+    vlan_dep = false
+    neigh_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_NEIGH_TB, vlan_name, "*"))
+    if err != nil {
+        return
+    }
+    vlan_mem_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_MEMB_TB, vlan_name, "*"))
+    if err != nil {
+        return
+    }
+    if len(neigh_kv) > 0 || len(vlan_mem_kv) > 0 {
+        vlan_dep = true
+    }
+    return
+}
+
+
+func vnet_dependencies_exist(vnet_id_str string) (vnet_dep bool, err error) {
+     db := &app_db_ops
+     var rt_tb_key string
+     vnet_dep = false
+     // TODO: Remove if else and correct getkvs in production code
+     if *RunApiAsLocalTestDocker {
+        rt_tb_key = generateDBTableKey(db.separator, "_"+ROUTE_TUN_TB, vnet_id_str, "*")
+     } else {
+        rt_tb_key = generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, "*")
+     }
+     routes_kv, err := GetKVsMulti(db.db_num, rt_tb_key)/* generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, "*"))*/
+     if err != nil {
+        return
+     } else if len(routes_kv) > 0 {
+        vnet_dep = true
+        return
+     }
+     vlan_if_kv, err := GetKVsMulti(conf_db_ops.db_num, generateDBTableKey(conf_db_ops.separator, VLAN_INTF_TB,"*"))
+     if err != nil {
+        return
+     }
+     for _,v := range vlan_if_kv {
+        if v["vnet_name"] == vnet_id_str {
+            vnet_dep = true
+            return
+        }
+     }
+     return
+}
+
+func vlan_validator(w http.ResponseWriter, vlan_id_str string) (vlan_id int, err error) {
+    db := &conf_db_ops
+    vlan_id, err = validateVlanID(vlan_id_str)
+    if err != nil {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vlan_id"}, "")
+        return vlan_id, err
+    }
+    vlan_name := VLAN_NAME_PREF + vlan_id_str
+    vlan_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VLAN_TB, vlan_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{"vlan_id"}, "")
+        return vlan_id, errors.New("Internal service err")
+    }
+    if vlan_kv == nil {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"vlan_id"}, "")
+        return vlan_id, errors.New("Vlan obj not found")
+    }
+    return
+}
+
+func get_and_validate_vnet_id(w http.ResponseWriter, vnet_name string) (vnet_id_str string, kv map[string]string, err error) {
+    db := &conf_db_ops
+    vnet_id := CacheGetVnetGuidId(vnet_name)
+    if vnet_id == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{vnet_name}, "")
+        err = errors.New("Vnet obj not found")
+        return
+    }
+    vnet_id_str = VNET_NAME_PREF + strconv.FormatUint(uint64(vnet_id), 10)
+    kv, err = GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vnet_id_str))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if kv == nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error: GUID Cache and DB out of sync", []string{}, "")
+        return
     }
     return
 }
