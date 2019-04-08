@@ -10,13 +10,3 @@ Architecture: any
 Depends: ${shlibs:Depends}
 Description: This package contains rest api server for MS EE and Baremetal scenarios
 
-Package: thrift-mock-server
-Architecture: any
-Depends: ${shlibs:Depends}
-Description: This package contains thrift mock server for MS EE and Baremetal dpdk application
-
-Package: arp-mock-server
-Architecture: any
-Depends: ${shlibs:Depends}
-Description: This package contains thrift mock server for the ARP responder
-
