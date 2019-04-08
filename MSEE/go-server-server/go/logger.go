@@ -5,11 +5,7 @@ import (
     "log"
     "net/http"
     "os"
-    "time"
-    "sync"
 )
-
-var writeMutex sync.Mutex
 
 type LoggingResponseWriter struct {
     inner http.ResponseWriter
@@ -62,34 +58,4 @@ func CommonNameMatch(r *http.Request) bool {
 
     log.Printf("error: Authentication Fail! CommonName in the client cert: %s is not found in trusted common names", commonName)
     return false;
-}
-
-func Logger(inner http.Handler, name string) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        start := time.Now()
-
-        log.Printf(
-            "info: request: %s %s %s",
-            r.Method,
-            r.RequestURI,
-            name,
-        )
-
-        if r.TLS == nil || CommonNameMatch(r) {
-            log.Printf("trace: acquire server write lock")
-            writeMutex.Lock()
-
-            inner.ServeHTTP(NewLoggingResponseWriter(w), r)
-
-            writeMutex.Unlock()
-            log.Printf("trace: release server write lock")
-        } else {
-            WriteRequestError(NewLoggingResponseWriter(w), http.StatusUnauthorized, "Authentication Fail with untrusted client cert", []string{}, "")
-        }
-
-        log.Printf(
-            "info: request: duration %s",
-            time.Since(start),
-        )
-    })
 }

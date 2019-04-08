@@ -11,19 +11,6 @@ type HeartbeatReturnModel struct {
     ResetTime     string `json:"reset_time,omitempty"`
 }
 
-type ServerSnapshotModel struct {
-    DecapModel TunnelDecapModel   `json:"decap_model,omitempty"`
-    VrfMap     map[int]VrfSnapshotModel `json:"vrf_map,omitempty"`
-}
-
-type VrfSnapshotModel struct {
-    VrfInfo     VnetModel             `json:"vrf_info,omitempty"`
-    VxlanMap    map[int]TunnelModel   `json:"vxlan_map,omitempty"`
-    PortMap     map[string]PortModel  `json:"port_map,omitempty"`
-    QinQPortMap map[string]QInQModel  `json:"qinqport_map,omitempty"`
-    RoutesMap   map[string]RouteModel `json:"routes,omitempty"`
-}
-
 type RouteModel struct {
     Cmd         string `json:"cmd,omitempty"`
     IPPrefix    string `json:"ip_prefix"`
@@ -39,30 +26,13 @@ type RouteReturnModel struct {
     Failed  []RouteModel `json:"failed,omitempty"`
 }
 
-type QInQModel struct {
-    VrfID      int    `json:"vrf_id"`
-    PeerIP     string `json:"peer_ip,omitempty"`
-    ProxyArpIP string `json:"proxy_arp_ip,omitempty"`
-    Subnet     string `json:"subnet,omitempty"`
+type InterfaceModel struct {
+    AdminState string `json:"admin-state"`
 }
 
-type QInQReturnModel struct {
-    Port string    `json:"port"`
-    STag int       `json:"stag"`
-    CTag int       `json:"ctag"`
-    Attr QInQModel `json:"attr"`
-}
-
-type PortModel struct {
-    VrfID      int      `json:"vrf_id"`
-    Addr       string   `json:"addr,omitempty"`
-    SpoofGuard []string `json:"spoof_guard,omitempty"`
-    MACAddress string   `json:"mac_address,omitempty"`
-}
-
-type PortReturnModel struct {
-    Port string    `json:"port"`
-    Attr PortModel `json:"attr"`
+type InterfaceReturnModel struct {
+    Port string         `json:"port"`
+    Attr InterfaceModel `json:"attr"`
 }
 
 type VlanModel struct {
@@ -97,34 +67,6 @@ type TunnelDecapModel struct {
 type TunnelDecapReturnModel struct {
     TunnelType string           `json:"tunnel_type"`
     Attr       TunnelDecapModel `json:"attr"`
-}
-
-type VirtualRouterModel struct {
-    VrfName    string   `json:"vrf_name"`
-    DHCPRelays []string `json:"dhcp_relays,omitempty"`
-}
-
-type VirtualRouterReturnModel struct {
-    VrfID int                `json:"vrf_id"`
-    Attr  VirtualRouterModel `json:"attr"`
-}
-
-type InterfaceModel struct {
-    AdminState string `json:"admin-state"`
-}
-
-type InterfaceReturnModel struct {
-    Port string         `json:"port"`
-    Attr InterfaceModel `json:"attr"`
-}
-
-type TunnelModel struct {
-    VrfID int `json:"vrf_id"`
-}
-
-type TunnelReturnModel struct {
-    Vnid int         `json:"vnid"`
-    Attr TunnelModel `json:"attr"`
 }
 
 type VnetModel struct {
@@ -226,99 +168,6 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     return
 }
 
-func (m *QInQModel) UnmarshalJSON(data []byte) (err error) {
-    required := struct {
-        VrfID      *int   `json:"vrf_id"`
-        PeerIP     string `json:"peer_ip"`
-        ProxyArpIP string `json:"proxy_arp_ip"`
-        Subnet     string `json:"subnet"`
-    }{}
-
-    err = json.Unmarshal(data, &required)
-
-    if err != nil {
-        return
-    }
-
-    if required.VrfID == nil {
-        err = &MissingValueError{"vrf_id"}
-        return
-    }
-
-    m.VrfID = *required.VrfID
-    m.PeerIP = required.PeerIP
-    m.ProxyArpIP = required.ProxyArpIP
-    m.Subnet = required.Subnet
-
-    if !IsValidIP(m.PeerIP) {
-        err = &InvalidFormatError{Field: "peer_ip", Message: "Invalid IPv4 address"}
-        return
-    }
-
-    if !IsValidIP(m.ProxyArpIP) {
-        err = &InvalidFormatError{Field: "proxy_arp_ip", Message: "Invalid IPv4 address"}
-        return
-    }
-
-    _, _, err = ParseIPPrefix(m.Subnet)
-    if err != nil {
-        err = &InvalidFormatError{Field: "subnet", Message: "Invalid IPv4 prefix"}
-        return
-    }
-
-    return
-}
-
-func (m *PortModel) UnmarshalJSON(data []byte) (err error) {
-    required := struct {
-        VrfID      *int     `json:"vrf_id"`
-        Addr       string   `json:"addr"`
-        SpoofGuard []string `json:"spoof_guard"`
-        MACAddress *string  `json:"mac_address"`
-    }{}
-
-    err = json.Unmarshal(data, &required)
-
-    if err != nil {
-        return
-    } else if required.VrfID == nil {
-        err = &MissingValueError{"vrf_id"}
-        return
-    } else if required.MACAddress == nil {
-        err = &MissingValueError{"mac_address"}
-        return
-    }
-
-    m.VrfID = *required.VrfID
-    m.Addr = required.Addr
-    m.SpoofGuard = required.SpoofGuard
-    m.MACAddress = *required.MACAddress
-
-    _, _, err = ParseIPPrefix(m.Addr)
-
-    if err != nil {
-        err = &InvalidFormatError{Field: "addr", Message: "Invalid IPv4 prefix"}
-        return
-    }
-
-    _, err = net.ParseMAC(m.MACAddress)
-
-    if err != nil {
-        err = &InvalidFormatError{Field: "mac_address", Message: "Invalid MAC address"}
-        return
-    }
-
-    for _, addr := range m.SpoofGuard {
-        _, _, err = ParseIPPrefix(addr)
-        if err != nil {
-            err = &InvalidFormatError{Field: "spoof_guard", Message: "Invalid IPv4 prefix"}
-            return
-        }
-    }
-
-    return
-}
-
 func (m *VlanMemberModel) UnmarshalJSON(data []byte) (err error) {
     required := struct {
          Tagging   string   `json:"tagging_mode,omitempty"`
@@ -384,79 +233,6 @@ func (m *TunnelDecapModel) UnmarshalJSON(data []byte) (err error) {
         err = &InvalidFormatError{Field: "ip_addr", Message: "Invalid IPv4 address"}
         return
     }
-
-    return
-}
-
-func (m *VirtualRouterModel) UnmarshalJSON(data []byte) (err error) {
-    required := struct {
-        VrfName    *string  `json:"vrf_name"`
-        DHCPRelays []string `json:"dhcp_relays"`
-    }{}
-
-    err = json.Unmarshal(data, &required)
-
-    if err != nil {
-        return
-    } else if required.VrfName == nil {
-        err = &MissingValueError{"vrf_name"}
-        return
-    }
-
-    m.VrfName = *required.VrfName
-    m.DHCPRelays = required.DHCPRelays
-
-    for _, ip := range m.DHCPRelays {
-        if !IsValidIP(ip) {
-            err = &InvalidFormatError{Field: "dhcp_relays", Message: "All entries in dhcp_relays must be a valid IPv4 address"}
-            return
-        }
-    }
-
-    return
-}
-
-func (m *InterfaceModel) UnmarshalJSON(data []byte) (err error) {
-    required := struct {
-        AdminState *string `json:"admin-state"`
-    }{}
-
-    err = json.Unmarshal(data, &required)
-
-    if err != nil {
-        return
-    } else if required.AdminState == nil {
-        err = &MissingValueError{"admin-state"}
-        return
-    }
-
-    m.AdminState = *required.AdminState
-
-    if m.AdminState != "up" && m.AdminState != "down" {
-        err = &InvalidFormatError{Field: "admin-state", Message: "admin-state may only be one of up, down"}
-        return
-    }
-
-    return
-}
-
-func (m *TunnelModel) UnmarshalJSON(data []byte) (err error) {
-    required := struct {
-        VrfID *int `json:"vrf_id"`
-    }{}
-
-    err = json.Unmarshal(data, &required)
-
-    if err != nil {
-        return
-    }
-
-    if required.VrfID == nil {
-        err = &MissingValueError{"vrf_id"}
-        return
-    }
-
-    m.VrfID = *required.VrfID
 
     return
 }

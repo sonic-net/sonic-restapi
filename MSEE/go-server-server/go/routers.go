@@ -3,6 +3,9 @@ package mseeserver
 import (
     "net/http"
     "fmt"
+    "log"
+    "time"
+    "sync"
     "github.com/gorilla/mux"
 )
 
@@ -15,10 +18,43 @@ type Route struct {
 
 type Routes []Route
 
+var writeMutex sync.Mutex
+
+func Middleware(inner http.Handler, name string) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+
+        log.Printf(
+            "info: request: %s %s %s",
+            r.Method,
+            r.RequestURI,
+            name,
+        )
+
+        if r.TLS == nil || CommonNameMatch(r) {
+            log.Printf("trace: acquire server write lock")
+            writeMutex.Lock()
+
+            inner.ServeHTTP(NewLoggingResponseWriter(w), r)
+
+            writeMutex.Unlock()
+            log.Printf("trace: release server write lock")
+        } else {
+            WriteRequestError(NewLoggingResponseWriter(w), http.StatusUnauthorized,
+                        "Authentication Fail with untrusted client cert", []string{}, "")
+        }
+
+        log.Printf(
+            "info: request: duration %s",
+            time.Since(start),
+        )
+    })
+}
+
 func NewRouter() *mux.Router {
     router := mux.NewRouter().StrictSlash(true)
     for _, route := range routes {
-        handler := Logger(route.HandlerFunc, route.Name)
+        handler := Middleware(route.HandlerFunc, route.Name)
 
         router.
             Methods(route.Method).
@@ -47,34 +83,6 @@ var routes = Routes{
         "GET",
         "/v1/state/heartbeat",
         StateHeartbeatGet,
-    },
-
-    Route{
-        "Config",
-        "GET",
-        "/v1/config",
-        ConfigGet,
-    },
-
-    Route{
-        "ConfigInterfacePortPortDelete",
-        "DELETE",
-        "/v1/config/interface/port/{port}",
-        ConfigInterfacePortPortDelete,
-    },
-
-    Route{
-        "ConfigInterfacePortPortGet",
-        "GET",
-        "/v1/config/interface/port/{port}",
-        ConfigInterfacePortPortGet,
-    },
-
-    Route{
-        "ConfigInterfacePortPortPut",
-        "PUT",
-        "/v1/config/interface/port/{port}",
-        ConfigInterfacePortPortPut,
     },
 
     Route{
@@ -141,41 +149,6 @@ var routes = Routes{
     },
 
     Route{
-        "ConfigInterfaceQinqPortDelete",
-        "DELETE",
-        "/v1/config/interface/qinq/{port}",
-        ConfigInterfaceQinqPortDelete,
-    },
-
-    Route{
-        "ConfigInterfaceQinqPortGet",
-        "GET",
-        "/v1/config/interface/qinq/{port}",
-        ConfigInterfaceQinqPortGet,
-    },
-
-    Route{
-        "ConfigInterfaceQinqPortStagCtagDelete",
-        "DELETE",
-        "/v1/config/interface/qinq/{port}/{stag}/{ctag}",
-        ConfigInterfaceQinqPortStagCtagDelete,
-    },
-
-    Route{
-        "ConfigInterfaceQinqPortStagCtagGet",
-        "GET",
-        "/v1/config/interface/qinq/{port}/{stag}/{ctag}",
-        ConfigInterfaceQinqPortStagCtagGet,
-    },
-
-    Route{
-        "ConfigInterfaceQinqPortStagCtagPut",
-        "PUT",
-        "/v1/config/interface/qinq/{port}/{stag}/{ctag}",
-        ConfigInterfaceQinqPortStagCtagPut,
-    },
-
-    Route{
         "ConfigTunnelDecapTunnelTypeDelete",
         "DELETE",
         "/v1/config/tunnel/decap/{tunnel_type}",
@@ -197,13 +170,6 @@ var routes = Routes{
     },
 
     Route{
-        "ConfigTunnelEncapVxlanGet",
-        "GET",
-        "/v1/config/tunnel/encap/vxlan",
-        ConfigTunnelEncapVxlanGet,
-    },
-
-    Route{
         "ConfigTunnelEncapVxlanVnidDelete",
         "DELETE",
         "/v1/config/tunnel/encap/vxlan/{vnid}",
@@ -222,13 +188,6 @@ var routes = Routes{
         "POST",
         "/v1/config/tunnel/encap/vxlan/{vnid}",
         ConfigTunnelEncapVxlanVnidPost,
-    },
-
-    Route{
-        "ConfigVrouterGet",
-        "GET",
-        "/v1/config/vrouter",
-        ConfigVrouterGet,
     },
 
     Route{
@@ -274,13 +233,6 @@ var routes = Routes{
     },
 
     Route{
-        "StateCounterGet",
-        "GET",
-        "/v1/state/counter",
-        StateCounterGet,
-    },
-
-    Route{
         "StateInterfacePortGet",
         "GET",
         "/v1/state/interface/{port}",
@@ -292,34 +244,6 @@ var routes = Routes{
         "GET",
         "/v1/state/interface",
         StateInterfaceGet,
-    },
-
-    Route{
-        "StateCounterGroupGet",
-        "GET",
-        "/v1/state/counter/{group}",
-        StateCounterGroupGet,
-    },
-
-    Route{
-        "StateHistogramGet",
-        "GET",
-        "/v1/state/histogram",
-        StateHistogramGet,
-    },
-
-    Route{
-        "StateStatisticsGet",
-        "GET",
-        "/v1/state/statistics",
-        StateStatisticsGet,
-    },
-
-    Route{
-        "StateStatisticsGroupGet",
-        "GET",
-        "/v1/state/statistics/{group}",
-        StateStatisticsGroupGet,
     },
 
     // Required to run Unit tests
