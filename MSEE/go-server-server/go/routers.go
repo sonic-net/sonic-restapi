@@ -253,4 +253,25 @@ var routes = Routes{
         "/v1/config/restartdb",
         InMemConfigRestart,
     },
+
+    Route{
+        "ConfigInterfaceVlansGet",
+        "GET",
+        "/v1/config/interface/vlans",
+        ConfigInterfaceVlansGet,
+    },
+
+    Route{
+        "ConfigInterfaceVlanMembersGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}/members",
+        ConfigInterfaceVlanMembersGet,
+    },
+
+    Route{
+        "ConfigInterfaceVlanNeighborsGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}/neighbors",
+        ConfigInterfaceVlanNeighborsGet,
+    },
 }

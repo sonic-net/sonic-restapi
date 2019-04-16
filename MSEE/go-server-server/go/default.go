@@ -958,3 +958,144 @@ func InMemConfigRestart(w http.ResponseWriter, r *http.Request) {
     }
     w.WriteHeader(http.StatusNoContent)
 }
+
+func ConfigInterfaceVlansGet(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    var vnet_idMatch string
+    var vnet_id string
+    var VlansPerVnet []VlansPerVnetModel
+    var VlansPerVnetReturn VlansPerVnetReturnModel
+    log.Printf("r.url query is %v",r.URL.Query())
+    if len(r.URL.Query()["vnet_id"]) <1 {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vnet_id"}, "No vnet_id specified")
+        return
+    }
+    log.Printf("vnet_id is %v ",r.URL.Query()["vnet_id"][0])
+    if len(r.URL.Query()["vnet_id"]) == 1 {
+        vnet_id = r.URL.Query()["vnet_id"][0]
+	var err error
+	vnet_idMatch, _ ,err = get_and_validate_vnet_id(w,vnet_id)
+        log.Printf("vnet_idMatch is %v", vnet_idMatch)
+	if err != nil {
+	    return
+        }
+    } else if len(r.URL.Query()["vnet_id"]) > 1 {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"vnet_id"}, "May only specify one vnet_id")
+        return
+    }
+
+    log.Printf("Getting a map for all the entries that match VLAN_Interface")
+    vlan_map_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB,  "*"))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    VlansPerVnetReturn.Vnet_id = vnet_id
+    for k,_ := range vlan_map_kv{
+        if len(k)<len(generateDBTableKey(db.separator,VLAN_INTF_TB,"Vlan4095"))+1{
+              //This is the VLAN_INTERFACE| table without the ip prefix
+              for _,value := range vlan_map_kv[k]{
+                  if value == string(vnet_idMatch){
+		     vlanId := k[len(generateDBTableKey(db.separator,VLAN_INTF_TB,"VLAN")):]
+		     ip_prefix_raw,_ := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB, k[len(generateDBTableKey(db.separator,VLAN_INTF_TB))+1:],"*"))
+		     var ip_prefix string
+		     for prefix,_ := range ip_prefix_raw{
+		         log.Printf("ip_prefix is %v ",prefix)
+                         ip_prefix = prefix[len(generateDBTableKey(db.separator,VLAN_INTF_TB,"VLAN"+vlanId))+1:]
+
+		     }
+		     vlanInt,_ := strconv.Atoi(vlanId)
+		     output := VlansPerVnetModel{
+                         // This gets the last character of the string for ex. in VLAN_INTERFACE|Vlan3 it gets 3
+			 IPPrefix: ip_prefix,
+			 VlanID: vlanInt,
+	             }
+                     VlansPerVnet = append(VlansPerVnet,output)
+                  }
+              }
+        }
+
+    }
+    VlansPerVnetReturn.Attr = VlansPerVnet
+    log.Printf(" output is  %v", VlansPerVnet)
+    WriteRequestResponse(w, VlansPerVnetReturn, http.StatusOK)
+}
+
+func ConfigInterfaceVlanMembersGet(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+    var Members []VlanMembersModel
+    var MembersReturn VlanMembersReturnModel
+    log.Printf(" in the members call ")
+
+    vlan_id, err := vlan_validator(w, vars["vlan_id"])
+    if err != nil {
+        // Error is already handled in this case
+        return
+    }
+    vlan_name := VLAN_NAME_PREF + vars["vlan_id"]
+
+    vlan_members_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_MEMB_TB, vlan_name,"*"))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if len(vlan_members_kv) == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"if_name"}, "")
+        return
+    }
+    for k,v := range vlan_members_kv{
+        //var attr VlanMembersModel
+        //attr.Tagging = v["tagging_mode"]
+        //attr.If_name = k[len(generateDBTableKey(db.separator,VLAN_MEMB_TB,vlan_name))+1:] 
+        output := VlanMembersModel{
+            If_name: k[len(generateDBTableKey(db.separator,VLAN_MEMB_TB,vlan_name))+1:],
+            Tagging: v["tagging_mode"],
+        }
+        Members = append(Members,output)
+    }
+    MembersReturn.VlanID = vlan_id
+    MembersReturn.Attr = Members
+    log.Printf(" output members is  %v", MembersReturn)
+
+    WriteRequestResponse(w, MembersReturn, http.StatusOK)
+}
+
+func ConfigInterfaceVlanNeighborsGet(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+    var Neighbors []VlanNeighborsModel
+    var NeighborsReturn VlanNeighborsReturnModel
+    log.Printf(" in the neighbors call ")
+
+    vlan_id, err := vlan_validator(w, vars["vlan_id"])
+    if err != nil {
+        // Error is already handled in this case
+        return
+    }
+    vlan_name := VLAN_NAME_PREF + vars["vlan_id"]
+
+    neighbors_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_NEIGH_TB, vlan_name, "*"))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+    if len(neighbors_kv) == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"ip_addr"}, "")
+        return
+    }
+    for k,_ := range neighbors_kv{
+        output := VlanNeighborsModel{
+            Ip_addr: k[len(generateDBTableKey(db.separator,VLAN_NEIGH_TB,vlan_name))+1:],
+        }
+        Neighbors = append(Neighbors,output)
+    }
+    NeighborsReturn.VlanID = vlan_id
+    NeighborsReturn.Attr = Neighbors
+
+    log.Printf(" output neighbors is  %v", NeighborsReturn)
+    WriteRequestResponse(w, NeighborsReturn, http.StatusOK)
+}

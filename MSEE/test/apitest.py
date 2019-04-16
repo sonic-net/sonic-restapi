@@ -169,6 +169,21 @@ class rest_api_client(unittest.TestCase):
     def post_config_restart_in_mem_db(self):
         return self.post('v1/config/restartdb')
 
+    # Get vlans per vnet_id
+    def get_config_interface_vlans(self, vnet_id=None):
+        params = {}
+        if vnet_id != None:
+            params['vnet_id'] = vnet_id
+        return self.get('v1/config/interface/vlans',params=params)
+
+    # Get members per vlan
+    def get_config_interface_vlan_members(self, vlan_id):
+        return self.get('v1/config/interface/vlan/{vlan_id}/members'.format(vlan_id=vlan_id))
+
+    # Get neighbors per vlan
+    def get_config_interface_vlan_neighbors(self, vlan_id):
+        return self.get('v1/config/interface/vlan/{vlan_id}/neighbors'.format(vlan_id=vlan_id))
+
     # Helper functions
     def post_generic_vxlan_tunnel(self):
         rv = self.post_config_tunnel_decap_tunnel_type('vxlan', {
@@ -816,6 +831,123 @@ class ra_client_positive_tests(rest_api_client):
         local_route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
         self.assertEqual(local_route_table, {})
         
+    #GetAllVlansPerVnetId
+    def test_get_vlans_per_vnetid(self):
+        # create vxlan tunnel
+        print("hello")
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interface 2000
+        self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.4.1/24'})
+        #create vlan interface 3000
+        self.post_config_vlan(4, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.3.1/24'})
+
+        # get vlans for vnet-guid-1
+        r = self.get_config_interface_vlans('vnet-guid-1')
+        print(r.text)
+        j = json.loads(r.text)
+        k = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":3,"ip_prefix":"10.0.4.1/24"},{"vlan_id":4,"ip_prefix":"10.0.3.1/24"}]}
+        for key,value in j.iteritems():
+            if type(value)!=list:
+                print("not type list",value)
+                self.assertEqual(k[key],j[key])
+            else:
+                print("is type list",value)
+                self.assertItemsEqual(value,k.values()[0]) 
+                    
+
+    def test_get_vlans_per_vnetid_100(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interface 2
+        self.post_config_vlan(200, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        #create vlan interface 3
+        self.post_config_vlan(300, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+
+        # get vlans for vnet-guid-1
+        r = self.get_config_interface_vlans('vnet-guid-1')
+        j = json.loads(r.text)
+        k = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":200,"ip_prefix":"10.0.1.1/24"},{"vlan_id":300,"ip_prefix":"10.0.2.1/24"}]}
+        for key,value in j.iteritems():
+            if type(value)!=list:
+                print("not type list",value)
+                self.assertEqual(k[key],j[key])
+            else:
+                print("is type list",value)
+                self.assertItemsEqual(value,k.values()[0]) 
+
+    def test_get_vlans_per_vnetid_1000(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interface 2
+        self.post_config_vlan(2124, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        #create vlan interface 3
+        self.post_config_vlan(3878, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+
+        # get vlans for vnet-guid-1
+        r = self.get_config_interface_vlans('vnet-guid-1')
+        j = json.loads(r.text)
+        #assert_equal(j, 
+        k = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":2124,"ip_prefix":"10.0.1.1/24"},{"vlan_id":3878,"ip_prefix":"10.0.2.1/24"}]}
+        for key,value in j.iteritems():
+            if type(value)!=list:
+                print("not type list",value)
+                self.assertEqual(k[key],j[key])
+            else:
+                print("is type list",value)
+                self.assertItemsEqual(value,k.values()[0]) 
+
+    # GetAllMembersOfVlan
+    def test_get_members_per_vlan(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interface 2
+        self.post_config_vlan(2, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        members = ["Ethernet2", "Ethernet3", "Ethernet4"]
+        for member in members:
+            self.post_config_vlan_member(2, member, {'tagging_mode' : 'untagged'})
+        r = self.get_config_interface_vlan_members(2)
+        j = json.loads(r.text)
+        self.assertItemsEqual( j,
+            {"vlan_id":2,"attr":[{"if_name":"Ethernet2","tagging_mode":"untagged"},{"if_name":"Ethernet3","tagging_mode":"untagged"},{"if_name":"Ethernet4","tagging_mode":"untagged"}]}
+            )
+
+
+    # GetAllNeighborsOfVlan
+    def test_get_neighbors_per_vlan(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interface 2
+        self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+        self.post_config_vlan_neighbor(3, "10.10.20.10")
+        self.post_config_vlan_neighbor(3, "10.10.30.10")
+
+        # get vlans for vnet-guid-1
+        r = self.get_config_interface_vlan_neighbors(3)
+        j = json.loads(r.text)
+        #six.assertCountEqual(self,j, [
+        self.assertItemsEqual( j, 
+            {"vlan_id":3,"attr":[{"ip_addr":"10.10.20.10"},{"ip_addr":"10.10.30.10"}]}
+            )
 
 class ra_client_negative_tests(rest_api_client):
     """Invalid input tests"""
@@ -1151,6 +1283,41 @@ class ra_client_negative_tests(rest_api_client):
              route['error_msg'] = 'Not found'
         self.assertItemsEqual(routes, j['failed'])
         self.check_routes_dont_exist_in_db(1, routes)
+
+#vlans per vnet negative tests
+    def test_get_vlans_per_vnetid_invalid_vlan(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interface 2
+        self.post_config_vlan(5555, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        #create vlan interface 3
+        self.post_config_vlan(4096, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+
+        # get vlans for vnet-guid-1
+        r = self.get_config_interface_vlans('vnet-guid-1')
+        j = json.loads(r.text)
+        self.assertEqual(j,{u'attr': None, u'vnet_id': u'vnet-guid-1'})
+
+    def test_get_vlans_per_vnetid_invalid_vnet(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interface 2
+        self.post_config_vlan(555, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        #create vlan interface 3
+        self.post_config_vlan(409, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+
+        # get vlans for vnet-guid-1
+        r = self.get_config_interface_vlans('')
+        j = json.loads(r.text)
+        self.assertEqual(r.status_code,404)
 
 
 suite = unittest.TestLoader().loadTestsFromTestCase(ra_client_positive_tests)
