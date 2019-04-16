@@ -107,6 +107,13 @@ var routes = Routes{
     },
 
     Route{
+        "ConfigInterfaceVlansGet",
+        "GET",
+        "/v1/config/interface/vlans",
+        ConfigInterfaceVlansGet,
+    },
+
+    Route{
         "ConfigInterfaceVlanMemberDelete",
         "DELETE",
         "/v1/config/interface/vlan/{vlan_id}/member/{if_name}",
@@ -128,6 +135,13 @@ var routes = Routes{
     },
 
     Route{
+        "ConfigInterfaceVlanMembersGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}/members",
+        ConfigInterfaceVlanMembersGet,
+    },
+
+    Route{
         "ConfigInterfaceVlanNeighborDelete",
         "DELETE",
         "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
@@ -146,6 +160,13 @@ var routes = Routes{
         "POST",
         "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
         ConfigInterfaceVlanNeighborPost,
+    },
+
+    Route{
+        "ConfigInterfaceVlanNeighborsGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}/neighbors",
+        ConfigInterfaceVlanNeighborsGet,
     },
 
     Route{
@@ -254,24 +275,4 @@ var routes = Routes{
         InMemConfigRestart,
     },
 
-    Route{
-        "ConfigInterfaceVlansGet",
-        "GET",
-        "/v1/config/interface/vlans",
-        ConfigInterfaceVlansGet,
-    },
-
-    Route{
-        "ConfigInterfaceVlanMembersGet",
-        "GET",
-        "/v1/config/interface/vlan/{vlan_id}/members",
-        ConfigInterfaceVlanMembersGet,
-    },
-
-    Route{
-        "ConfigInterfaceVlanNeighborsGet",
-        "GET",
-        "/v1/config/interface/vlan/{vlan_id}/neighbors",
-        ConfigInterfaceVlanNeighborsGet,
-    },
 }
