@@ -623,7 +623,6 @@ paths:
             type: object
             required:
                - vlan_id
-               - attr
             properties:
                vlan_id:
                  type: integer
@@ -796,7 +795,6 @@ paths:
             type: object
             required:
                - vlan_id
-               - attr
             properties:
                vlan_id:
                  type: integer
