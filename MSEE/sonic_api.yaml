@@ -607,8 +607,8 @@ paths:
             $ref: '#/definitions/Error'
     '/config/interface/vlan/{vlan_id}/members'
     get:
-      summary: Get information about all existing vlan port member interfaces on an existing vlan interface
-      description: Returns attributes of the members for given vlan. If the vlan is not defined/present on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      summary: Get information about all existing vlan port member interfaces for an existing vlan interface
+      description: Returns attributes of all the member interfaces for given vlan. If the vlan is not defined/present on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       parameters:
         - name: vlan_id
           in: path
@@ -779,8 +779,8 @@ paths:
             $ref: '#/definitions/Error'
     '/config/interface/vlan/{vlan_id}/neighbors'
     get:
-      summary: Get information about existing vlan neighbors on an existing vlan interface
-      description: Returns HTTP success/failure code for neighbors of requested vlan. If the vlan interface does not exist on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      summary: Get information about all vlan neighbors on an existing vlan interface
+      description: Returns all the neighbors associated with requested vlan. If the vlan interface does not exist on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
       parameters:
         - name: vlan_id
           in: path

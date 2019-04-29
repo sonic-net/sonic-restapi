@@ -127,6 +127,12 @@ class rest_api_client(unittest.TestCase):
     def delete_config_vlan(self, vlan_id):
         return self.delete('v1/config/interface/vlan/{vlan_id}'.format(vlan_id=vlan_id)) 
 
+    def get_config_interface_vlans(self, vnet_id=None):
+        params = {}
+        if vnet_id != None:
+            params['vnet_id'] = vnet_id
+        return self.get('v1/config/interface/vlans',params=params)
+
     # Vlan Member
     def post_config_vlan_member(self, vlan_id, if_name, value):
         return self.post('v1/config/interface/vlan/{vlan_id}/member/{if_name}'.format(vlan_id=vlan_id, if_name=if_name), value) 
@@ -137,6 +143,9 @@ class rest_api_client(unittest.TestCase):
     def delete_config_vlan_member(self, vlan_id, if_name):
         return self.delete('v1/config/interface/vlan/{vlan_id}/member/{if_name}'.format(vlan_id=vlan_id, if_name=if_name)) 
 
+    def get_config_interface_vlan_members(self, vlan_id):
+        return self.get('v1/config/interface/vlan/{vlan_id}/members'.format(vlan_id=vlan_id))
+
     # Vlan Neighbor
     def post_config_vlan_neighbor(self, vlan_id, ip_addr):
         return self.post('v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}'.format(vlan_id=vlan_id, ip_addr=ip_addr)) 
@@ -146,6 +155,9 @@ class rest_api_client(unittest.TestCase):
 
     def delete_config_vlan_neighbor(self, vlan_id, ip_addr):
         return self.delete('v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}'.format(vlan_id=vlan_id, ip_addr=ip_addr))    
+
+    def get_config_interface_vlan_neighbors(self, vlan_id):
+        return self.get('v1/config/interface/vlan/{vlan_id}/neighbors'.format(vlan_id=vlan_id))
 
     # Routes
     def patch_config_vrouter_vrf_id_routes(self, vrf_id, value):
@@ -168,21 +180,6 @@ class rest_api_client(unittest.TestCase):
     # In memory DB restart
     def post_config_restart_in_mem_db(self):
         return self.post('v1/config/restartdb')
-
-    # Get vlans per vnet_id
-    def get_config_interface_vlans(self, vnet_id=None):
-        params = {}
-        if vnet_id != None:
-            params['vnet_id'] = vnet_id
-        return self.get('v1/config/interface/vlans',params=params)
-
-    # Get members per vlan
-    def get_config_interface_vlan_members(self, vlan_id):
-        return self.get('v1/config/interface/vlan/{vlan_id}/members'.format(vlan_id=vlan_id))
-
-    # Get neighbors per vlan
-    def get_config_interface_vlan_neighbors(self, vlan_id):
-        return self.get('v1/config/interface/vlan/{vlan_id}/neighbors'.format(vlan_id=vlan_id))
 
     # Helper functions
     def post_generic_vxlan_tunnel(self):
@@ -513,6 +510,78 @@ class ra_client_positive_tests(rest_api_client):
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
         self.assertEqual(vlan_intf_table, {})
 
+    def test_get_vlans_per_vnetid_1digitvlans(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        self.post_config_vrouter_vrf_id('vnet-guid-2', {'vnid': 2001})
+        #create vlan interfaces
+        self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.4.1/24'})
+        self.post_config_vlan(4, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.3.1/24'})
+
+        self.post_config_vlan(5, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.4.1/24'})
+        self.post_config_vlan(6, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.3.1/24'})
+        # get vlans for vnet-guid-1
+        r_vnet1 = self.get_config_interface_vlans('vnet-guid-1')
+        r_vnet2 = self.get_config_interface_vlans('vnet-guid-2')
+        j_vnet1 = json.loads(r_vnet1.text)
+        j_vnet2 = json.loads(r_vnet2.text)
+        k_vnet1 = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":3,"ip_prefix":"10.0.4.1/24"},{"vlan_id":4,"ip_prefix":"10.0.3.1/24"}]}
+        k_vnet2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":5,"ip_prefix":"10.2.4.1/24"},{"vlan_id":6,"ip_prefix":"10.2.3.1/24"}]}
+        for key,value in j_vnet1.iteritems():
+            if type(value)!=list:
+                #print("not type list",value)
+                self.assertEqual(k_vnet1[key],j_vnet1[key])
+            else:
+                #print("is type list",value)
+                self.assertItemsEqual(value,k_vnet1.values()[0])
+        for key,value in j_vnet2.iteritems():
+            if type(value)!=list:
+                #print("not type list",value)
+                self.assertEqual(k_vnet2[key],j_vnet2[key])
+            else:
+                #print("is type list",value)
+                self.assertItemsEqual(value,k_vnet2.values()[0])
+
+    def test_get_vlans_per_vnetid_4digitvlans(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        self.post_config_vrouter_vrf_id('vnet-guid-2', {'vnid': 2002})
+        #create vlan interfaces
+        self.post_config_vlan(1111, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        self.post_config_vlan(2222, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+        self.post_config_vlan(3000, {'vnet_id' : 'vnet-guid-2'})
+        self.post_config_vlan(4000, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.2.1/24'})
+
+        # get vlans for vnet-guid-1
+        r = self.get_config_interface_vlans('vnet-guid-1')
+        j = json.loads(r.text)
+        r2 = self.get_config_interface_vlans('vnet-guid-2')
+        j2 = json.loads(r2.text)
+        k = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":1111,"ip_prefix":"10.0.1.1/24"},{"vlan_id":2222,"ip_prefix":"10.0.2.1/24"}]}
+        k2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":3000},{"vlan_id":4000,"ip_prefix":"10.2.2.1/24"}]}
+        for key,value in j.iteritems():
+            if type(value)!=list:
+                #print("not type list",value)
+                self.assertEqual(k[key],j[key])
+            else:
+                #print("is type list",value)
+                self.assertItemsEqual(value,k.values()[0]) 
+        for key,value in j2.iteritems():
+            if type(value)!=list:
+                #print("not type list",value)
+                self.assertEqual(k2[key],j2[key])
+            else:
+                #print("is type list",value)
+                self.assertItemsEqual(value,k2.values()[0])
+
 
 # Vlan Member
     def test_vlan_member_tagged_untagged_interop(self):
@@ -599,6 +668,24 @@ class ra_client_positive_tests(rest_api_client):
         vlan_mem_table = self.configdb.hgetall(VLAN_MEMB_TB + '|' + VLAN_NAME_PREF + '2|Ethernet2')
         self.assertEqual(vlan_mem_table, {b'tagging_mode':b'untagged'})
 
+    def test_get_members_per_vlan(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interface 2
+        self.post_config_vlan(2, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        members = ["Ethernet2", "Ethernet3", "Ethernet4"]
+        for member in members:
+            self.post_config_vlan_member(2, member, {'tagging_mode' : 'untagged'})
+        r = self.get_config_interface_vlan_members(2)
+        j = json.loads(r.text)
+        self.assertItemsEqual( j,
+            {"vlan_id":2,"attr":[{"if_name":"Ethernet2","tagging_mode":"untagged"},{"if_name":"Ethernet3","tagging_mode":"untagged"},{"if_name":"Ethernet4","tagging_mode":"untagged"}]}
+            )
+
 
 # Vlan Neighbor
     def test_vlan_neighbor_all_verbs(self):
@@ -623,6 +710,25 @@ class ra_client_positive_tests(rest_api_client):
         self.assertEqual(r.status_code, 204)
         vlan_neigh_table = self.configdb.hgetall(VLAN_NEIGH_TB + '|' + VLAN_NAME_PREF + '2|10.10.10.10')
         self.assertEqual(vlan_neigh_table, {})
+
+    def test_get_neighbors_per_vlan(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interface 2
+        self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+        self.post_config_vlan_neighbor(3, "10.10.20.10")
+        self.post_config_vlan_neighbor(3, "10.10.30.10")
+
+        # get vlans for vnet-guid-1
+        r = self.get_config_interface_vlan_neighbors(3)
+        j = json.loads(r.text)
+        self.assertItemsEqual( j,
+            {"vlan_id":3,"attr":[{"ip_addr":"10.10.20.10"},{"ip_addr":"10.10.30.10"}]}
+            )
 
 # Routes
     def test_patch_update_routes_with_optional_args(self):
@@ -831,121 +937,6 @@ class ra_client_positive_tests(rest_api_client):
         local_route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
         self.assertEqual(local_route_table, {})
         
-    #GetAllVlansPerVnetId
-    def test_get_vlans_per_vnetid_1digitvlans(self):
-        # create vxlan tunnel
-        self.post_config_tunnel_decap_tunnel_type('vxlan', {
-        'ip_addr': '6.6.6.6'
-        })
-        # create vnet_id/vrf
-        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
-        self.post_config_vrouter_vrf_id('vnet-guid-2', {'vnid': 2001})
-        #create vlan interfaces
-        self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.4.1/24'})
-        self.post_config_vlan(4, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.3.1/24'})
-
-        self.post_config_vlan(5, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.4.1/24'})
-        self.post_config_vlan(6, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.3.1/24'})
-        # get vlans for vnet-guid-1
-        r_vnet1 = self.get_config_interface_vlans('vnet-guid-1')
-        r_vnet2 = self.get_config_interface_vlans('vnet-guid-2')
-        j_vnet1 = json.loads(r_vnet1.text)
-        j_vnet2 = json.loads(r_vnet2.text)
-        k_vnet1 = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":3,"ip_prefix":"10.0.4.1/24"},{"vlan_id":4,"ip_prefix":"10.0.3.1/24"}]}
-        k_vnet2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":5,"ip_prefix":"10.2.4.1/24"},{"vlan_id":6,"ip_prefix":"10.2.3.1/24"}]}
-        for key,value in j_vnet1.iteritems():
-            if type(value)!=list:
-                #print("not type list",value)
-                self.assertEqual(k_vnet1[key],j_vnet1[key])
-            else:
-                #print("is type list",value)
-                self.assertItemsEqual(value,k_vnet1.values()[0])
-        for key,value in j_vnet2.iteritems():
-            if type(value)!=list:
-                #print("not type list",value)
-                self.assertEqual(k_vnet2[key],j_vnet2[key])
-            else:
-                #print("is type list",value)
-                self.assertItemsEqual(value,k_vnet2.values()[0])
-                    
-
-    def test_get_vlans_per_vnetid_4digitvlans(self):
-        # create vxlan tunnel
-        self.post_config_tunnel_decap_tunnel_type('vxlan', {
-        'ip_addr': '6.6.6.6'
-        })
-        # create vnet_id/vrf
-        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
-        self.post_config_vrouter_vrf_id('vnet-guid-2', {'vnid': 2002})
-        #create vlan interfaces
-        self.post_config_vlan(1111, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
-        self.post_config_vlan(2222, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
-        self.post_config_vlan(3000, {'vnet_id' : 'vnet-guid-2'})
-        self.post_config_vlan(4000, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.2.1/24'})
-
-        # get vlans for vnet-guid-1
-        r = self.get_config_interface_vlans('vnet-guid-1')
-        j = json.loads(r.text)
-        r2 = self.get_config_interface_vlans('vnet-guid-2')
-        j2 = json.loads(r2.text)
-        k = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":1111,"ip_prefix":"10.0.1.1/24"},{"vlan_id":2222,"ip_prefix":"10.0.2.1/24"}]}
-        k2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":3000},{"vlan_id":4000,"ip_prefix":"10.2.2.1/24"}]}
-        for key,value in j.iteritems():
-            if type(value)!=list:
-                #print("not type list",value)
-                self.assertEqual(k[key],j[key])
-            else:
-                #print("is type list",value)
-                self.assertItemsEqual(value,k.values()[0]) 
-        for key,value in j2.iteritems():
-            if type(value)!=list:
-                #print("not type list",value)
-                self.assertEqual(k2[key],j2[key])
-            else:
-                #print("is type list",value)
-                self.assertItemsEqual(value,k2.values()[0])
-
-    # GetAllMembersOfVlan
-    def test_get_members_per_vlan(self):
-        # create vxlan tunnel
-        self.post_config_tunnel_decap_tunnel_type('vxlan', {
-        'ip_addr': '6.6.6.6'
-        })
-        # create vnet_id/vrf
-        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
-        #create vlan interface 2
-        self.post_config_vlan(2, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
-        members = ["Ethernet2", "Ethernet3", "Ethernet4"]
-        for member in members:
-            self.post_config_vlan_member(2, member, {'tagging_mode' : 'untagged'})
-        r = self.get_config_interface_vlan_members(2)
-        j = json.loads(r.text)
-        self.assertItemsEqual( j,
-            {"vlan_id":2,"attr":[{"if_name":"Ethernet2","tagging_mode":"untagged"},{"if_name":"Ethernet3","tagging_mode":"untagged"},{"if_name":"Ethernet4","tagging_mode":"untagged"}]}
-            )
-
-
-    # GetAllNeighborsOfVlan
-    def test_get_neighbors_per_vlan(self):
-        # create vxlan tunnel
-        self.post_config_tunnel_decap_tunnel_type('vxlan', {
-        'ip_addr': '6.6.6.6'
-        })
-        # create vnet_id/vrf
-        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
-        #create vlan interface 2
-        self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
-        self.post_config_vlan_neighbor(3, "10.10.20.10")
-        self.post_config_vlan_neighbor(3, "10.10.30.10")
-
-        # get vlans for vnet-guid-1
-        r = self.get_config_interface_vlan_neighbors(3)
-        j = json.loads(r.text)
-        #six.assertCountEqual(self,j, [
-        self.assertItemsEqual( j, 
-            {"vlan_id":3,"attr":[{"ip_addr":"10.10.20.10"},{"ip_addr":"10.10.30.10"}]}
-            )
-
 class ra_client_negative_tests(rest_api_client):
     """Invalid input tests"""
 # Decap:
@@ -1154,6 +1145,38 @@ class ra_client_negative_tests(rest_api_client):
         r = self.delete_config_vlan(2)
         self.assertEqual(r.status_code, 204)
 
+    def test_get_vlans_per_vnetid_invalid_vlan(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create invalid vlan interfaces
+        self.post_config_vlan(5555, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        self.post_config_vlan(4096, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+
+        # get vlans for vnet-guid-1
+        r = self.get_config_interface_vlans('vnet-guid-1')
+        j = json.loads(r.text)
+        self.assertEqual(j,{u'attr': None, u'vnet_id': u'vnet-guid-1'})
+
+    def test_get_vlans_per_vnetid_invalid_vnet(self):
+        # create vxlan tunnel
+        self.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interfaces
+        self.post_config_vlan(555, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        self.post_config_vlan(409, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+
+        # get vlans for vnet-guid-1
+        r = self.get_config_interface_vlans('')
+        j = json.loads(r.text)
+        self.assertEqual(r.status_code,404)
+
 # Vlan Member
     def test_post_vlan_mem_which_exists_tagged(self):
         self.post_generic_vlan_and_deps()
@@ -1280,39 +1303,6 @@ class ra_client_negative_tests(rest_api_client):
              route['error_msg'] = 'Not found'
         self.assertItemsEqual(routes, j['failed'])
         self.check_routes_dont_exist_in_db(1, routes)
-
-#vlans per vnet negative tests
-    def test_get_vlans_per_vnetid_invalid_vlan(self):
-        # create vxlan tunnel
-        self.post_config_tunnel_decap_tunnel_type('vxlan', {
-        'ip_addr': '6.6.6.6'
-        })
-        # create vnet_id/vrf
-        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
-        #create invalid vlan interfaces
-        self.post_config_vlan(5555, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
-        self.post_config_vlan(4096, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
-
-        # get vlans for vnet-guid-1
-        r = self.get_config_interface_vlans('vnet-guid-1')
-        j = json.loads(r.text)
-        self.assertEqual(j,{u'attr': None, u'vnet_id': u'vnet-guid-1'})
-
-    def test_get_vlans_per_vnetid_invalid_vnet(self):
-        # create vxlan tunnel
-        self.post_config_tunnel_decap_tunnel_type('vxlan', {
-        'ip_addr': '6.6.6.6'
-        })
-        # create vnet_id/vrf
-        self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
-        #create vlan interfaces
-        self.post_config_vlan(555, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
-        self.post_config_vlan(409, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
-
-        # get vlans for vnet-guid-1
-        r = self.get_config_interface_vlans('')
-        j = json.loads(r.text)
-        self.assertEqual(r.status_code,404)
 
 
 suite = unittest.TestLoader().loadTestsFromTestCase(ra_client_positive_tests)
