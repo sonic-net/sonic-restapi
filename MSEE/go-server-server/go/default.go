@@ -567,7 +567,6 @@ func ConfigInterfaceVlanNeighborsGet(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
     var Neighbors = []VlanNeighborsModel{}
     var NeighborsReturn VlanNeighborsReturnModel
-    log.Printf(" in the neighbors call ")
 
     vlan_id, err := vlan_validator(w, vars["vlan_id"])
     if err != nil {
