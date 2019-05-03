@@ -55,9 +55,39 @@ type VlanMemberReturnModel struct {
     Attr      VlanMemberModel  `json:"attr"`
 }
 
+type VlanMembersModel struct {
+    If_name   string           `json:"if_name"`
+    Tagging   string           `json:"tagging_mode"`
+}
+
+type VlanMembersReturnModel struct {
+    VlanID    int              `json:"vlan_id"`
+    Attr      []VlanMembersModel  `json:"attr"`
+}
+
 type VlanNeighborReturnModel struct {
     VlanID    int              `json:"vlan_id"`
     Ip_addr   string           `json:"ip_addr"`
+}
+
+type VlanNeighborsModel struct {
+    Ip_addr   string           `json:"ip_addr"`
+}
+
+type VlanNeighborsReturnModel struct {
+    VlanID    int                  `json:"vlan_id"`
+    Attr      []VlanNeighborsModel `json:"attr"`
+}
+
+type VlansPerVnetReturnModel struct {
+    Vnet_id   string               `json:"vnet_id,omitempty"`
+    Attr      []VlansPerVnetModel  `json:"attr"`
+}
+
+type VlansPerVnetModel struct {
+    VlanID    int              `json:"vlan_id"`
+    IPPrefix  string           `json:"ip_prefix,omitempty"`
+
 }
 
 type TunnelDecapModel struct {

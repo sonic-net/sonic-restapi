@@ -412,6 +412,51 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
+    '/config/interface/vlans'
+    get:
+      summary: Get information about existing vlan interfaces for given vnet_id
+      description: Returns attributes for vlans of requested vnet_id. If the vnet_id does not exist, it returns a '404' error.
+      parameters:
+        - name: vnet_id
+          in: path
+          type: string
+          required: true
+          description: vnet_id containing the vnet guid as a string
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - vnet_id
+              - attr
+            properties:
+              vnet_id:
+                type: string
+                description: vnet_id containing the vnet guid as a string
+              attr:
+                type: array
+                $ref: '#/definitions/VlansEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vnet_id is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
 #----------------------------------------------
 # VLAN interface member 
 #----------------------------------------------
@@ -560,6 +605,52 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
+    '/config/interface/vlan/{vlan_id}/members'
+    get:
+      summary: Get information about all existing vlan port member interfaces for an existing vlan interface
+      description: Returns attributes of all the member interfaces for given vlan. If the vlan is not defined/present on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlan_id
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+               - vlan_id
+            properties:
+               vlan_id:
+                 type: integer
+                 format: int32
+                 description: 12 bit vlan_id
+               attr:
+                 type: array
+                 $ref: '#/definitions/VlanMembersEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not defined.
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
 #----------------------------------------------
 # VLAN interface neighbor 
 #----------------------------------------------
@@ -676,6 +767,52 @@ paths:
             $ref: '#/definitions/Error'
         '404':
           description: Vlan interface is not found/Vlan neighbor is not found on this Vlan interface
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    '/config/interface/vlan/{vlan_id}/neighbors'
+    get:
+      summary: Get information about all vlan neighbors on an existing vlan interface
+      description: Returns all the neighbors associated with requested vlan. If the vlan interface does not exist on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      parameters:
+        - name: vlan_id
+          in: path
+          required: true
+          type: integer
+          format: int32
+          description: 12 bit vlan_id
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+               - vlan_id
+            properties:
+               vlan_id:
+                 type: integer
+                 format: int32
+                 description: 12 bit vlan_id
+               attr:
+                 type: array
+                 $ref: '#/definitions/VlanNeighborsEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not found
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -1088,9 +1225,36 @@ definitions:
           Vlan interface IP address and prefix, this will act as
           the default gateway to/from the HSM. 
         type: string
+  VlansEntry:
+    type: object
+    properties:
+      vlan_id:
+        type: integer
+        format: int32
+        description: 12 bit vlan_id
+      ip_prefix:
+        description: >-
+          Vlan interface IP address and prefix, this will act as
+          the default gateway to/from the HSM.
+        type: string
   VlanMemberEntry:
     type: object
     properties:
       tagging_mode:
         type: string
         description: tagged/untagged describes the vlan member's tagging mode, eg: HSM accepts only untagged traffic
+  VlanMembersEntry:
+    type: object
+    properties:
+      tagging_mode:
+        type: string
+        description: tagged/untagged describes the vlan member's tagging mode, eg: HSM accepts only untagged traffic
+      if_name:
+        type: string
+        description: Physical port name
+  VlanNeighborsEntry:
+    type: object
+    properties:
+      ip_addr:
+        type: string
+        description: IP address of directly attached device to the switch
