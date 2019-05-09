@@ -282,7 +282,7 @@ paths:
 #----------------------------------------------
 # VLAN interface 
 #----------------------------------------------
-    '/config/interface/vlan/{vlan_id}'
+    '/config/interface/vlan/{vlan_id}':
     post:
       summary: Create a new vlan interface
       description: Create a new vlan interface with name Vlan{vlan_id} and vlanid set to vlan_id. If such a vlan interface already exists then this method returns the error '409' sub-code 0. If a vnet with specified vnet_id in attr does not exist this function will return error '409' sub-code 1. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
@@ -412,7 +412,7 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
-    '/config/interface/vlans'
+    '/config/interface/vlans':
     get:
       summary: Get information about existing vlan interfaces for given vnet_id
       description: Returns attributes for vlans of requested vnet_id. If the vnet_id does not exist, it returns a '404' error.
@@ -460,7 +460,7 @@ paths:
 #----------------------------------------------
 # VLAN interface member 
 #----------------------------------------------
-    '/config/interface/vlan/{vlan_id}/member/{if_name}'
+    '/config/interface/vlan/{vlan_id}/member/{if_name}':
     post:
       summary: Add a physical port to a vlan interface
       description: Add a member to interface Vlan{vlan_id}. If the vlan interface does not exist on SONiC it returns a '404' error. If such a member is already present on this Vlan interface the API returns '409' sub-code 0. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If attr with tagging mode is provided it will be honored in config, if not, the default tagging mode will be set to 'untagged'. Vlan members may be tagged or untagged, but, the Vlan member port may be untagged in only one Vlan interface, deviations from this will cause the API to return '409' sub-code 0. 
@@ -605,7 +605,7 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
-    '/config/interface/vlan/{vlan_id}/members'
+    '/config/interface/vlan/{vlan_id}/members':
     get:
       summary: Get information about all existing vlan port member interfaces for an existing vlan interface
       description: Returns attributes of all the member interfaces for given vlan. If the vlan is not defined/present on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
@@ -654,7 +654,7 @@ paths:
 #----------------------------------------------
 # VLAN interface neighbor 
 #----------------------------------------------
-    '/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}'
+    '/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}':
     post:
       summary: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery 
       description: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery. If such a neighbor already exists on this Vlan interface then this method returns the error '409' sub-code 0, if the Vlan interface doesn't exist on SONiC this returns error '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
@@ -777,7 +777,7 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
-    '/config/interface/vlan/{vlan_id}/neighbors'
+    '/config/interface/vlan/{vlan_id}/neighbors':
     get:
       summary: Get information about all vlan neighbors on an existing vlan interface
       description: Returns all the neighbors associated with requested vlan. If the vlan interface does not exist on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
@@ -1242,13 +1242,13 @@ definitions:
     properties:
       tagging_mode:
         type: string
-        description: tagged/untagged describes the vlan member's tagging mode, eg: HSM accepts only untagged traffic
+        description: "tagged/untagged describes the vlan member's tagging mode, eg: HSM accepts only untagged traffic"
   VlanMembersEntry:
     type: object
     properties:
       tagging_mode:
         type: string
-        description: tagged/untagged describes the vlan member's tagging mode, eg: HSM accepts only untagged traffic
+        description: "tagged/untagged describes the vlan member's tagging mode, eg: HSM accepts only untagged traffic"
       if_name:
         type: string
         description: Physical port name
