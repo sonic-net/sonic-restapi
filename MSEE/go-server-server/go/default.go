@@ -113,7 +113,7 @@ func ConfigInterfaceVlanDelete(w http.ResponseWriter, r *http.Request) {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
-    /* Delete sequence: 1. local subnet route 2. Vlan Interface IP prefix table, 3. Vlan Interface table, 4. Vlan */
+    /* Delete sequence: 1. local subnet route(1s delay) 2. Vlan Interface IP prefix table(1s delay), 3. Vlan Interface table, 4. Vlan */
     /* Delete 1 */
     if len(vlan_pref_kv) == 1 && vlan_if_kv != nil {
         for k,_ := range vlan_pref_kv {
@@ -128,6 +128,8 @@ func ConfigInterfaceVlanDelete(w http.ResponseWriter, r *http.Request) {
 
     /* Delete 2 */
     if len(vlan_pref_kv) == 1 {
+        /* Sleep as we deleted local subnet route */
+        time.Sleep(time.Second)
         for k,_ := range vlan_pref_kv {
             table_key := k[len(VLAN_INTF_TB)+ 1:]
             vlan_if_pt.Del(table_key, "DEL", "")
