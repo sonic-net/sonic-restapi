@@ -155,6 +155,40 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 #----------------------------------------------
+# Operations
+#----------------------------------------------
+  '/operations/ping':
+    post:
+      summary: pings an ip address from a VRF context, if provided
+      description: Returns a JSON response object with packets transmitted, received, maxRTT, minRTT, avgRTT. When specified vnet_id doesn't exist in the config_db, returns 404 Object not found.
+      parameters:
+        - name: ip_address
+          in: body
+          required: true
+          type: string
+          description: IP address of the device to ping
+        - name: vnet_id
+          in: body
+          required: false
+          type: string
+          description: vnet_id containing the vnet guid as a string
+        - name: count
+          in: body
+          required: false
+          type: string
+          description: value for -c parameter of ping
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Virtual router object
 #----------------------------------------------
   '/config/vrouter/{vnet_id}':

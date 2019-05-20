@@ -108,6 +108,20 @@ type VnetReturnModel struct {
     Attr VnetModel    `json:"attr"`
 }
 
+type PingRequestModel struct {
+    IpAddress string   `json:"ip_addr"`
+    VnetId string   `json:"vnet_id"`
+    Count string   `json:"count"`
+}
+
+type PingReturnModel struct {
+    PacketsTransmitted string   `json:"packets_transmitted"`
+    PacketsReceived string   `json:"packets_received"`
+    MinRTT string   `json:"min_rtt"`
+    MaxRTT string   `json:"max_rtt"`
+    AvgRTT string   `json:"avg_rtt"`
+}
+
 type ErrorInner struct {
     Code    int      `json:"code"`
     SubCode *int     `json:"sub-code,omitempty"`

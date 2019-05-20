@@ -9,11 +9,14 @@ import (
     "swsscommon"
     "time"
     "github.com/gorilla/mux"
+    "os/exec"
 )
 
 const RESRC_EXISTS int = 0
 const DEP_MISSING int  = 1
 const DELETE_DEP  int  = 2
+const DEFAULT_PING_COUNT_STR string = "4"
+const PING_COMMAND_STR string = "ping"
 
 func StateHeartbeatGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -1099,4 +1102,67 @@ func InMemConfigRestart(w http.ResponseWriter, r *http.Request) {
         genVnetGuidMap()
     }
     w.WriteHeader(http.StatusNoContent)
+}
+
+//Operations
+func PingVRF(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    var vnet_id string
+    var vnet_id_match string
+    var ip_addr string
+    var count string
+    var out []byte
+    var err error
+    var attr PingRequestModel
+    err_read_json := ReadJSONBody(w, r, &attr)
+    if err_read_json != nil {
+        // The error is already handled in this case
+        return
+    }
+
+    if attr.VnetId != "" {
+        vnet_id = attr.VnetId
+	var err error
+	vnet_id_match, _ ,err = get_and_validate_vnet_id(w,vnet_id)
+	if err != nil {
+	    return
+        }
+    } else {
+        log.Printf(" vnet_id not provided \n")
+    }
+
+    if attr.IpAddress != "" {
+        ip_addr = attr.IpAddress
+    } else {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"ip_addr"}, "")
+    }
+
+    if attr.Count != "" {
+        count = attr.Count
+    } else {
+        log.Printf(" count not provided \n")
+    }
+
+    var output PingReturnModel
+    var count_param string
+    if count != "" {
+	count_param = "-c " + count
+    } else  {
+	count_param = "-c " + DEFAULT_PING_COUNT_STR
+    }
+
+    if vnet_id_match != "" {
+	args := []string{ip_addr, count_param, "-I", vnet_id_match}
+        out, err = exec.Command(PING_COMMAND_STR, args...).Output()
+    } else {
+        out, err = exec.Command(PING_COMMAND_STR, ip_addr, count_param).Output()
+    }
+    if err != nil {
+        log.Printf("Error of ping is "+ err.Error())
+    }
+
+    op := string(out[:])
+    output = parse_ping_output(op)
+
+    WriteRequestResponse(w, output, http.StatusOK)
 }
