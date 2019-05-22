@@ -181,6 +181,11 @@ class rest_api_client(unittest.TestCase):
     def post_config_restart_in_mem_db(self):
         return self.post('v1/config/restartdb')
 
+    # Operations
+    # Ping
+    def post_ping_vrf(self, value):
+        return self.post('v1/operations/ping', value)
+
     # Helper functions
     def post_generic_vxlan_tunnel(self):
         rv = self.post_config_tunnel_decap_tunnel_type('vxlan', {
@@ -936,6 +941,24 @@ class ra_client_positive_tests(rest_api_client):
         self.assertEqual(r.status_code, 204)
         local_route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
         self.assertEqual(local_route_table, {})
+
+    # Operations
+    # PingVRF
+    def test_post_ping_vrf(self):
+        vlan0 = 2
+        self.post_generic_vrouter_and_deps()
+        # Ping loss but response 200
+        r = self.post_ping_vrf({'vnet_id' : 'vnet-guid-1', 'count' : '2', 'ip_addr' : '8.8.8.8'})
+        self.assertEqual(r.status_code, 200)
+        # Ping success and response 200
+        r = self.post_ping_vrf({"count" : "2", "ip_addr" : "8.8.8.8"})
+        self.assertEqual(r.status_code, 200)
+        # Ping success and response 200
+        r = self.post_ping_vrf({"ip_addr" : "8.8.8.8"})
+        self.assertEqual(r.status_code, 200)
+        # vnet_id not found 404 error
+        r = self.post_ping_vrf({'vnet_id' : 'vnet-1', 'ip_addr' : '8.8.8.8'})
+        self.assertEqual(r.status_code, 404)
         
 class ra_client_negative_tests(rest_api_client):
     """Invalid input tests"""
