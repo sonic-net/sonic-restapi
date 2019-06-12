@@ -1125,6 +1125,7 @@ func PingVRF(w http.ResponseWriter, r *http.Request) {
 	var err error
 	vnet_id_match, _ ,err = get_and_validate_vnet_id(w,vnet_id)
 	if err != nil {
+	    // Error is handled in get_and_validate_vnet_id method
 	    return
         }
     } else {
@@ -1134,7 +1135,7 @@ func PingVRF(w http.ResponseWriter, r *http.Request) {
     if attr.IpAddress != "" {
         ip_addr = attr.IpAddress
     } else {
-        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"ip_addr"}, "")
+        WriteRequestError(w, http.StatusBadRequest, "Mandatory argument missing", []string{"ip_addr"}, "")
     }
 
     if attr.Count != "" {
@@ -1150,15 +1151,13 @@ func PingVRF(w http.ResponseWriter, r *http.Request) {
     } else  {
 	count_param = "-c " + DEFAULT_PING_COUNT_STR
     }
-
+    args := []string{ip_addr, count_param}
     if vnet_id_match != "" {
-	args := []string{ip_addr, count_param, "-I", vnet_id_match}
-        out, err = exec.Command(PING_COMMAND_STR, args...).Output()
-    } else {
-        out, err = exec.Command(PING_COMMAND_STR, ip_addr, count_param).Output()
+	args = append(args, "-I", vnet_id_match)
     }
+    out, err = exec.Command(PING_COMMAND_STR, args...).Output()
     if err != nil {
-        log.Printf("Error of ping is "+ err.Error())
+        log.Printf("Exec command Error is "+ err.Error())
     }
 
     op := string(out[:])
