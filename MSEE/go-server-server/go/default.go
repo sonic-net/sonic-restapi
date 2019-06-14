@@ -1133,12 +1133,22 @@ func PingVRF(w http.ResponseWriter, r *http.Request) {
     }
 
     if attr.IpAddress != "" {
+
+        if !IsValidIPBoth(attr.IpAddress) {
+            WriteRequestError(w, http.StatusBadRequest, "Invalid IP address provided", []string{"ip_addr"}, "")
+            return
+        }
         ip_addr = attr.IpAddress
     } else {
         WriteRequestError(w, http.StatusBadRequest, "Mandatory argument missing", []string{"ip_addr"}, "")
     }
 
     if attr.Count != "" {
+        _,err := strconv.Atoi(attr.Count)
+	if err != nil {
+            WriteRequestError(w, http.StatusBadRequest, " count should be an integer", []string{"count"}, "")
+	    return
+	}
         count = attr.Count
     } else {
         log.Printf(" count not provided \n")

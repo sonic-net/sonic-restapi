@@ -956,9 +956,6 @@ class ra_client_positive_tests(rest_api_client):
         # Ping success and response 200
         r = self.post_ping_vrf({"ip_addr" : "8.8.8.8"})
         self.assertEqual(r.status_code, 200)
-        # vnet_id not found 404 error
-        r = self.post_ping_vrf({'vnet_id' : 'vnet-1', 'ip_addr' : '8.8.8.8'})
-        self.assertEqual(r.status_code, 404)
         
 class ra_client_negative_tests(rest_api_client):
     """Invalid input tests"""
@@ -1326,6 +1323,21 @@ class ra_client_negative_tests(rest_api_client):
              route['error_msg'] = 'Not found'
         self.assertItemsEqual(routes, j['failed'])
         self.check_routes_dont_exist_in_db(1, routes)
+
+    # Operations
+    # PingVRF
+    def test_post_ping_vrf_invalid(self):
+        vlan0 = 2
+        self.post_generic_vrouter_and_deps()
+        # Invalid count scenario
+        r = self.post_ping_vrf({"count" : "abc", "ip_addr" : "8.8.8.8"})
+        self.assertEqual(r.status_code, 400)
+        # Invalid ip_addr scenario
+        r = self.post_ping_vrf({"ip_addr" : "8.8.8.888"})
+        self.assertEqual(r.status_code, 400)
+        # vnet_id not found 404 error
+        r = self.post_ping_vrf({'vnet_id' : 'vnet-1', 'ip_addr' : '8.8.8.8'})
+        self.assertEqual(r.status_code, 404)
 
 
 suite = unittest.TestLoader().loadTestsFromTestCase(ra_client_positive_tests)
