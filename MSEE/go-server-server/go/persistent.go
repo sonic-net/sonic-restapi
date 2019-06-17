@@ -222,11 +222,7 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
     db := &conf_db_ops
     var pattern string
     // TODO: Keep only else statement code in production
-    if *RunApiAsLocalTestDocker {
-        pattern = generateDBTableKey(db.separator, "_"+ CFG_ROUTE_TUN_TB, vnet_id_str, ipFilter)
-    } else {
-        pattern = generateDBTableKey(db.separator, CFG_ROUTE_TUN_TB, vnet_id_str, ipFilter)
-    }
+    pattern = generateDBTableKey(db.separator, CFG_ROUTE_TUN_TB, vnet_id_str, ipFilter)
     routes = []RouteModel{}
 
     kv, err := GetKVsMulti(db.db_num,pattern)

@@ -979,11 +979,8 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
 		       continue
 		  }
         // TODO: Remove if else and correct getkvs in production code
-        if *RunApiAsLocalTestDocker {
-             rt_tb_key = generateDBTableKey(db.separator, "_"+ CFG_ROUTE_TUN_TB, vnet_id_str, r.IPPrefix)
-        } else {
-             rt_tb_key = generateDBTableKey(db.separator, CFG_ROUTE_TUN_TB, vnet_id_str, r.IPPrefix)
-        }
+        rt_tb_key = generateDBTableKey(db.separator, CFG_ROUTE_TUN_TB, vnet_id_str, r.IPPrefix)
+       
 		  cur_route, err := GetKVs(db.db_num, rt_tb_key)/* generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, r.IPPrefix))*/
 		  if err != nil {
              r.Error_code = http.StatusInternalServerError

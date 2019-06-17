@@ -17,7 +17,7 @@ RUN apt-get update \
       flex \
       g++ \
       git \
-      libboost-program-options1.62-dev \
+      libboost-all-dev \
       libevent-dev \
       libssl-dev \
       libtool \
