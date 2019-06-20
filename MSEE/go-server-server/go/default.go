@@ -1107,10 +1107,7 @@ func InMemConfigRestart(w http.ResponseWriter, r *http.Request) {
 //Operations
 func PingVRF(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-    var vnet_id string
     var vnet_id_match string
-    var ip_addr string
-    var count string
     var out []byte
     var err error
     var attr PingRequestModel
@@ -1119,9 +1116,8 @@ func PingVRF(w http.ResponseWriter, r *http.Request) {
         // The error is already handled in this case
         return
     }
-
     if attr.VnetId != "" {
-        vnet_id = attr.VnetId
+        vnet_id := attr.VnetId
 	var err error
 	vnet_id_match, _ ,err = get_and_validate_vnet_id(w,vnet_id)
 	if err != nil {
@@ -1132,36 +1128,23 @@ func PingVRF(w http.ResponseWriter, r *http.Request) {
         log.Printf(" vnet_id not provided \n")
     }
 
-    if attr.IpAddress != "" {
-
-        if !IsValidIPBoth(attr.IpAddress) {
-            WriteRequestError(w, http.StatusBadRequest, "Invalid IP address provided", []string{"ip_addr"}, "")
-            return
-        }
-        ip_addr = attr.IpAddress
-    } else {
-        WriteRequestError(w, http.StatusBadRequest, "Mandatory argument missing", []string{"ip_addr"}, "")
-    }
-
     if attr.Count != "" {
         _,err := strconv.Atoi(attr.Count)
 	if err != nil {
             WriteRequestError(w, http.StatusBadRequest, " count should be an integer", []string{"count"}, "")
 	    return
 	}
-        count = attr.Count
     } else {
         log.Printf(" count not provided \n")
     }
-
     var output PingReturnModel
     var count_param string
-    if count != "" {
-	count_param = "-c " + count
+    if attr.Count != "" {
+	count_param = "-c " + attr.Count
     } else  {
 	count_param = "-c " + DEFAULT_PING_COUNT_STR
     }
-    args := []string{ip_addr, count_param}
+    args := []string{attr.IpAddress, count_param}
     if vnet_id_match != "" {
 	args = append(args, "-I", vnet_id_match)
     }

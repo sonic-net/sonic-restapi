@@ -306,3 +306,31 @@ func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
 
     return
 }
+
+func (m *PingRequestModel) UnmarshalJSON(data []byte) (err error) {
+    required := struct {
+        IpAddress *string   `json:"ip_addr"`
+        VnetId    string   `json:"vnet_id"`
+        Count     string   `json:"count"`
+    }{}
+
+    err = json.Unmarshal(data, &required)
+
+    if err != nil {
+        return
+    }
+
+    if required.IpAddress == nil {
+        err = &MissingValueError{"ip_addr"}
+        return
+    }
+    m.IpAddress = *required.IpAddress
+
+    if !IsValidIPBoth(m.IpAddress) {
+        err = &InvalidFormatError{Field: "ip_addr", Message: "Invalid IPv4 address"}
+        return
+    }
+    m.VnetId = required.VnetId
+    m.Count = required.Count
+    return
+}
