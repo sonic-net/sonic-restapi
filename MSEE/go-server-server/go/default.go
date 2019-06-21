@@ -1105,7 +1105,7 @@ func InMemConfigRestart(w http.ResponseWriter, r *http.Request) {
 }
 
 //Operations
-func PingVRF(w http.ResponseWriter, r *http.Request) {
+func Ping(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     var vnet_id_match string
     var out []byte
@@ -1125,23 +1125,15 @@ func PingVRF(w http.ResponseWriter, r *http.Request) {
 	    return
         }
     } else {
-        log.Printf(" vnet_id not provided \n")
+        log.Printf("vnet_id not provided \n")
     }
 
-    if attr.Count != "" {
-        _,err := strconv.Atoi(attr.Count)
-	if err != nil {
-            WriteRequestError(w, http.StatusBadRequest, " count should be an integer", []string{"count"}, "")
-	    return
-	}
-    } else {
-        log.Printf(" count not provided \n")
-    }
     var output PingReturnModel
     var count_param string
     if attr.Count != "" {
 	count_param = "-c " + attr.Count
     } else  {
+        log.Printf("count not provided , using default count 4 \n")
 	count_param = "-c " + DEFAULT_PING_COUNT_STR
     }
     args := []string{attr.IpAddress, count_param}

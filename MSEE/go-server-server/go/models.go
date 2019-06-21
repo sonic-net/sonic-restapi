@@ -3,6 +3,7 @@ package mseeserver
 import (
     "encoding/json"
     "net"
+    "strconv"
 )
 
 type HeartbeatReturnModel struct {
@@ -329,6 +330,13 @@ func (m *PingRequestModel) UnmarshalJSON(data []byte) (err error) {
     if !IsValidIPBoth(m.IpAddress) {
         err = &InvalidFormatError{Field: "ip_addr", Message: "Invalid IPv4 address"}
         return
+    }
+    if required.Count != "" {
+        _,err_count := strconv.Atoi(required.Count)
+	if err_count != nil {
+            err = &InvalidFormatError{Field: "count", Message: "count should be an integer"}
+	    return
+	}
     }
     m.VnetId = required.VnetId
     m.Count = required.Count

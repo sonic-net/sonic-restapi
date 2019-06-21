@@ -183,7 +183,7 @@ class rest_api_client(unittest.TestCase):
 
     # Operations
     # Ping
-    def post_ping_vrf(self, value):
+    def post_ping(self, value):
         return self.post('v1/operations/ping', value)
 
     # Helper functions
@@ -944,17 +944,17 @@ class ra_client_positive_tests(rest_api_client):
 
     # Operations
     # PingVRF
-    def test_post_ping_vrf(self):
+    def test_post_ping(self):
         vlan0 = 2
         self.post_generic_vrouter_and_deps()
         # Ping loss but response 200
-        r = self.post_ping_vrf({'vnet_id' : 'vnet-guid-1', 'count' : '2', 'ip_addr' : '8.8.8.8'})
+        r = self.post_ping({'vnet_id' : 'vnet-guid-1', 'count' : '2', 'ip_addr' : '8.8.8.8'})
         self.assertEqual(r.status_code, 200)
         # Ping success and response 200
-        r = self.post_ping_vrf({"count" : "2", "ip_addr" : "8.8.8.8"})
+        r = self.post_ping({"count" : "2", "ip_addr" : "8.8.8.8"})
         self.assertEqual(r.status_code, 200)
         # Ping success and response 200
-        r = self.post_ping_vrf({"ip_addr" : "8.8.8.8"})
+        r = self.post_ping({"ip_addr" : "8.8.8.8"})
         self.assertEqual(r.status_code, 200)
         
 class ra_client_negative_tests(rest_api_client):
@@ -1326,17 +1326,17 @@ class ra_client_negative_tests(rest_api_client):
 
     # Operations
     # PingVRF
-    def test_post_ping_vrf_invalid(self):
+    def test_post_ping_invalid(self):
         vlan0 = 2
         self.post_generic_vrouter_and_deps()
         # Invalid count scenario
-        r = self.post_ping_vrf({"count" : "abc", "ip_addr" : "8.8.8.8"})
+        r = self.post_ping({"count" : "abc", "ip_addr" : "8.8.8.8"})
         self.assertEqual(r.status_code, 400)
         # Invalid ip_addr scenario
-        r = self.post_ping_vrf({"ip_addr" : "8.8.8.888"})
+        r = self.post_ping({"ip_addr" : "8.8.8.888"})
         self.assertEqual(r.status_code, 400)
         # vnet_id not found 404 error
-        r = self.post_ping_vrf({'vnet_id' : 'vnet-1', 'ip_addr' : '8.8.8.8'})
+        r = self.post_ping({'vnet_id' : 'vnet-1', 'ip_addr' : '8.8.8.8'})
         self.assertEqual(r.status_code, 404)
 
 

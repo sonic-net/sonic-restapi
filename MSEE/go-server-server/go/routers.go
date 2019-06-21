@@ -274,10 +274,10 @@ var routes = Routes{
 
    // Adding Ping method from VRF context
    Route{
-        "PingVRF",
+        "Ping",
         "POST",
         "/v1/operations/ping",
-        PingVRF,
+        Ping,
     },
 
 }
