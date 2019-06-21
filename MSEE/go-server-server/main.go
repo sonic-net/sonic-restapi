@@ -20,7 +20,7 @@ import (
 
 func StartHttpServer(handler http.Handler) {
     log.Printf("info: http endpoint started")
-    log.Fatal(http.ListenAndServe(":8080", handler))
+    log.Fatal(http.ListenAndServe(":8090", handler))
 }
 
 

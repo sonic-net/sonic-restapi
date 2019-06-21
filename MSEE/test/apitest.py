@@ -9,7 +9,7 @@ import logging
 import redis
 import json
 
-TEST_HOST = 'http://localhost:8080/'
+TEST_HOST = 'http://localhost:8090/'
 
 logging.basicConfig(filename='test.log', filemode='w', level=logging.INFO)
 l = logging.getLogger('rest_api_test')
