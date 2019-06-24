@@ -3,6 +3,7 @@ package mseeserver
 import (
     "encoding/json"
     "net"
+    "strconv"
 )
 
 type HeartbeatReturnModel struct {
@@ -106,6 +107,20 @@ type VnetModel struct {
 type VnetReturnModel struct {
     VnetName string   `json:"vnet_id"`
     Attr VnetModel    `json:"attr"`
+}
+
+type PingRequestModel struct {
+    IpAddress string   `json:"ip_addr"`
+    VnetId string   `json:"vnet_id"`
+    Count string   `json:"count"`
+}
+
+type PingReturnModel struct {
+    PacketsTransmitted string   `json:"packets_transmitted"`
+    PacketsReceived string   `json:"packets_received"`
+    MinRTT string   `json:"min_rtt"`
+    MaxRTT string   `json:"max_rtt"`
+    AvgRTT string   `json:"avg_rtt"`
 }
 
 type ErrorInner struct {
@@ -290,5 +305,40 @@ func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
 
     m.Vnid = *required.Vnid
 
+    return
+}
+
+func (m *PingRequestModel) UnmarshalJSON(data []byte) (err error) {
+    required := struct {
+        IpAddress *string   `json:"ip_addr"`
+        VnetId    string   `json:"vnet_id"`
+        Count     string   `json:"count"`
+    }{}
+
+    err = json.Unmarshal(data, &required)
+
+    if err != nil {
+        return
+    }
+
+    if required.IpAddress == nil {
+        err = &MissingValueError{"ip_addr"}
+        return
+    }
+    m.IpAddress = *required.IpAddress
+
+    if !IsValidIPBoth(m.IpAddress) {
+        err = &InvalidFormatError{Field: "ip_addr", Message: "Invalid IPv4 address"}
+        return
+    }
+    if required.Count != "" {
+        _,err_count := strconv.Atoi(required.Count)
+	if err_count != nil {
+            err = &InvalidFormatError{Field: "count", Message: "count should be an integer"}
+	    return
+	}
+    }
+    m.VnetId = required.VnetId
+    m.Count = required.Count
     return
 }

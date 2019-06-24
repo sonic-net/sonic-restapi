@@ -9,6 +9,7 @@ import (
     "net/http"
     "strconv"
     "strings"
+    "regexp"
 )
 
 func WriteRequestError(w http.ResponseWriter, code int, message string, fields []string, details string) {
@@ -333,4 +334,26 @@ func get_and_validate_vnet_id(w http.ResponseWriter, vnet_name string) (vnet_id_
         return
     }
     return
+}
+
+func parse_ping_output(ping_output string) (parsed_output PingReturnModel) {
+    var split_string []string
+    split_string = strings.Split(ping_output, " ")
+    for index, el := range split_string {
+	if el == "transmitted," {
+	    re := regexp.MustCompile("[0-9]")
+	    parsed_output.PacketsTransmitted = re.FindString(split_string[index-2])
+	}
+	if el == "received," {
+		parsed_output.PacketsReceived = split_string[index-1]
+	}
+	if el == "min/avg/max/mdev" {
+		parsed_output.MinRTT = strings.Split(split_string[index+2], "/")[0]
+		parsed_output.MaxRTT = strings.Split(split_string[index+2], "/")[2]
+		parsed_output.AvgRTT = strings.Split(split_string[index+2], "/")[1]
+
+	}
+
+    }
+    return parsed_output
 }

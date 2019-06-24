@@ -9,11 +9,14 @@ import (
     "swsscommon"
     "time"
     "github.com/gorilla/mux"
+    "os/exec"
 )
 
 const RESRC_EXISTS int = 0
 const DEP_MISSING int  = 1
 const DELETE_DEP  int  = 2
+const DEFAULT_PING_COUNT_STR string = "4"
+const PING_COMMAND_STR string = "ping"
 
 func StateHeartbeatGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -1099,4 +1102,51 @@ func InMemConfigRestart(w http.ResponseWriter, r *http.Request) {
         genVnetGuidMap()
     }
     w.WriteHeader(http.StatusNoContent)
+}
+
+//Operations
+func Ping(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    var vnet_id_match string
+    var out []byte
+    var err error
+    var attr PingRequestModel
+    err_read_json := ReadJSONBody(w, r, &attr)
+    if err_read_json != nil {
+        // The error is already handled in this case
+        return
+    }
+    if attr.VnetId != "" {
+        vnet_id := attr.VnetId
+	var err error
+	vnet_id_match, _ ,err = get_and_validate_vnet_id(w,vnet_id)
+	if err != nil {
+	    // Error is handled in get_and_validate_vnet_id method
+	    return
+        }
+    } else {
+        log.Printf("vnet_id not provided \n")
+    }
+
+    var output PingReturnModel
+    var count_param string
+    if attr.Count != "" {
+	count_param = "-c " + attr.Count
+    } else  {
+        log.Printf("count not provided , using default count 4 \n")
+	count_param = "-c " + DEFAULT_PING_COUNT_STR
+    }
+    args := []string{attr.IpAddress, count_param}
+    if vnet_id_match != "" {
+	args = append(args, "-I", vnet_id_match)
+    }
+    out, err = exec.Command(PING_COMMAND_STR, args...).Output()
+    if err != nil {
+        log.Printf("Exec command Error is "+ err.Error())
+    }
+
+    op := string(out[:])
+    output = parse_ping_output(op)
+
+    WriteRequestResponse(w, output, http.StatusOK)
 }

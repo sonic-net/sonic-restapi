@@ -23,7 +23,6 @@ var writeMutex sync.Mutex
 func Middleware(inner http.Handler, name string) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         start := time.Now()
-
         log.Printf(
             "info: request: %s %s %s",
             r.Method,
@@ -34,9 +33,7 @@ func Middleware(inner http.Handler, name string) http.Handler {
         if r.TLS == nil || CommonNameMatch(r) {
             log.Printf("trace: acquire server write lock")
             writeMutex.Lock()
-
             inner.ServeHTTP(NewLoggingResponseWriter(w), r)
-
             writeMutex.Unlock()
             log.Printf("trace: release server write lock")
         } else {
@@ -273,6 +270,14 @@ var routes = Routes{
         "POST",
         "/v1/config/restartdb",
         InMemConfigRestart,
+    },
+
+   // Adding Ping method from VRF context
+   Route{
+        "Ping",
+        "POST",
+        "/v1/operations/ping",
+        Ping,
     },
 
 }
