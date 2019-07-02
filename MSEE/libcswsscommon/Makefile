@@ -5,7 +5,7 @@ INCLUDES= \
 	-I$(SWSSCOMMON_SRC)/common \
 	-I/usr/include/swss
 
-C = g++
+#C = g++
 CPPFLAGS=-g -std=c++11 $(INCLUDES)
 LDFLAGS=-g -shared
 
