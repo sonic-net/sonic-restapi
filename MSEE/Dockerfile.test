@@ -1,4 +1,4 @@
-FROM debian:jessie
+FROM debian:stretch
 
 MAINTAINER pavelsh@microsoft.com
 
@@ -30,7 +30,6 @@ RUN sed -ri 's/^(save .*$)/# \1/g;                                              
              s/^daemonize yes$/daemonize no/;                                           \
              s/^logfile .*$/logfile ""/;                                                \
              s/^# syslog-enabled no$/syslog-enabled no/;                                \
-             s/^# unixsocket/unixsocket/;                                               \
              s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
              s/^bind 127.0.0.1/bind 0.0.0.0/ \
             ' /etc/redis/redis.conf

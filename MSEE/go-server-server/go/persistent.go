@@ -49,6 +49,8 @@ const VLAN_MEMB_TB      string = "VLAN_MEMBER"
 const VLAN_NEIGH_TB     string = "NEIGH"
 const ROUTE_TUN_TB      string = "VNET_ROUTE_TUNNEL_TABLE"
 const LOCAL_ROUTE_TB    string = "VNET_ROUTE_TABLE"
+const CFG_ROUTE_TUN_TB  string = "VNET_ROUTE_TUNNEL"
+const CFG_LOCAL_ROUTE_TB    string = "VNET_ROUTE"
 
 // DB Helper constants
 const VNET_NAME_PREF  string = "Vnet"
@@ -217,14 +219,10 @@ func GetKVsMulti(DB int, pattern string) (kv map[string]map[string]string, err e
 }
 
 func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (routes []RouteModel, err error) {
-    db := &app_db_ops
+    db := &conf_db_ops
     var pattern string
     // TODO: Keep only else statement code in production
-    if *RunApiAsLocalTestDocker {
-        pattern = generateDBTableKey(db.separator, "_"+ROUTE_TUN_TB, vnet_id_str, ipFilter)
-    } else {
-        pattern = generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, ipFilter)
-    }
+    pattern = generateDBTableKey(db.separator, CFG_ROUTE_TUN_TB, vnet_id_str, ipFilter)
     routes = []RouteModel{}
 
     kv, err := GetKVsMulti(db.db_num,pattern)
