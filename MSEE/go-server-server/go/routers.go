@@ -3,6 +3,9 @@ package mseeserver
 import (
     "net/http"
     "fmt"
+    "log"
+    "time"
+    "sync"
     "github.com/gorilla/mux"
 )
 
@@ -15,10 +18,40 @@ type Route struct {
 
 type Routes []Route
 
+var writeMutex sync.Mutex
+
+func Middleware(inner http.Handler, name string) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        start := time.Now()
+        log.Printf(
+            "info: request: %s %s %s",
+            r.Method,
+            r.RequestURI,
+            name,
+        )
+
+        if r.TLS == nil || CommonNameMatch(r) {
+            log.Printf("trace: acquire server write lock")
+            writeMutex.Lock()
+            inner.ServeHTTP(NewLoggingResponseWriter(w), r)
+            writeMutex.Unlock()
+            log.Printf("trace: release server write lock")
+        } else {
+            WriteRequestError(NewLoggingResponseWriter(w), http.StatusUnauthorized,
+                        "Authentication Fail with untrusted client cert", []string{}, "")
+        }
+
+        log.Printf(
+            "info: request: duration %s",
+            time.Since(start),
+        )
+    })
+}
+
 func NewRouter() *mux.Router {
     router := mux.NewRouter().StrictSlash(true)
     for _, route := range routes {
-        handler := Logger(route.HandlerFunc, route.Name)
+        handler := Middleware(route.HandlerFunc, route.Name)
 
         router.
             Methods(route.Method).
@@ -50,66 +83,87 @@ var routes = Routes{
     },
 
     Route{
-        "Config",
-        "GET",
-        "/v1/config",
-        ConfigGet,
-    },
-
-    Route{
-        "ConfigInterfacePortPortDelete",
+        "ConfigInterfaceVlanDelete",
         "DELETE",
-        "/v1/config/interface/port/{port}",
-        ConfigInterfacePortPortDelete,
+        "/v1/config/interface/vlan/{vlan_id}",
+        ConfigInterfaceVlanDelete,
     },
 
     Route{
-        "ConfigInterfacePortPortGet",
+        "ConfigInterfaceVlanGet",
         "GET",
-        "/v1/config/interface/port/{port}",
-        ConfigInterfacePortPortGet,
+        "/v1/config/interface/vlan/{vlan_id}",
+        ConfigInterfaceVlanGet,
     },
 
     Route{
-        "ConfigInterfacePortPortPut",
-        "PUT",
-        "/v1/config/interface/port/{port}",
-        ConfigInterfacePortPortPut,
+        "ConfigInterfaceVlanPost",
+        "POST",
+        "/v1/config/interface/vlan/{vlan_id}",
+        ConfigInterfaceVlanPost,
     },
 
     Route{
-        "ConfigInterfaceQinqPortDelete",
+        "ConfigInterfaceVlansGet",
+        "GET",
+        "/v1/config/interface/vlans",
+        ConfigInterfaceVlansGet,
+    },
+
+    Route{
+        "ConfigInterfaceVlanMemberDelete",
         "DELETE",
-        "/v1/config/interface/qinq/{port}",
-        ConfigInterfaceQinqPortDelete,
+        "/v1/config/interface/vlan/{vlan_id}/member/{if_name}",
+        ConfigInterfaceVlanMemberDelete,
     },
 
     Route{
-        "ConfigInterfaceQinqPortGet",
+        "ConfigInterfaceVlanMemberGet",
         "GET",
-        "/v1/config/interface/qinq/{port}",
-        ConfigInterfaceQinqPortGet,
+        "/v1/config/interface/vlan/{vlan_id}/member/{if_name}",
+        ConfigInterfaceVlanMemberGet,
     },
 
     Route{
-        "ConfigInterfaceQinqPortStagCtagDelete",
+        "ConfigInterfaceVlanMemberPost",
+        "POST",
+        "/v1/config/interface/vlan/{vlan_id}/member/{if_name}",
+        ConfigInterfaceVlanMemberPost,
+    },
+
+    Route{
+        "ConfigInterfaceVlanMembersGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}/members",
+        ConfigInterfaceVlanMembersGet,
+    },
+
+    Route{
+        "ConfigInterfaceVlanNeighborDelete",
         "DELETE",
-        "/v1/config/interface/qinq/{port}/{stag}/{ctag}",
-        ConfigInterfaceQinqPortStagCtagDelete,
+        "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
+        ConfigInterfaceVlanNeighborDelete,
     },
 
     Route{
-        "ConfigInterfaceQinqPortStagCtagGet",
+        "ConfigInterfaceVlanNeighborGet",
         "GET",
-        "/v1/config/interface/qinq/{port}/{stag}/{ctag}",
-        ConfigInterfaceQinqPortStagCtagGet,
+        "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
+        ConfigInterfaceVlanNeighborGet,
     },
 
     Route{
-        "ConfigInterfaceQinqPortStagCtagPut",
-        "PUT",
-        "/v1/config/interface/qinq/{port}/{stag}/{ctag}",
-        ConfigInterfaceQinqPortStagCtagPut,
+        "ConfigInterfaceVlanNeighborPost",
+        "POST",
+        "/v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}",
+        ConfigInterfaceVlanNeighborPost,
+    },
+
+    Route{
+        "ConfigInterfaceVlanNeighborsGet",
+        "GET",
+        "/v1/config/interface/vlan/{vlan_id}/neighbors",
+        ConfigInterfaceVlanNeighborsGet,
     },
 
     Route{
@@ -127,17 +181,10 @@ var routes = Routes{
     },
 
     Route{
-        "ConfigTunnelDecapTunnelTypePut",
-        "PUT",
+        "ConfigTunnelDecapTunnelTypePost",
+        "POST",
         "/v1/config/tunnel/decap/{tunnel_type}",
-        ConfigTunnelDecapTunnelTypePut,
-    },
-
-    Route{
-        "ConfigTunnelEncapVxlanGet",
-        "GET",
-        "/v1/config/tunnel/encap/vxlan",
-        ConfigTunnelEncapVxlanGet,
+        ConfigTunnelDecapTunnelTypePost,
     },
 
     Route{
@@ -155,66 +202,52 @@ var routes = Routes{
     },
 
     Route{
-        "ConfigTunnelEncapVxlanVnidPut",
-        "PUT",
+        "ConfigTunnelEncapVxlanVnidPost",
+        "POST",
         "/v1/config/tunnel/encap/vxlan/{vnid}",
-        ConfigTunnelEncapVxlanVnidPut,
-    },
-
-    Route{
-        "ConfigVrouterGet",
-        "GET",
-        "/v1/config/vrouter",
-        ConfigVrouterGet,
+        ConfigTunnelEncapVxlanVnidPost,
     },
 
     Route{
         "ConfigVrouterVrfIdDelete",
         "DELETE",
-        "/v1/config/vrouter/{vrf_id}",
+        "/v1/config/vrouter/{vnet_name}",
         ConfigVrouterVrfIdDelete,
     },
 
     Route{
         "ConfigVrouterVrfIdGet",
         "GET",
-        "/v1/config/vrouter/{vrf_id}",
+        "/v1/config/vrouter/{vnet_name}",
         ConfigVrouterVrfIdGet,
     },
 
     Route{
-        "ConfigVrouterVrfIdPut",
-        "PUT",
-        "/v1/config/vrouter/{vrf_id}",
-        ConfigVrouterVrfIdPut,
+        "ConfigVrouterVrfIdPost",
+        "POST",
+        "/v1/config/vrouter/{vnet_name}",
+        ConfigVrouterVrfIdPost,
     },
 
     Route{
         "ConfigVrouterVrfIdRoutesDelete",
         "DELETE",
-        "/v1/config/vrouter/{vrf_id}/routes",
+        "/v1/config/vrouter/{vnet_name}/routes",
         ConfigVrouterVrfIdRoutesDelete,
     },
 
     Route{
         "ConfigVrouterVrfIdRoutesGet",
         "GET",
-        "/v1/config/vrouter/{vrf_id}/routes",
+        "/v1/config/vrouter/{vnet_name}/routes",
         ConfigVrouterVrfIdRoutesGet,
     },
 
     Route{
-        "ConfigVrouterVrfIdRoutesPut",
-        "PUT",
-        "/v1/config/vrouter/{vrf_id}/routes",
-        ConfigVrouterVrfIdRoutesPut,
-    },
-
-    Route{
-        "StateCounterGet",
-        "GET",
-        "/v1/state/counter",
-        StateCounterGet,
+        "ConfigVrouterVrfIdRoutesPatch",
+        "PATCH",
+        "/v1/config/vrouter/{vnet_name}/routes",
+        ConfigVrouterVrfIdRoutesPatch,
     },
 
     Route{
@@ -231,31 +264,20 @@ var routes = Routes{
         StateInterfaceGet,
     },
 
+    // Required to run Unit tests
     Route{
-        "StateCounterGroupGet",
-        "GET",
-        "/v1/state/counter/{group}",
-        StateCounterGroupGet,
+        "InMemConfigRestart",
+        "POST",
+        "/v1/config/restartdb",
+        InMemConfigRestart,
     },
 
-    Route{
-        "StateHistogramGet",
-        "GET",
-        "/v1/state/histogram",
-        StateHistogramGet,
+   // Adding Ping method from VRF context
+   Route{
+        "Ping",
+        "POST",
+        "/v1/operations/ping",
+        Ping,
     },
 
-    Route{
-        "StateStatisticsGet",
-        "GET",
-        "/v1/state/statistics",
-        StateStatisticsGet,
-    },
-
-    Route{
-        "StateStatisticsGroupGet",
-        "GET",
-        "/v1/state/statistics/{group}",
-        StateStatisticsGroupGet,
-    },
 }
