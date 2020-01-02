@@ -6,6 +6,6 @@ Build-Depends: dh-exec (>=0.3), debhelper (>= 9)
 Standards-Version: 1.0.0
 
 Package: sonic-rest-api
-Architecture: amd64
+Architecture: any
 Depends: ${shlibs:Depends}
 Description: This package contains rest api server for MS EE and Baremetal scenarios
