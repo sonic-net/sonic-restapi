@@ -22,7 +22,7 @@ RUN dpkg -i /debs/libhiredis0.13_0.13.3-2_amd64.deb \
  && dpkg -i /debs/libnl-route-3-200_3.2.27-2_amd64.deb \
  && dpkg -i /debs/libswsscommon_1.0.0_amd64.deb \
  && dpkg -i /debs/libswsscommon-dev_1.0.0_amd64.deb \
- && dpkg -i /debs/sonic-rest-api_1.0.0_amd64.deb
+ && dpkg -i /debs/sonic-rest-api_1.0.1_amd64.deb
 RUN rm -fr /debs
 
 # Adjust redis configurations
