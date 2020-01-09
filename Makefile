@@ -8,7 +8,7 @@ export GOBIN=$(GOPATH)/bin
 all: install build
 
 install: build
-	/usr/bin/install -D $(GOPATH)/bin/go-server-server debian/sonic-rest-api/sbin/go-server-server
+	/usr/bin/install -D $(GOPATH)/bin/go-server-server debian/sonic-rest-api/usr/sbin/go-server-server
 
 build: $(GOPATH)/bin/go-server-server
 
