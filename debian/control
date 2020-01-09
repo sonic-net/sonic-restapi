@@ -9,4 +9,3 @@ Package: sonic-rest-api
 Architecture: any
 Depends: ${shlibs:Depends}
 Description: This package contains rest api server for MS EE and Baremetal scenarios
-

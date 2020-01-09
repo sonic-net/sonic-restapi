@@ -1,6 +1,11 @@
+sonic-rest-api-server (1.0.1) stable; urgency=medium
+
+  * VNet/Vxlan support.
+
+ -- Prince Sunny <prsunny@microsoft.com>  Mon, 8 Jul 2019 15:00:15 -0800
+
 sonic-rest-api-server (1.0.0) stable; urgency=medium
 
   * Initial release.
 
  -- Pavel Shirshov <pavelsh@microsoft.com>  Wed, 19 Jul 2017 12:30:15 -0800
-
