@@ -41,7 +41,9 @@ func StartHttpsServer(handler http.Handler) {
         // VerifyClientCertIfGiven
         // RequireAndVerifyClientCert
         ClientAuth: tls.RequireAndVerifyClientCert,
+        MinVersion: tls.VersionTLS12,
     }
+
     tlsConfig.BuildNameToCertificate()
 
     server := &http.Server{
