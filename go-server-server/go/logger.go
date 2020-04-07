@@ -43,19 +43,3 @@ func InitLogging() {
     }
     colog.SetOutput(file)
 }
-
-func CommonNameMatch(r *http.Request) bool {
-    commonName := r.TLS.PeerCertificates[0].Subject.CommonName
-
-    //FIXME : in the authentication of client certificate,  after the certificate chain is validated by 
-    // TLS, here we will futher check if the common name of the end-entity certificate is in the trusted 
-    // common name list of the server config. A more strict check may be added here later.
-    for _, name := range trustedertCommonNames {
-        if commonName == name {
-            return true;
-        }
-    }
-
-    log.Printf("error: Authentication Fail! CommonName in the client cert: %s is not found in trusted common names", commonName)
-    return false;
-}
