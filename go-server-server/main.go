@@ -71,7 +71,7 @@ func StartHttpsServer(handler http.Handler) {
     <-sigchannel
     log.Printf("info: Signal received. Shutting down...")
     if err := server.Shutdown(context.Background()); err != nil {
-        log.Printf("HTTP server Shutdown: %v", err)
+        log.Printf("trace: HTTP server Shutdown: %v", err)
     } else {
         log.Printf("info: Server shutdown successful!")
     }
