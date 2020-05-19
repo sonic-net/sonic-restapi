@@ -16,6 +16,10 @@ import (
     "crypto/x509"
     "io/ioutil"
     "time"
+    "os"
+    "os/signal"
+    "syscall"
+    "context"
 )
 
 func StartHttpServer(handler http.Handler) {
@@ -53,7 +57,25 @@ func StartHttpsServer(handler http.Handler) {
     }
 
     log.Printf("info: https endpoint started")
-    log.Fatal(server.ListenAndServeTLS(*sw.ServerCertFlag, *sw.ServerKeyFlag))
+
+    // Listening should happen in a go-routine to prevent blocking
+    go func() {
+        log.Fatal(server.ListenAndServeTLS(*sw.ServerCertFlag, *sw.ServerKeyFlag))
+    }()
+
+    sigchannel := make(chan os.Signal, 1)
+    signal.Notify(sigchannel,
+        syscall.SIGTERM,
+        syscall.SIGQUIT)
+
+    <-sigchannel
+    log.Printf("info: Signal received. Shutting down...")
+    if err := server.Shutdown(context.Background()); err != nil {
+        log.Printf("trace: HTTP server Shutdown: %v", err)
+    } else {
+        log.Printf("info: Server shutdown successful!")
+    }
+    os.Exit(0)
 }
 
 func main() {
