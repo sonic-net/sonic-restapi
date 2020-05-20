@@ -491,6 +491,39 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
+    '/config/interface/vlans/all':
+    get:
+      summary: Get information about all existing vlans configured in the system
+      description: Returns attributes for vlans. If no vlans exist, it returns a '404' error.
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            properties:
+              attr:
+                type: array
+                $ref: '#/definitions/VlansAllEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vnet_id is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
 #----------------------------------------------
 # VLAN interface member 
 #----------------------------------------------
@@ -1270,6 +1303,20 @@ definitions:
         description: >-
           Vlan interface IP address and prefix, this will act as
           the default gateway to/from the HSM.
+        type: string
+  VlansAllEntry:
+    type: object
+    properties:
+      vlan_id:
+        type: integer
+        format: int32
+        description: 12 bit vlan_id
+      vnet_id:
+        type: string
+        description: vnet_id containing the vnet guid as a string
+      ip_prefix:
+        description: >-
+          Vlan interface IP address and prefix
         type: string
   VlanMemberEntry:
     type: object
