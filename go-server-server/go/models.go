@@ -46,6 +46,16 @@ type VlanReturnModel struct {
     Attr      VlanModel   `json:"attr"`
 }
 
+type VlansModel struct {
+    VlanID    int     `json:"vlan_id"`
+    IPPrefix  string  `json:"ip_prefix,omitempty"`
+    Vnet_id   string  `json:"vnet_id,omitempty"`
+}
+
+type VlansReturnModel struct {
+    Attr      []VlansModel  `json:"attr"`
+}
+
 type VlanMemberModel struct {
     Tagging   string      `json:"tagging_mode"`
 }
