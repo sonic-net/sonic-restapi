@@ -4,6 +4,7 @@ GO := /usr/local/go/bin/go
 export GOROOT=/usr/local/go
 export GOPATH=$(HOME)/go
 export GOBIN=$(GOPATH)/bin
+export GO111MODULE=on
 
 all: install build
 

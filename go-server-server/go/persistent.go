@@ -2,7 +2,7 @@ package mseeserver
 
 import (
     "fmt"
-    "github.com/go-redis/redis"
+    "github.com/go-redis/redis/v7"
     "log"
     "strconv"
     "strings"
@@ -80,7 +80,7 @@ func InitialiseVariables() {
         now := time.Now().In(loc)
         ServerResetTime = fmt.Sprintf("%v", now)
 
-        newuuid, _ := uuid.NewV4()
+        newuuid := uuid.NewV4()
         ServerResetGuid = newuuid.String()
 
         err = CacheSetConfigResetInfo(ServerResetGuid, ServerResetTime)
