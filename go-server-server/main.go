@@ -26,7 +26,7 @@ import (
     "bytes"
 )
 
-const CERT_MONITOR_FREQUENCY = 3600 * time.Second
+const CERT_MONITOR_FREQUENCY = 20 * time.Second
 
 func StartHttpServer(handler http.Handler) {
     log.Printf("info: http endpoint started")
@@ -80,8 +80,9 @@ func StartHttpsServer(handler http.Handler, messenger <-chan int, wgroup *sync.W
         }
         switch value {
         case 0:
+            // Signal from signal_handler
             log.Printf("info: Terminating...")
-            return
+            os.Exit(0)
         }
     }
 }
@@ -91,7 +92,6 @@ func signal_handler(messenger chan<- int, wgroup *sync.WaitGroup) {
     sigchannel := make(chan os.Signal, 1)
     signal.Notify(sigchannel,
         syscall.SIGTERM,
-        syscall.SIGKILL,
         syscall.SIGQUIT)
 
     <-sigchannel
