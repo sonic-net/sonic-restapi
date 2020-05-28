@@ -12,7 +12,8 @@ RUN apt-get update \
       supervisor \
       curl \
       bridge-utils \
-      net-tools
+      net-tools \
+      procps
 
 COPY debs /debs
 RUN dpkg -i /debs/libhiredis0.13_0.13.3-2_amd64.deb \
