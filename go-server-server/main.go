@@ -14,13 +14,19 @@ import (
     "net/http"
     "crypto/tls"
     "crypto/x509"
+    "crypto/md5"
+    "io"
     "io/ioutil"
     "os"
     "os/signal"
     "syscall"
     "context"
     "sync"
+    "time"
+    "bytes"
 )
+
+const CERT_MONITOR_FREQUENCY = 3600 * time.Second
 
 func StartHttpServer(handler http.Handler) {
     log.Printf("info: http endpoint started")
@@ -93,6 +99,71 @@ func signal_handler(messenger chan<- int, wgroup *sync.WaitGroup) {
     return
 }
 
+func monitor_certs(messenger chan<- int, wgroup *sync.WaitGroup) {
+    defer wgroup.Done()
+    client_cert, _ := os.Open(*sw.ClientCertFlag)
+    prev_client_cert_hash := md5.New()
+    io.Copy(prev_client_cert_hash, client_cert)
+    log.Printf("trace: MD5 checksum of %s is %x", client_cert.Name(), prev_client_cert_hash.Sum(nil))
+    client_cert.Close()
+
+    server_cert, _ := os.Open(*sw.ServerCertFlag)
+    prev_server_cert_hash := md5.New()
+    io.Copy(prev_server_cert_hash, server_cert)
+    log.Printf("trace: MD5 checksum of %s is %x", server_cert.Name(), prev_server_cert_hash.Sum(nil))
+    server_cert.Close()
+
+    server_key, _ := os.Open(*sw.ServerKeyFlag)
+    prev_server_key_hash := md5.New()
+    io.Copy(prev_server_key_hash, server_key)
+    log.Printf("trace: MD5 checksum of %s is %x", server_key.Name(), prev_server_key_hash.Sum(nil))
+    server_key.Close()
+
+    time.Sleep(CERT_MONITOR_FREQUENCY)
+
+    for {
+        reload := false
+        client_cert, _ := os.Open(*sw.ClientCertFlag)
+        client_cert_hash := md5.New()
+        io.Copy(client_cert_hash, client_cert)    
+        log.Printf("trace: MD5 checksum of %s is %x", client_cert.Name(), client_cert_hash.Sum(nil))
+        if bytes.Compare(client_cert_hash.Sum(nil), prev_client_cert_hash.Sum(nil)) != 0 {
+            log.Printf("info: MD5 checksum of %s changed from %x to %x", client_cert.Name(), prev_client_cert_hash.Sum(nil), client_cert_hash.Sum(nil))
+            reload = true
+        }
+        prev_client_cert_hash = client_cert_hash
+        client_cert.Close()
+
+        server_cert, _ := os.Open(*sw.ServerCertFlag)
+        server_cert_hash := md5.New()
+        io.Copy(server_cert_hash, server_cert)    
+        log.Printf("trace: MD5 checksum of %s is %x", server_cert.Name(), server_cert_hash.Sum(nil))
+        if bytes.Compare(server_cert_hash.Sum(nil), prev_server_cert_hash.Sum(nil)) != 0 {
+            log.Printf("info: MD5 checksum of %s changed from %x to %x", server_cert.Name(), prev_server_cert_hash.Sum(nil), server_cert_hash.Sum(nil))
+            reload = true
+        }
+        prev_server_cert_hash = server_cert_hash
+        server_cert.Close()
+
+        server_key, _ := os.Open(*sw.ServerKeyFlag)
+        server_key_hash := md5.New()
+        io.Copy(server_key_hash, server_key)    
+        log.Printf("trace: MD5 checksum of %s is %x", server_key.Name(), server_key_hash.Sum(nil))
+        if bytes.Compare(server_key_hash.Sum(nil), prev_server_key_hash.Sum(nil)) != 0 {
+            log.Printf("info: MD5 checksum of %s changed from %x to %x", server_key.Name(), prev_server_key_hash.Sum(nil), server_key_hash.Sum(nil))
+            reload = true
+        }
+        prev_server_key_hash = server_key_hash
+        server_key.Close()
+
+        if reload == true {
+            log.Printf("info: Certs have rolled! Reload needed!")
+            messenger <- 1
+        }
+        time.Sleep(CERT_MONITOR_FREQUENCY)
+    }
+}
+
 func main() {
     iniflags.Parse()
 
@@ -120,7 +191,9 @@ func main() {
 
     wgroup.Add(1)
     go signal_handler(messenger, &wgroup)
+
+    wgroup.Add(1)
+    go monitor_certs(messenger, &wgroup)
+
     wgroup.Wait()
 }
-
-
