@@ -26,7 +26,7 @@ import (
     "bytes"
 )
 
-const CERT_MONITOR_FREQUENCY = 20 * time.Second
+const CERT_MONITOR_FREQUENCY = 3600 * time.Second
 
 func StartHttpServer(handler http.Handler) {
     log.Printf("info: http endpoint started")
