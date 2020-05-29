@@ -35,27 +35,27 @@ func StartHttpServer(handler http.Handler) {
 
 func StartHttpsServer(handler http.Handler, messenger <-chan int, wgroup *sync.WaitGroup) {
     defer wgroup.Done()
-    clientCert, err := ioutil.ReadFile(*sw.ClientCertFlag)
-    if err != nil {
-        log.Fatalf("error: couldn't open client cert file, %s", err)
-    }
-    clientCertPool := x509.NewCertPool()
-    clientCertPool.AppendCertsFromPEM(clientCert)
-
-    // Setup HTTPS client cert the server trust and validation policy
-    tlsConfig := &tls.Config{
-        ClientCAs: clientCertPool,
-        // NoClientCert
-        // RequestClientCert
-        // RequireAnyClientCert
-        // VerifyClientCertIfGiven
-        // RequireAndVerifyClientCert
-        ClientAuth: tls.RequireAndVerifyClientCert,
-        MinVersion: tls.VersionTLS12,
-    }
-
-    tlsConfig.BuildNameToCertificate()
     for {
+        clientCert, err := ioutil.ReadFile(*sw.ClientCertFlag)
+        if err != nil {
+            log.Fatalf("error: couldn't open client cert file, %s", err)
+        }
+        clientCertPool := x509.NewCertPool()
+        clientCertPool.AppendCertsFromPEM(clientCert)
+
+        // Setup HTTPS client cert the server trust and validation policy
+        tlsConfig := &tls.Config{
+            ClientCAs: clientCertPool,
+            // NoClientCert
+            // RequestClientCert
+            // RequireAnyClientCert
+            // VerifyClientCertIfGiven
+            // RequireAndVerifyClientCert
+            ClientAuth: tls.RequireAndVerifyClientCert,
+            MinVersion: tls.VersionTLS12,
+        }
+        tlsConfig.BuildNameToCertificate()
+
         server := &http.Server{
             Addr:      ":8081",
             Handler:   handler,
