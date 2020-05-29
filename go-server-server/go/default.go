@@ -214,6 +214,7 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
         vnet_id_str = VNET_NAME_PREF + strconv.FormatUint(uint64(vnet_id), 10)
         vlan_if_pt.Set(vlan_name, map[string]string{
             "vnet_name": vnet_id_str,
+            "proxy_arp": "enabled",
         }, "SET", "")
     }
 
