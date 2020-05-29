@@ -450,7 +450,7 @@ class ra_client_positive_tests(rest_api_client):
         vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {b'vlanid': b'2'})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
-        self.assertEqual(vlan_intf_table, {b'vnet_name': VNET_NAME_PREF + '1'})
+        self.assertEqual(vlan_intf_table, {b'proxy_arp': b'enabled', b'vnet_name': VNET_NAME_PREF + '1'})
 
         # delete
         r = self.delete_config_vlan(2)
@@ -508,7 +508,7 @@ class ra_client_positive_tests(rest_api_client):
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
         self.assertEqual(vlan_intf_table, {b'':b''})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
-        self.assertEqual(vlan_intf_table, {b'vnet_name': VNET_NAME_PREF+'1'})
+        self.assertEqual(vlan_intf_table, {b'proxy_arp': b'enabled', b'vnet_name': VNET_NAME_PREF+'1'})
 
         # delete
         r = self.delete_config_vlan(2)
