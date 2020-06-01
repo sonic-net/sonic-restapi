@@ -14,8 +14,6 @@ import (
     "net/http"
     "crypto/tls"
     "crypto/x509"
-    "crypto/md5"
-    "io"
     "io/ioutil"
     "os"
     "os/signal"
@@ -23,7 +21,6 @@ import (
     "context"
     "sync"
     "time"
-    "bytes"
 )
 
 const CERT_MONITOR_FREQUENCY = 3600 * time.Second
@@ -101,60 +98,48 @@ func signal_handler(messenger chan<- int, wgroup *sync.WaitGroup) {
 
 func monitor_certs(messenger chan<- int, wgroup *sync.WaitGroup) {
     defer wgroup.Done()
-    client_cert, _ := os.Open(*sw.ClientCertFlag)
-    prev_client_cert_hash := md5.New()
-    io.Copy(prev_client_cert_hash, client_cert)
-    log.Printf("trace: MD5 checksum of %s is %x", client_cert.Name(), prev_client_cert_hash.Sum(nil))
-    client_cert.Close()
+    client_cert_finfo, _ := os.Lstat(*sw.ClientCertFlag)
+    prev_client_cert_mtime := client_cert_finfo.ModTime()
+    log.Printf("trace: Last modified time of %s is %d", client_cert_finfo.Name(), prev_client_cert_mtime.Unix())
 
-    server_cert, _ := os.Open(*sw.ServerCertFlag)
-    prev_server_cert_hash := md5.New()
-    io.Copy(prev_server_cert_hash, server_cert)
-    log.Printf("trace: MD5 checksum of %s is %x", server_cert.Name(), prev_server_cert_hash.Sum(nil))
-    server_cert.Close()
+    server_cert_finfo, _ := os.Lstat(*sw.ServerCertFlag)
+    prev_server_cert_mtime := server_cert_finfo.ModTime()
+    log.Printf("trace: Last modified time of %s is %d", server_cert_finfo.Name(), prev_server_cert_mtime.Unix())
 
-    server_key, _ := os.Open(*sw.ServerKeyFlag)
-    prev_server_key_hash := md5.New()
-    io.Copy(prev_server_key_hash, server_key)
-    log.Printf("trace: MD5 checksum of %s is %x", server_key.Name(), prev_server_key_hash.Sum(nil))
-    server_key.Close()
+    sever_key_finfo, _ := os.Lstat(*sw.ServerKeyFlag)
+    prev_sever_key_mtime := sever_key_finfo.ModTime()
+    log.Printf("trace: Last modified time of %s is %d", sever_key_finfo.Name(), prev_sever_key_mtime.Unix())
 
     time.Sleep(CERT_MONITOR_FREQUENCY)
 
     for {
         reload := false
-        client_cert, _ := os.Open(*sw.ClientCertFlag)
-        client_cert_hash := md5.New()
-        io.Copy(client_cert_hash, client_cert)    
-        log.Printf("trace: MD5 checksum of %s is %x", client_cert.Name(), client_cert_hash.Sum(nil))
-        if bytes.Compare(client_cert_hash.Sum(nil), prev_client_cert_hash.Sum(nil)) != 0 {
-            log.Printf("info: MD5 checksum of %s changed from %x to %x", client_cert.Name(), prev_client_cert_hash.Sum(nil), client_cert_hash.Sum(nil))
+        client_cert_finfo, _ := os.Lstat(*sw.ClientCertFlag)
+        client_cert_mtime := client_cert_finfo.ModTime()
+        log.Printf("trace: Last modified time of %s is %d", client_cert_finfo.Name(), client_cert_mtime.Unix())
+        if client_cert_mtime != prev_client_cert_mtime {
+            log.Printf("info: Last modified time of %s changed from %d to %d", client_cert_finfo.Name(), prev_client_cert_mtime.Unix(), client_cert_mtime.Unix())
             reload = true
         }
-        prev_client_cert_hash = client_cert_hash
-        client_cert.Close()
+        prev_client_cert_mtime = client_cert_mtime
 
-        server_cert, _ := os.Open(*sw.ServerCertFlag)
-        server_cert_hash := md5.New()
-        io.Copy(server_cert_hash, server_cert)    
-        log.Printf("trace: MD5 checksum of %s is %x", server_cert.Name(), server_cert_hash.Sum(nil))
-        if bytes.Compare(server_cert_hash.Sum(nil), prev_server_cert_hash.Sum(nil)) != 0 {
-            log.Printf("info: MD5 checksum of %s changed from %x to %x", server_cert.Name(), prev_server_cert_hash.Sum(nil), server_cert_hash.Sum(nil))
+        server_cert_finfo, _ := os.Lstat(*sw.ServerCertFlag)
+        server_cert_mtime := server_cert_finfo.ModTime()
+        log.Printf("trace: Last modified time of %s is %d", server_cert_finfo.Name(), server_cert_mtime.Unix())
+        if server_cert_mtime != prev_server_cert_mtime {
+            log.Printf("info: Last modified time of %s changed from %d to %d", server_cert_finfo.Name(), prev_server_cert_mtime.Unix(), server_cert_mtime.Unix())
             reload = true
         }
-        prev_server_cert_hash = server_cert_hash
-        server_cert.Close()
+        prev_server_cert_mtime = server_cert_mtime
 
-        server_key, _ := os.Open(*sw.ServerKeyFlag)
-        server_key_hash := md5.New()
-        io.Copy(server_key_hash, server_key)    
-        log.Printf("trace: MD5 checksum of %s is %x", server_key.Name(), server_key_hash.Sum(nil))
-        if bytes.Compare(server_key_hash.Sum(nil), prev_server_key_hash.Sum(nil)) != 0 {
-            log.Printf("info: MD5 checksum of %s changed from %x to %x", server_key.Name(), prev_server_key_hash.Sum(nil), server_key_hash.Sum(nil))
+        sever_key_finfo, _ := os.Lstat(*sw.ServerKeyFlag)
+        sever_key_mtime := sever_key_finfo.ModTime()
+        log.Printf("trace: Last modified time of %s is %d", sever_key_finfo.Name(), sever_key_mtime.Unix())
+        if sever_key_mtime != prev_sever_key_mtime {
+            log.Printf("info: Last modified time of %s changed from %d to %d", sever_key_finfo.Name(), prev_sever_key_mtime.Unix(), sever_key_mtime.Unix())
             reload = true
         }
-        prev_server_key_hash = server_key_hash
-        server_key.Close()
+        prev_sever_key_mtime = sever_key_mtime
 
         if reload == true {
             log.Printf("info: Certs have rolled! Reload needed!")
