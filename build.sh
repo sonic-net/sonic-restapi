@@ -2,7 +2,7 @@
 set -e
 
 # copy debian packages from sonic-buildimage
-# bash copy.sh
+bash copy.sh
 
 # build a container with build utilities
 docker build -t rest-api-build-image --rm -f Dockerfile.build .
@@ -22,10 +22,3 @@ sudo rm -fr /tmp/target
 
 # build rest-api test image
 docker build -t rest-api-image-test_local --rm -f Dockerfile.test .
-
-# build rest-api production image
-docker build -t rest-api-image --rm .
-
-
-# save rest-api-image into a file
-docker save rest-api-image | gzip > rest-api-image.gz
