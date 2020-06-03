@@ -231,13 +231,13 @@ class rest_api_client(unittest.TestCase):
         l.info('------------------------------------------------------------')
 
         # Clear DBs - reach known state
-        self.db = redis.StrictRedis('localhost', 6380, 0)
+        self.db = redis.StrictRedis('localhost', 6379, 0)
         self.db.flushdb()
 
-        self.cache = redis.StrictRedis('localhost', 6380, 7)
+        self.cache = redis.StrictRedis('localhost', 6379, 7)
         self.cache.flushdb()
 
-        self.configdb = redis.StrictRedis('localhost', 6380, 4)
+        self.configdb = redis.StrictRedis('localhost', 6379, 4)
         self.configdb.flushdb()
 
         # Sanity check
