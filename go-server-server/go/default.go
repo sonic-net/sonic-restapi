@@ -1,4 +1,4 @@
-package mseeserver
+package restapi
 
 import (
     "log"

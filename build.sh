@@ -24,8 +24,8 @@ sudo rm -fr /tmp/target
 docker build -t rest-api-image-test_local --rm -f Dockerfile.test .
 
 # build rest-api production image
-docker build -t rest-api-image --rm .
+# docker build -t rest-api-image --rm .
 
 
 # save rest-api-image into a file
-docker save rest-api-image | gzip > rest-api-image.gz
+# docker save rest-api-image | gzip > rest-api-image.gz
