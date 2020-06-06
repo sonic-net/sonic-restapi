@@ -219,10 +219,13 @@ func GetKVsMulti(DB int, pattern string) (kv map[string]map[string]string, err e
 }
 
 func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (routes []RouteModel, err error) {
-    db := &conf_db_ops
+    db := &app_db_ops
     var pattern string
-    // TODO: Keep only else statement code in production
-    pattern = generateDBTableKey(db.separator, CFG_ROUTE_TUN_TB, vnet_id_str, ipFilter)
+    if *RunApiAsLocalTestDocker {
+        pattern = generateDBTableKey(db.separator, "_"+ROUTE_TUN_TB, vnet_id_str, ipFilter)
+    } else {
+        pattern = generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, ipFilter)
+    }
     routes = []RouteModel{}
 
     kv, err := GetKVsMulti(db.db_num,pattern)
