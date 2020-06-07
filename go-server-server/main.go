@@ -172,13 +172,13 @@ func main() {
     if (*sw.HttpsFlag) {
         wgroup.Add(1)
         go StartHttpsServer(router, messenger, &wgroup)
+        
+        wgroup.Add(1)
+        go monitor_certs(messenger, &wgroup)
     }
 
     wgroup.Add(1)
     go signal_handler(messenger, &wgroup)
-
-    wgroup.Add(1)
-    go monitor_certs(messenger, &wgroup)
 
     wgroup.Wait()
 }
