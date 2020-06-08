@@ -205,11 +205,11 @@ func validateVlanID(vlan_id_str string) (vlanID int, err error) {
 func generateVlanPrefixInVnet(vnet_id_str string) (vlanPrefixArr []string, err error) {
     db := &app_db_ops
     var rt_tb_key string
+    rt_tb_name := LOCAL_ROUTE_TB
     if *RunApiAsLocalTestDocker {
-        rt_tb_key = generateDBTableKey(db.separator, "_"+LOCAL_ROUTE_TB, vnet_id_str, "*")
-    } else {
-        rt_tb_key = generateDBTableKey(db.separator, LOCAL_ROUTE_TB, vnet_id_str, "*")
+        rt_tb_name = "_"+LOCAL_ROUTE_TB
     }
+    rt_tb_key = generateDBTableKey(db.separator, rt_tb_name, vnet_id_str, "*")
     kv, err := GetKVsMulti(db.db_num, rt_tb_key)
     if err != nil {
         return vlanPrefixArr, err
@@ -267,11 +267,12 @@ func vnet_dependencies_exist(vnet_id_str string) (vnet_dep bool, err error) {
      db := &app_db_ops
      var rt_tb_key string
      vnet_dep = false
+
+     rt_tb_name := ROUTE_TUN_TB
      if *RunApiAsLocalTestDocker {
-         rt_tb_key = generateDBTableKey(db.separator, "_"+ROUTE_TUN_TB, vnet_id_str, "*")
-     } else {
-         rt_tb_key = generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, "*")
+         rt_tb_name = "_"+ROUTE_TUN_TB
      }
+     rt_tb_key = generateDBTableKey(db.separator, rt_tb_name, vnet_id_str, "*")
      routes_kv, err := GetKVsMulti(db.db_num, rt_tb_key)/* generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, "*"))*/
      if err != nil {
         return
