@@ -1032,11 +1032,13 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
              log.Printf("Skipping route %v as it is a baremetal /32 route", r)
 		       continue
 		  }
+
+        rt_tb_name := ROUTE_TUN_TB
         if *RunApiAsLocalTestDocker {
-             rt_tb_key = generateDBTableKey(db.separator, "_"+ROUTE_TUN_TB, vnet_id_str, r.IPPrefix)
-        } else {
-             rt_tb_key = generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, r.IPPrefix)
+            rt_tb_name = "_"+ROUTE_TUN_TB
         }
+        rt_tb_key = generateDBTableKey(db.separator, rt_tb_name, vnet_id_str, r.IPPrefix)
+
 		  cur_route, err := GetKVs(db.db_num, rt_tb_key)/* generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, r.IPPrefix))*/
 		  if err != nil {
              r.Error_code = http.StatusInternalServerError
