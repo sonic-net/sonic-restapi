@@ -212,7 +212,7 @@ class rest_api_client(unittest.TestCase):
 
     def check_routes_exist_in_db(self, vnet_num_mapped, routes_arr):
        for route in routes_arr:
-           route_table = self.configdb.hgetall(CFG_ROUTE_TUN_TB + '|' + VNET_NAME_PREF +str(vnet_num_mapped)+'|'+route['ip_prefix'])
+           route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(vnet_num_mapped)+':'+route['ip_prefix'])
            self.assertEqual(route_table, {
                             b'endpoint' : route['nexthop'],
                             b'mac_address' : route['mac_address'],
@@ -221,7 +221,7 @@ class rest_api_client(unittest.TestCase):
 
     def check_routes_dont_exist_in_db(self, vnet_num_mapped, routes_arr):
        for route in routes_arr:
-           route_table = self.configdb.hgetall(CFG_ROUTE_TUN_TB + '|' + VNET_NAME_PREF +str(vnet_num_mapped)+'|'+route['ip_prefix'])
+           route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(vnet_num_mapped)+':'+route['ip_prefix'])
            self.assertEqual(route_table, {})
 
     # Test setup
@@ -774,7 +774,7 @@ class ra_client_positive_tests(rest_api_client):
                 }
         r = self.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         self.assertEqual(r.status_code, 204)
-        route_table = self.configdb.hgetall(CFG_ROUTE_TUN_TB + '|' + VNET_NAME_PREF +str(1)+'|'+route['ip_prefix'])
+        route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         self.assertEqual(route_table, {b'endpoint' : route['nexthop']})
         del route['cmd']
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
@@ -787,7 +787,7 @@ class ra_client_positive_tests(rest_api_client):
         route['cmd'] = 'add'
         r = self.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         self.assertEqual(r.status_code, 204)
-        route_table = self.configdb.hgetall(CFG_ROUTE_TUN_TB + '|' + VNET_NAME_PREF +str(1)+'|'+route['ip_prefix'])
+        route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         self.assertEqual(route_table, {b'endpoint' : route['nexthop'],
                                        b'vni' : str(route['vnid'])
                                       })
@@ -803,7 +803,7 @@ class ra_client_positive_tests(rest_api_client):
         route['cmd'] = 'add'
         r = self.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         self.assertEqual(r.status_code, 204)
-        route_table = self.configdb.hgetall(CFG_ROUTE_TUN_TB + '|' + VNET_NAME_PREF +str(1)+'|'+route['ip_prefix'])
+        route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         self.assertEqual(route_table, {b'endpoint' : route['nexthop'],
                                        b'mac_address' : route['mac_address']
                                       })
@@ -964,11 +964,11 @@ class ra_client_positive_tests(rest_api_client):
         
     def test_local_subnet_route_addition(self):
         self.post_generic_vlan_and_deps()
-        local_route_table = self.configdb.hgetall(CFG_LOCAL_ROUTE_TB + '|' + VNET_NAME_PREF +str(1)+'|10.1.1.0/24')
+        local_route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
         self.assertEqual(local_route_table, {b'ifname' : VLAN_NAME_PREF + '2'})
         r = self.delete_config_vlan(2)
         self.assertEqual(r.status_code, 204)
-        local_route_table = self.configdb.hgetall(CFG_LOCAL_ROUTE_TB + '|' + VNET_NAME_PREF +str(1)+'|10.1.1.0/24')
+        local_route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
         self.assertEqual(local_route_table, {})
 
     # Operations

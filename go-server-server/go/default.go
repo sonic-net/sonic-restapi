@@ -123,9 +123,9 @@ func ConfigInterfaceVlanDelete(w http.ResponseWriter, r *http.Request) {
             ip_pref := k[(len(generateDBTableKey(db.separator,VLAN_INTF_TB, vlan_name)) + 1):]
              _, vlan_netw, _ := net.ParseCIDR(ip_pref)
             vnet_id_str := vlan_if_kv["vnet_name"]
-            local_subnet_route_pt := swsscommon.NewTable(db.swss_db, CFG_LOCAL_ROUTE_TB)
+            local_subnet_route_pt := swsscommon.NewProducerStateTable(app_db_ops.swss_db, LOCAL_ROUTE_TB)
             defer local_subnet_route_pt.Delete()
-            local_subnet_route_pt.Del(generateDBTableKey(db.separator, vnet_id_str, vlan_netw.String()), "DEL", "")
+            local_subnet_route_pt.Del(generateDBTableKey(app_db_ops.separator, vnet_id_str, vlan_netw.String()), "DEL", "")
         }
     }
 
@@ -225,12 +225,12 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
         }
         vlan_if_pt.Set(generateDBTableKey(db.separator, vlan_name, attr.IPPrefix), map[string]string{"":""}, "SET", "")
         if attr.Vnet_id != "" {
-             local_subnet_route_pt := swsscommon.NewTable(db.swss_db, CFG_LOCAL_ROUTE_TB)
+             local_subnet_route_pt := swsscommon.NewProducerStateTable(app_db_ops.swss_db, LOCAL_ROUTE_TB)
              defer local_subnet_route_pt.Delete()
              // No error check for IPPrefix since it is already checked in unmarshal
              _, vlan_netw, _ := net.ParseCIDR(attr.IPPrefix)
              local_subnet_route_pt.Set(
-                 generateDBTableKey(db.separator, vnet_id_str, vlan_netw.String()),
+                 generateDBTableKey(app_db_ops.separator, vnet_id_str, vlan_netw.String()),
                  map[string]string{"ifname": vlan_name},
              "SET", "")
         }
@@ -897,7 +897,7 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
 
 func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-    db := &conf_db_ops
+    db := &app_db_ops
     vars := mux.Vars(r)
 
     vnet_id_str, _, err := get_and_validate_vnet_id(w, vars["vnet_name"])
@@ -925,7 +925,7 @@ func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
     }
 
     var failed []RouteModel
-    pt := swsscommon.NewTable(db.swss_db, CFG_ROUTE_TUN_TB)
+    pt := swsscommon.NewProducerStateTable(db.swss_db, ROUTE_TUN_TB)
     defer pt.Delete()
 
     for _, r := range routes {
@@ -989,7 +989,7 @@ func ConfigVrouterVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
 
 func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-    db := &conf_db_ops
+    db := &app_db_ops
     vars := mux.Vars(r)
     var rt_tb_key string
 
@@ -1015,7 +1015,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    pt := swsscommon.NewTable(db.swss_db, CFG_ROUTE_TUN_TB)
+    pt := swsscommon.NewProducerStateTable(db.swss_db, ROUTE_TUN_TB)
     defer pt.Delete()
 
     var failed []RouteModel
@@ -1032,9 +1032,13 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
              log.Printf("Skipping route %v as it is a baremetal /32 route", r)
 		       continue
 		  }
-        // TODO: Remove if else and correct getkvs in production code
-        rt_tb_key = generateDBTableKey(db.separator, CFG_ROUTE_TUN_TB, vnet_id_str, r.IPPrefix)
-       
+
+        rt_tb_name := ROUTE_TUN_TB
+        if *RunApiAsLocalTestDocker {
+            rt_tb_name = "_"+ROUTE_TUN_TB
+        }
+        rt_tb_key = generateDBTableKey(db.separator, rt_tb_name, vnet_id_str, r.IPPrefix)
+
 		  cur_route, err := GetKVs(db.db_num, rt_tb_key)/* generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, r.IPPrefix))*/
 		  if err != nil {
              r.Error_code = http.StatusInternalServerError
