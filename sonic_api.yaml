@@ -155,6 +155,36 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 #----------------------------------------------
+# Config Reset Status API
+#----------------------------------------------
+  '/config/resetstatus':
+    get:
+      summary: API for caller to check the status of the config in the DB
+      description: Returns a JSON response with the config reset status
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - reset_status
+            properties:
+              reset_status:
+                type: string
+                description: configuration reset status.
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Operations
 #----------------------------------------------
   '/operations/ping':
