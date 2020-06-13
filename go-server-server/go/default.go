@@ -30,6 +30,17 @@ func StateHeartbeatGet(w http.ResponseWriter, r *http.Request) {
     WriteRequestResponse(w, output, http.StatusOK)
 }
 
+func ConfigResetStatusGet(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    var output ConfigResetStatusModel
+    if ConfigResetStatus == true {
+        output.ResetStatus = "true"
+    } else {
+        output.ResetStatus = "false"
+    }
+    WriteRequestResponse(w, output, http.StatusOK)    
+}
+
 func ConfigInterfaceVlanGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     db := &conf_db_ops

@@ -83,6 +83,13 @@ var routes = Routes{
     },
 
     Route{
+        "ConfigResetStatusGet",
+        "GET",
+        "/v1/config/resetstatus",
+        ConfigResetStatusGet,
+    },
+
+    Route{
         "ConfigInterfaceVlanDelete",
         "DELETE",
         "/v1/config/interface/vlan/{vlan_id}",

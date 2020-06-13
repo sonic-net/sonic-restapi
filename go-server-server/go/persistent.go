@@ -16,6 +16,8 @@ const ServerAPIVersion string = "1.0.0"
 var ServerResetGuid string
 var ServerResetTime string
 
+var ConfigResetStatus bool
+
 var redisDB *redis.Client
 var swssDB swsscommon.DBConnector
 var swss_conf_DB swsscommon.DBConnector
@@ -94,6 +96,8 @@ func InitialiseVariables() {
         log.Fatalf("error: could not retrieve server reset info from DB, error: %+v", err)
     }
     genVnetGuidMap()
+
+    ConfigResetStatus = true
 }
 
 

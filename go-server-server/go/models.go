@@ -12,6 +12,10 @@ type HeartbeatReturnModel struct {
     ResetTime     string `json:"reset_time,omitempty"`
 }
 
+type ConfigResetStatusModel struct {
+    ResetStatus      string `json:"reset_status,omitempty"`
+}
+
 type RouteModel struct {
     Cmd         string `json:"cmd,omitempty"`
     IPPrefix    string `json:"ip_prefix"`
