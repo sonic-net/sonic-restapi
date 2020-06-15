@@ -90,14 +90,13 @@ func InitialiseVariables() {
             log.Fatalf("error: could not save reset info to DB, error: %+v", err)
         }
         log.Printf("info: set config reset Guid and Time to %v, %v", ServerResetGuid, ServerResetTime)
+        ConfigResetStatus = true
     } else if err == nil {
         log.Printf("info: find config reset Guid and Time in DB as %v, %v", ServerResetGuid, ServerResetTime)
     } else {
         log.Fatalf("error: could not retrieve server reset info from DB, error: %+v", err)
     }
     genVnetGuidMap()
-
-    ConfigResetStatus = true
 }
 
 
