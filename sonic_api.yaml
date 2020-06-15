@@ -184,6 +184,30 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
+    post:
+      summary: API for caller to set the status of the config in the DB
+      description: Returns a JSON response with the config reset status after the change
+      parameters:
+        - name: reset_status
+          in: body
+          required: true
+          type: string
+          description: configuration reset status value
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
 #----------------------------------------------
 # Operations
 #----------------------------------------------

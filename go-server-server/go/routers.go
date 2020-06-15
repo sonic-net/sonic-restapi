@@ -90,6 +90,13 @@ var routes = Routes{
     },
 
     Route{
+        "ConfigResetStatusPost",
+        "POST",
+        "/v1/config/resetstatus",
+        ConfigResetStatusPost,
+    },
+
+    Route{
         "ConfigInterfaceVlanDelete",
         "DELETE",
         "/v1/config/interface/vlan/{vlan_id}",
