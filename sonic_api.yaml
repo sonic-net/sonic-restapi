@@ -192,7 +192,7 @@ paths:
           in: body
           required: true
           type: string
-          description: configuration reset status value
+          description: The value of configuration reset status. Only true or false accepted
       responses:
         '200':
           description: OK
