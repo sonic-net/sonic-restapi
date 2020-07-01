@@ -16,6 +16,8 @@ const ServerAPIVersion string = "1.0.0"
 var ServerResetGuid string
 var ServerResetTime string
 
+var ConfigResetStatus bool
+
 var redisDB *redis.Client
 var swssDB swsscommon.DBConnector
 var swss_conf_DB swsscommon.DBConnector
@@ -88,6 +90,7 @@ func InitialiseVariables() {
             log.Fatalf("error: could not save reset info to DB, error: %+v", err)
         }
         log.Printf("info: set config reset Guid and Time to %v, %v", ServerResetGuid, ServerResetTime)
+        ConfigResetStatus = true
     } else if err == nil {
         log.Printf("info: find config reset Guid and Time in DB as %v, %v", ServerResetGuid, ServerResetTime)
     } else {

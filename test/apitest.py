@@ -89,6 +89,12 @@ class rest_api_client(unittest.TestCase):
         l.info('Response Body: %s' % r.text)
         return r
 
+    def get_config_reset_status(self):
+        return self.get('v1/config/resetstatus')
+
+    def post_config_reset_status(self, value):
+        return self.post('v1/config/resetstatus', value)
+
     # VRF/VNET
     def post_config_vrouter_vrf_id(self, vrf_id, value):
         return self.post('v1/config/vrouter/{vrf_id}'.format(vrf_id=vrf_id), value)
@@ -287,6 +293,25 @@ class ra_client_positive_tests(rest_api_client):
                 'ip_addr': '34.53.1.0'
             }
         })
+
+# Config reset status
+    def test_config_status_reset_get(self):
+        r = self.get_config_reset_status()
+        self.assertEqual(r.status_code, 200)
+        j = json.loads(r.text)
+        self.assertEqual(j, {
+            'reset_status': 'true'
+        })
+
+    def test_config_status_reset_post(self):
+        r = self.post_config_reset_status({'reset_status': 'false'})
+        self.assertEqual(r.status_code, 200)
+        j = json.loads(r.text)
+        self.assertEqual(j, {
+            'reset_status': 'false'
+        })
+        r = self.post_config_reset_status({'reset_status': 'boolean'})
+        self.assertEqual(r.status_code, 400)
 
 # Decap
     def test_post_config_tunnel_decap_tunnel_type(self):
