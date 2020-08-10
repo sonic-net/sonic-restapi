@@ -342,6 +342,11 @@ func ConfigInterfaceVlansAllGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    if vlan_map_kv == nil || len(vlan_map_kv) == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"Vlans"}, "")
+        return
+    }
+
     for _,v := range vlan_map_kv{
         vlan_name := VLAN_NAME_PREF + v["vlanid"]
         vlan_pref_kv, _ := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB, vlan_name, "*"))
@@ -786,6 +791,8 @@ func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
     pt.Set("default_vxlan_tunnel", map[string]string{
         "src_ip": attr.IPAddr,
     }, "SET", "")
+
+    CacheTunnelLpbkIps(attr.IPAddr, true)
 }
 
 func ConfigTunnelEncapVxlanVnidDelete(w http.ResponseWriter, r *http.Request) {
@@ -1026,14 +1033,6 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    vlanPrefixArr, err := generateVlanPrefixInVnet(vnet_id_str)
-    if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Error generating vlan prefix array", []string{}, "")
-        return
-    } else {
-        log.Printf("info: gen vlanPrefixArr is %v", vlanPrefixArr)
-    }
-
     var attr []RouteModel
 
     err = ReadJSONBody(w, r, &attr)
@@ -1048,17 +1047,11 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     var failed []RouteModel
 
     for _, r := range attr {
-        bm_next_hop, err := isBMNextHop(r.IPPrefix, vlanPrefixArr)
-        if err != nil {
-            r.Error_code = http.StatusInternalServerError
-            r.Error_msg = "Internal service error"
-            failed = append(failed, r)
+        bm_next_hop := isLocalTunnelNexthop(r.NextHop)
+        if bm_next_hop {
+            log.Printf("Skipping route %v as it is a /32 local subnet route", r)
             continue
         }
-	     if bm_next_hop {
-             log.Printf("Skipping route %v as it is a baremetal /32 route", r)
-		       continue
-		  }
 
         rt_tb_name := ROUTE_TUN_TB
         if *RunApiAsLocalTestDocker {

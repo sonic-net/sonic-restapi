@@ -26,6 +26,7 @@ var trustedertCommonNames []string
 var vnetGuidMap map[string]uint32
 var vnetGuidIdUsed []bool
 var nextGuidId uint32
+var localTunnelLpbkIps []string
 
 const REDIS_SOCK string = "/var/run/redis/redis.sock"
 
@@ -97,8 +98,9 @@ func InitialiseVariables() {
         log.Fatalf("error: could not retrieve server reset info from DB, error: %+v", err)
     }
     genVnetGuidMap()
-}
 
+    genVxlanTunnelInfo()
+}
 
 func genVnetGuidMap() {
     vnetGuidMap = make(map[string]uint32)
@@ -142,6 +144,24 @@ func genVnetGuidMap() {
         }
     }
     nextGuidId = i + 1
+}
+
+func genVxlanTunnelInfo() {
+    localTunnelLpbkIps = make([]string, 256)
+    db := &conf_db_ops
+    kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, "*"))
+
+    if (err != nil) || (len(kv) == 0) {
+        log.Printf("info: No Vxlan tunnel tables, default init, err: %d len kv: %d", err, len(kv))
+        return
+    }
+
+    for k, v := range kv {
+        log.Printf("info: TABLE: %s TABLE_KVs: %#v", k, v)
+        localTunnelLpbkIps = append(localTunnelLpbkIps, v["src_ip"])
+    }
+
+    log.Printf("info: Existing loopback ips %v", localTunnelLpbkIps)
 }
 
 func DBConnect() {
@@ -308,6 +328,18 @@ func CacheSetConfigResetInfo(GUID string, time string) error {
     }
 
     return nil
+}
+
+func CacheTunnelLpbkIps(ipAddr string, add bool) {
+
+    log.Printf("info: lbkp ip update %s, add: %v", ipAddr, add)
+
+	if add {
+	    localTunnelLpbkIps = append(localTunnelLpbkIps, ipAddr)
+	    log.Printf("info: stored loopback ips %v", localTunnelLpbkIps)
+	} else {
+        //Deleting tunnel is not currently supported.
+	}
 }
 
 func CacheGetVnetGuidId(GUID string) (val uint32) {
