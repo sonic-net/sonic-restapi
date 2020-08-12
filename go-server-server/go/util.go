@@ -245,6 +245,22 @@ func isBMNextHop(ipprefix string, vlanPrefixArr []string) (bm_next_hop bool, err
 	 return
 }
 
+func isLocalTunnelNexthop(ipNextHop string) (local_next_hop bool) {
+    local_next_hop = false
+    lpbk_ips := localTunnelLpbkIps
+    if (ipNextHop == "" || len(lpbk_ips) == 0) {
+        return
+    }
+
+    for _, s := range lpbk_ips {
+        if s == ipNextHop {
+            local_next_hop = true
+            return local_next_hop
+        }
+    }
+    return
+}
+
 func vlan_dependencies_exist(vlan_name string) (vlan_dep bool, err error) {
     db := &conf_db_ops
     vlan_dep = false

@@ -851,7 +851,7 @@ class ra_client_positive_tests(rest_api_client):
              for ci in cidr:
 		routes.append({'cmd':'add',
                             'ip_prefix':'10.1.'+str(i)+'.1/'+str(ci),
-                            'nexthop':'192.168.2.'+str(i),
+                            'nexthop':'34.53.'+str(i)+'.0',
                             'vnid': 1 + i%5,
                             'mac_address':'00:08:aa:bb:cd:'+hex(15+i)[2:]})
 
@@ -862,7 +862,7 @@ class ra_client_positive_tests(rest_api_client):
         routes_not_bm = []
         for route in routes:
              del route['cmd']
-             if route['ip_prefix'] == '10.1.1.1/32' or  route['ip_prefix'] == '10.1.5.1/32':
+             if route['nexthop'] == '34.53.1.0':
                   routes_bm.append(route)
              else:
                   routes_not_bm.append(route)
