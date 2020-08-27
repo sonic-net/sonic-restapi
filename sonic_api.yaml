@@ -121,7 +121,7 @@ paths:
   '/state/heartbeat':
     get:
       summary: the heartbeat API for caller to check the status of the server
-      description: Returns Ok when server is live. Also returns API version and config reset time info of the server.
+      description: Returns Ok when server is live. Also returns API version, config reset time info of the server and available routes.
       responses:
         '200':
           description: OK
@@ -131,6 +131,7 @@ paths:
               - server_version
               - reset_GUID
               - reset_time
+              - routes_available
             properties:
               server_version:
                 type: string
@@ -142,6 +143,9 @@ paths:
                 type: string
                 format: date-time
                 description: time of server restartting from scratch, in a human readable format.
+              routes_available:
+                type: int
+                description: Remaining routes available to be programmed. Returns -1 if CRM:STATS is unavailable. Continue programming routes and check back later. 
         '401':
           description: Invalid authentication credentials
           schema:
