@@ -21,6 +21,7 @@ var ConfigResetStatus bool
 var redisDB *redis.Client
 var swssDB swsscommon.DBConnector
 var swss_conf_DB swsscommon.DBConnector
+var swss_ctr_DB swsscommon.DBConnector
 var trustedertCommonNames []string
 
 var vnetGuidMap map[string]uint32

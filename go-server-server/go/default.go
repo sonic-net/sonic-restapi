@@ -20,21 +20,21 @@ const PING_COMMAND_STR string = "ping"
 
 func StateHeartbeatGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-    var availableRoutes := -1
+    var availableRoutes int = -1
     db := &ctr_db_ops
     crm_stats_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, CRM_TB, "STATS"))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     } else {
-        availableRoutes = strconv.Atoi(crm_stats_kv["crm_stats_ipv4_route_available"])
+        availableRoutes, _ = strconv.Atoi(crm_stats_kv["crm_stats_ipv4_route_available"])
     }
 
     output := HeartbeatReturnModel{
         ServerVersion: ServerAPIVersion,
         ResetGUID: ServerResetGuid,
         ResetTime: ServerResetTime,
-        RoutesAvailable: availableRoutes
+        RoutesAvailable: availableRoutes,
     }
 
     WriteRequestResponse(w, output, http.StatusOK)
