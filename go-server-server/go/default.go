@@ -24,8 +24,7 @@ func StateHeartbeatGet(w http.ResponseWriter, r *http.Request) {
     db := &ctr_db_ops
     crm_stats_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, CRM_TB, "STATS"))
     if err != nil {
-        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-        return
+        log.Printf("Fetching CRM:STATS key from Counters DB failed")
     } else {
         availableRoutes, _ = strconv.Atoi(crm_stats_kv["crm_stats_ipv4_route_available"])
     }
