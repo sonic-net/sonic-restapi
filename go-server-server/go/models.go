@@ -7,9 +7,10 @@ import (
 )
 
 type HeartbeatReturnModel struct {
-    ServerVersion string `json:"server_version,omitempty"`
-    ResetGUID    string `json:"reset_GUID,omitempty"`
-    ResetTime     string `json:"reset_time,omitempty"`
+    ServerVersion   string `json:"server_version,omitempty"`
+    ResetGUID       string `json:"reset_GUID,omitempty"`
+    ResetTime       string `json:"reset_time,omitempty"`
+    RoutesAvailable int    `json:"routes_available,omitempty"`
 }
 
 type ConfigResetStatusModel struct {

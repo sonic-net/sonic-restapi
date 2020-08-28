@@ -21,6 +21,7 @@ var ConfigResetStatus bool
 var redisDB *redis.Client
 var swssDB swsscommon.DBConnector
 var swss_conf_DB swsscommon.DBConnector
+var swss_ctr_DB swsscommon.DBConnector
 var trustedertCommonNames []string
 
 var vnetGuidMap map[string]uint32
@@ -54,6 +55,7 @@ const ROUTE_TUN_TB      string = "VNET_ROUTE_TUNNEL_TABLE"
 const LOCAL_ROUTE_TB    string = "VNET_ROUTE_TABLE"
 const CFG_ROUTE_TUN_TB  string = "VNET_ROUTE_TUNNEL"
 const CFG_LOCAL_ROUTE_TB    string = "VNET_ROUTE"
+const CRM_TB            string = "CRM"
 
 // DB Helper constants
 const VNET_NAME_PREF  string = "Vnet"
@@ -67,6 +69,7 @@ type db_ops struct {
 
 var app_db_ops db_ops
 var conf_db_ops db_ops
+var ctr_db_ops db_ops
 
 func Initialise() {
     DBConnect()
@@ -185,10 +188,12 @@ func DBConnect() {
 	     swss_conf_DB = swsscommon.NewDBConnector(CONFIG_DB, "localhost", 6379, SWSS_TIMEOUT)
     } else {
         swssDB = swsscommon.NewDBConnector2(APPL_DB, REDIS_SOCK, SWSS_TIMEOUT)
-	     swss_conf_DB = swsscommon.NewDBConnector2(CONFIG_DB, REDIS_SOCK, SWSS_TIMEOUT)
+        swss_conf_DB = swsscommon.NewDBConnector2(CONFIG_DB, REDIS_SOCK, SWSS_TIMEOUT)
+        swss_ctr_DB = swsscommon.NewDBConnector2(COUNTER_DB, REDIS_SOCK, SWSS_TIMEOUT)
     }
     app_db_ops = db_ops{separator: ":", swss_db: swssDB, db_num: APPL_DB}
     conf_db_ops = db_ops{separator: "|", swss_db: swss_conf_DB, db_num: CONFIG_DB}
+    ctr_db_ops = db_ops{separator: ":", swss_db: swss_ctr_DB, db_num: COUNTER_DB}
 }
 
 func GetKVs(DB int, key string) (kv map[string]string, err error) {
