@@ -35,12 +35,8 @@ const APPL_DB int = 0
 const COUNTER_DB int = 2
 const CONFIG_DB int = 4
 
-// TODO:
-// DB 4 is reserved for config DB, we can not simply flush it any more
-// when we reset the server. It will affect other applications on Sonic.
-// Let use use DB 7 for caching now and move the info in cache to config DB
-// with new schema and delete only keys for this server in Reset.
-const APPL_CACHE_DB int = 7
+// Use RESTAPI_DB for cache
+const APPL_CACHE_DB int = 8
 
 const SWSS_TIMEOUT uint = 0
 
@@ -79,7 +75,8 @@ func Initialise() {
 func InitialiseVariables() {
     trustedertCommonNames = strings.Split(*ClientCertCommonNameFlag, ",")
     var err error
-    ServerResetGuid, ServerResetTime, err = CacheGetConfigResetInfo()
+    var resetStatus string
+    ServerResetGuid, ServerResetTime, resetStatus, err = CacheGetConfigResetInfo()
 
     if err == redis.Nil {
         loc, _ := time.LoadLocation("UTC")
@@ -94,9 +91,16 @@ func InitialiseVariables() {
             log.Fatalf("error: could not save reset info to DB, error: %+v", err)
         }
         log.Printf("info: set config reset Guid and Time to %v, %v", ServerResetGuid, ServerResetTime)
+
         ConfigResetStatus = true
+        err = CacheSetResetStatusInfo(ConfigResetStatus)
+        if err != nil {
+            log.Fatalf("error: could not save reset status info to DB, error: %+v", err)
+        }
     } else if err == nil {
-        log.Printf("info: find config reset Guid and Time in DB as %v, %v", ServerResetGuid, ServerResetTime)
+        ConfigResetStatus = (resetStatus == "true")
+        log.Printf("info: find config reset Guid, Time, ResetStatus in DB as %v, %v, %v",
+                   ServerResetGuid, ServerResetTime, ConfigResetStatus)
     } else {
         log.Fatalf("error: could not retrieve server reset info from DB, error: %+v", err)
     }
@@ -290,11 +294,12 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
     return
 }
 
-func CacheGetConfigResetInfo() (GUID string, time string, err error) {
+func CacheGetConfigResetInfo() (GUID string, time string, resetStatus string, err error) {
     pipe := redisDB.TxPipeline()
     pipe.Select(APPL_CACHE_DB)
     getCmd_guid := pipe.HGet("RESET_INFO", "GUID")
     getCmd_time := pipe.HGet("RESET_INFO", "time")
+    getCmd_resetStatus := pipe.HGet("RESET_INFO", "reset_status")
     _, err = pipe.Exec()
 
     if err != nil {
@@ -311,7 +316,12 @@ func CacheGetConfigResetInfo() (GUID string, time string, err error) {
         return
     }
 
-    return getCmd_guid.Val(), getCmd_time.Val(), nil
+    if getCmd_resetStatus.Err() != nil {
+        err = getCmd_resetStatus.Err()
+        return
+    }
+
+    return getCmd_guid.Val(), getCmd_time.Val(), getCmd_resetStatus.Val(), nil
 }
 
 func CacheSetConfigResetInfo(GUID string, time string) error {
@@ -330,6 +340,28 @@ func CacheSetConfigResetInfo(GUID string, time string) error {
 
     if setCmd_time.Err() != nil {
         return setCmd_time.Err()
+    }
+
+    return nil
+}
+
+func CacheSetResetStatusInfo(resetStatus bool) error {
+    pipe := redisDB.TxPipeline()
+    pipe.Select(APPL_CACHE_DB)
+
+    val := "false"
+    if resetStatus {
+        val = "true"
+    }
+
+    setCmd_resetStatus := pipe.HSet("RESET_INFO", "reset_status", val)
+    _, err := pipe.Exec()
+    if err != nil {
+        return err
+    }
+
+    if setCmd_resetStatus.Err() != nil {
+        return setCmd_resetStatus.Err()
     }
 
     return nil

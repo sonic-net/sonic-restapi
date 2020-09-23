@@ -63,6 +63,7 @@ func ConfigResetStatusPost(w http.ResponseWriter, r *http.Request) {
         WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"reset_status"}, "only true/false values accepted")
         return
     }
+    CacheSetResetStatusInfo(ConfigResetStatus)
     ConfigResetStatusGet(w, r)    
 }
 
