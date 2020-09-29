@@ -11,7 +11,7 @@ func CommonNameMatch(r *http.Request) bool {
 	// common name list of the server config. A more strict check may be added here later.
 	for _, peercert := range r.TLS.PeerCertificates {
 		commonName := peercert.Subject.CommonName
-		for _, name := range trustedertCommonNames {
+		for _, name := range trustedCertCommonNames {
 			if commonName == name {
 				return true;
 			}
