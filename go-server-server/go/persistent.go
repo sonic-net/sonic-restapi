@@ -22,7 +22,7 @@ var redisDB *redis.Client
 var swssDB swsscommon.DBConnector
 var swss_conf_DB swsscommon.DBConnector
 var swss_ctr_DB swsscommon.DBConnector
-var trustedertCommonNames []string
+var trustedCertCommonNames []string
 
 var vnetGuidMap map[string]uint32
 var vnetGuidIdUsed []bool
@@ -73,7 +73,7 @@ func Initialise() {
 }
 
 func InitialiseVariables() {
-    trustedertCommonNames = strings.Split(*ClientCertCommonNameFlag, ",")
+    trustedCertCommonNames = strings.Split(*ClientCertCommonNameFlag, ",")
     var err error
     var resetStatus string
     ServerResetGuid, ServerResetTime, resetStatus, err = CacheGetConfigResetInfo()
