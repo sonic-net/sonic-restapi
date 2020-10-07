@@ -1051,7 +1051,20 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    pt := swsscommon.NewProducerStateTable(db.swss_db, ROUTE_TUN_TB)
+    ifname, ok := vars["ifname"]
+    if ok {
+        pt := swsscommon.NewProducerStateTable(db.swss_db, LOCAL_ROUTE_TB)
+        rt_tb_name := LOCAL_ROUTE_TB
+        if *RunApiAsLocalTestDocker {
+            rt_tb_name = "_"+LOCAL_ROUTE_TB
+        }
+    } else {
+        pt := swsscommon.NewProducerStateTable(db.swss_db, ROUTE_TUN_TB)
+        rt_tb_name := ROUTE_TUN_TB
+        if *RunApiAsLocalTestDocker {
+            rt_tb_name = "_"+ROUTE_TUN_TB
+        }
+    }
     defer pt.Delete()
 
     var failed []RouteModel
@@ -1063,49 +1076,59 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             continue
         }
 
-        rt_tb_name := ROUTE_TUN_TB
-        if *RunApiAsLocalTestDocker {
-            rt_tb_name = "_"+ROUTE_TUN_TB
-        }
         rt_tb_key = generateDBTableKey(db.separator, rt_tb_name, vnet_id_str, r.IPPrefix)
 
-		  cur_route, err := GetKVs(db.db_num, rt_tb_key)/* generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, r.IPPrefix))*/
-		  if err != nil {
-             r.Error_code = http.StatusInternalServerError
-             r.Error_msg = "Internal service error"
-		       failed = append(failed, r)
-		  }
-		  if r.Cmd == "delete" {
-		       if cur_route == nil {
-                  r.Error_code = http.StatusNotFound
-				      r.Error_msg = "Not found"
-						failed = append(failed, r)
-			    } else {
-				      pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
-				 }
-		  } else {
-             if cur_route != nil {
-                  if cur_route["endpoint"] != r.NextHop ||
-                     cur_route["mac_address"] != r.MACAddress ||
-                     cur_route["vni"] != strconv.Itoa(r.Vnid) {
-                         /* Delete and re-add the route as it is not identical */
-                         pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
-                  } else {
-                         /* Identical route */
-                         continue
-                  }
-             }
-		       route_map := make(map[string]string)
-				 route_map["endpoint"] = r.NextHop
-				 if(r.MACAddress != "") {
-				      route_map["mac_address"] = r.MACAddress
-				 }
-				 if(r.Vnid != 0) {
-				      route_map["vni"] = strconv.Itoa(r.Vnid)
-				 }
-				 pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
-
-		  }
+        cur_route, err := GetKVs(db.db_num, rt_tb_key)/* generateDBTableKey(db.separator, ROUTE_TUN_TB, vnet_id_str, r.IPPrefix))*/
+        if err != nil {
+            r.Error_code = http.StatusInternalServerError
+            r.Error_msg = "Internal service error"
+            failed = append(failed, r)
+        }
+        if r.Cmd == "delete" {
+            if cur_route == nil {
+                r.Error_code = http.StatusNotFound
+                    r.Error_msg = "Not found"
+                    failed = append(failed, r)
+            } else {
+                    pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
+                }
+        } else {
+            if cur_route != nil {
+            if r.IfName == nil {
+                if cur_route["endpoint"] != r.NextHop ||
+                    cur_route["mac_address"] != r.MACAddress ||
+                    cur_route["vni"] != strconv.Itoa(r.Vnid) {
+                        /* Delete and re-add the route as it is not identical */
+                        pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
+                } else {
+                        /* Identical route */
+                        continue
+                }
+            } else {
+                if cur_route["ifname"] != r.IfName {
+                    /* Delete and re-add the route as it is not identical */
+                    pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")                        
+                } else {
+                    /* Identical route */
+                    continue
+                }
+            }
+            }
+            route_map := make(map[string]string)
+            if r.IfName == nil {
+                route_map["endpoint"] = r.NextHop
+                if(r.MACAddress != "") {
+                        route_map["mac_address"] = r.MACAddress
+                }
+                if(r.Vnid != 0) {
+                        route_map["vni"] = strconv.Itoa(r.Vnid)
+                }
+            } else {
+                route_map["nexthop"] = r.NextHop
+            }
+            // if ifname is present, then route_map['nexthop'] = r.nexthop; else route_map["endpoint"] = r.NextHop
+            pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
+		}
 	 }
 
     if len(failed) > 0 {

@@ -20,6 +20,7 @@ type ConfigResetStatusModel struct {
 type RouteModel struct {
     Cmd         string `json:"cmd,omitempty"`
     IPPrefix    string `json:"ip_prefix"`
+    IfName      string `json:"ifname,omitempty"`
     NextHopType string `json:"nexthop_type,omitempty"`
     NextHop     string `json:"nexthop"`
     MACAddress  string `json:"mac_address,omitempty"`
