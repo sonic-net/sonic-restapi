@@ -1051,25 +1051,27 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    ifname, ok := vars["ifname"]
-    if ok {
-        pt := swsscommon.NewProducerStateTable(db.swss_db, LOCAL_ROUTE_TB)
-        rt_tb_name := LOCAL_ROUTE_TB
-        if *RunApiAsLocalTestDocker {
-            rt_tb_name = "_"+LOCAL_ROUTE_TB
-        }
-    } else {
-        pt := swsscommon.NewProducerStateTable(db.swss_db, ROUTE_TUN_TB)
-        rt_tb_name := ROUTE_TUN_TB
-        if *RunApiAsLocalTestDocker {
-            rt_tb_name = "_"+ROUTE_TUN_TB
-        }
-    }
+    var pt swsscommon.ProducerStateTable
+    var rt_tb_name string
     defer pt.Delete()
 
     var failed []RouteModel
 
     for _, r := range attr {
+        if r.IfName == "" {
+            pt = swsscommon.NewProducerStateTable(db.swss_db, ROUTE_TUN_TB)
+            rt_tb_name = ROUTE_TUN_TB
+            if *RunApiAsLocalTestDocker {
+                rt_tb_name = "_"+ROUTE_TUN_TB
+            }            
+        } else {
+            pt = swsscommon.NewProducerStateTable(db.swss_db, LOCAL_ROUTE_TB)
+            rt_tb_name = LOCAL_ROUTE_TB
+            if *RunApiAsLocalTestDocker {
+                rt_tb_name = "_"+LOCAL_ROUTE_TB
+            }
+        }
+
         bm_next_hop := isLocalTunnelNexthop(r.NextHop)
         if bm_next_hop {
             log.Printf("Skipping route %v as it is a /32 local subnet route", r)
@@ -1094,28 +1096,28 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 }
         } else {
             if cur_route != nil {
-            if r.IfName == nil {
-                if cur_route["endpoint"] != r.NextHop ||
-                    cur_route["mac_address"] != r.MACAddress ||
-                    cur_route["vni"] != strconv.Itoa(r.Vnid) {
-                        /* Delete and re-add the route as it is not identical */
-                        pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
+                if r.IfName == "" {
+                    if cur_route["endpoint"] != r.NextHop ||
+                        cur_route["mac_address"] != r.MACAddress ||
+                        cur_route["vni"] != strconv.Itoa(r.Vnid) {
+                            /* Delete and re-add the route as it is not identical */
+                            pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
+                    } else {
+                            /* Identical route */
+                            continue
+                    }
                 } else {
+                    if cur_route["ifname"] != r.IfName {
+                        /* Delete and re-add the route as it is not identical */
+                        pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")                        
+                    } else {
                         /* Identical route */
                         continue
+                    }
                 }
-            } else {
-                if cur_route["ifname"] != r.IfName {
-                    /* Delete and re-add the route as it is not identical */
-                    pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")                        
-                } else {
-                    /* Identical route */
-                    continue
-                }
-            }
             }
             route_map := make(map[string]string)
-            if r.IfName == nil {
+            if r.IfName == "" {
                 route_map["endpoint"] = r.NextHop
                 if(r.MACAddress != "") {
                         route_map["mac_address"] = r.MACAddress
@@ -1129,7 +1131,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             // if ifname is present, then route_map['nexthop'] = r.nexthop; else route_map["endpoint"] = r.NextHop
             pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
 		}
-	 }
+	}
 
     if len(failed) > 0 {
         output := RouteReturnModel {
