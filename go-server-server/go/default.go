@@ -969,12 +969,16 @@ func ConfigVrouterVrfIdRoutesDelete(w http.ResponseWriter, r *http.Request) {
     }
 
     var failed []RouteModel
-    pt := swsscommon.NewProducerStateTable(db.swss_db, ROUTE_TUN_TB)
-    defer pt.Delete()
+    pt1 := swsscommon.NewProducerStateTable(db.swss_db, ROUTE_TUN_TB)
+    defer pt1.Delete()
+    pt2 := swsscommon.NewProducerStateTable(db.swss_db, LOCAL_ROUTE_TB)
+    defer pt2.Delete()
 
     for _, r := range routes {
-        table := generateDBTableKey(db.separator, vnet_id_str, r.IPPrefix)
-        pt.Del(table, "DEL", "")
+        table1 := generateDBTableKey(db.separator, vnet_id_str, r.IPPrefix)
+        pt1.Del(table1, "DEL", "")
+        table2 := generateDBTableKey(db.separator, vnet_id_str, r.IPPrefix)
+        pt2.Del(table2, "DEL", "")
     }
 
     if len(failed) > 0 {
@@ -1126,6 +1130,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                         route_map["vni"] = strconv.Itoa(r.Vnid)
                 }
             } else {
+                route_map["ifname"] = r.IfName
                 route_map["nexthop"] = r.NextHop
             }
             // if ifname is present, then route_map['nexthop'] = r.nexthop; else route_map["endpoint"] = r.NextHop

@@ -261,12 +261,23 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
     pattern = generateDBTableKey(db.separator, rt_tb_name, vnet_id_str, ipFilter)
     routes = []RouteModel{}
 
-    kv, err := GetKVsMulti(db.db_num,pattern)
-    if err != nil {
+    kv1, err1 := GetKVsMulti(db.db_num,pattern)
+    if err1 != nil {
         return
     }
 
-    for k, kvp := range kv {
+    rt_tb_name = LOCAL_ROUTE_TB
+    if *RunApiAsLocalTestDocker {
+        rt_tb_name = "_"+LOCAL_ROUTE_TB
+    }
+    pattern = generateDBTableKey(db.separator, rt_tb_name, vnet_id_str, ipFilter)
+
+    kv2, err2 := GetKVsMulti(db.db_num,pattern)
+    if err2 != nil {
+        return
+    }        
+
+    for k, kvp := range kv1 {
         ipprefix := strings.Split(k, db.separator)[2]
 
         routeModel := RouteModel{
@@ -291,6 +302,30 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
         routes = append(routes, routeModel)
     }
 
+    for k, kvp := range kv2 {
+        ipprefix := strings.Split(k, db.separator)[2]
+
+        routeModel := RouteModel{
+            IPPrefix:    ipprefix,
+            NextHop:     kvp["nexthop"],
+        }
+
+        if vnid, ok := kvp["vni"]; ok {
+            routeModel.Vnid, _ = strconv.Atoi(vnid)
+        }
+
+        if vnidMatch >= 0 {
+            if vnidMatch != routeModel.Vnid {
+                continue
+            }
+        }
+
+        if ifname, ok := kvp["ifname"]; ok {
+            routeModel.IfName = ifname
+        }
+
+        routes = append(routes, routeModel)
+    }
     return
 }
 
