@@ -1133,7 +1133,6 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 route_map["ifname"] = r.IfName
                 route_map["nexthop"] = r.NextHop
             }
-            // if ifname is present, then route_map['nexthop'] = r.nexthop; else route_map["endpoint"] = r.NextHop
             pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
 		}
 	}

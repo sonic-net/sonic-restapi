@@ -817,7 +817,7 @@ class ra_client_positive_tests(rest_api_client):
         del route['cmd']
         routes = list()
         routes.append(route)
-        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'if_name': 'Vlan2'})
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
         self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
@@ -835,7 +835,7 @@ class ra_client_positive_tests(rest_api_client):
         del route['cmd']
         routes = list()
         routes.append(route)
-        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'if_name': 'Vlan2'})
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
         self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
@@ -854,7 +854,7 @@ class ra_client_positive_tests(rest_api_client):
         del route['cmd']
         routes = list()
         routes.append(route)
-        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'if_name': 'Vlan2'})
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
         self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
@@ -888,12 +888,11 @@ class ra_client_positive_tests(rest_api_client):
                   routes_bm.append(route)
              else:
                   routes_not_bm.append(route)
-
         self.check_routes_exist_in_tun_tb(1, routes_not_bm) 
         self.check_routes_dont_exist_in_tun_tb(1, routes_bm) 
 
-        routes_not_bm.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'if_name': 'Vlan2'})
-        routes_not_bm.append({'nexthop': '', 'ip_prefix': '10.1.5.0/24', 'if_name': 'Vlan3'})
+        routes_not_bm.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
+        routes_not_bm.append({'nexthop': '', 'ip_prefix': '10.1.5.0/24', 'ifname': 'Vlan3'})
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
         self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
@@ -932,7 +931,7 @@ class ra_client_positive_tests(rest_api_client):
         # Get all
         for route in routes:
              del route['cmd']
-        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'if_name': 'Vlan2'})
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
         self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
@@ -999,7 +998,7 @@ class ra_client_positive_tests(rest_api_client):
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
         self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
-        routes_vnid.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'if_name': 'Vlan2'})
+        routes_vnid.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
         self.assertItemsEqual(j, routes_vnid)
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1", vnid=4)
         self.assertEqual(r.status_code, 200)

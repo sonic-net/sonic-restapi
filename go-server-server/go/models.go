@@ -20,7 +20,7 @@ type ConfigResetStatusModel struct {
 type RouteModel struct {
     Cmd         string `json:"cmd,omitempty"`
     IPPrefix    string `json:"ip_prefix"`
-    IfName      string `json:"if_name,omitempty"`
+    IfName      string `json:"ifname,omitempty"`
     NextHopType string `json:"nexthop_type,omitempty"`
     NextHop     string `json:"nexthop"`
     MACAddress  string `json:"mac_address,omitempty"`
@@ -172,7 +172,7 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     required := struct {
         Cmd         *string `json:"cmd"`
         IPPrefix    *string `json:"ip_prefix"`
-        IfName      *string `json:"if_name"`
+        IfName      *string `json:"ifname"`
         NextHopType *string `json:"nexthop_type"`
         NextHop     *string `json:"nexthop"`
         MACAddress  *string `json:"mac_address"`
