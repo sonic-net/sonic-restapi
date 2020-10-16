@@ -988,10 +988,12 @@ class ra_client_positive_tests(rest_api_client):
             else:
                  routes_not_vnid.append(route)
             i += 1
+        routes_vnid.append({'nexthop': '', 'ifname': 'Vlan2', 'ip_prefix': '10.1.1.0/24'})
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1", vnid=5)
         self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
         self.assertItemsEqual(j, routes_vnid)
+        routes_vnid.remove({'nexthop': '', 'ifname': 'Vlan2', 'ip_prefix': '10.1.1.0/24'})
 
         # Get filtered by ip_prefix
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1", ip_prefix=route_pref['ip_prefix'])
@@ -1036,7 +1038,6 @@ class ra_client_positive_tests(rest_api_client):
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
         self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
-        routes_vnid.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
         self.assertItemsEqual(j, routes_vnid)
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1", vnid=4)
         self.assertEqual(r.status_code, 200)
