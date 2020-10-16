@@ -1311,6 +1311,9 @@ definitions:
       mac_address:
         type: string
         description: mac_address of the target VM
+      ifname:
+        type: string
+        description: Interface name for local route. When ifname is mentioned, nexthop is optional
       vnid:
         type: integer
         format: int32

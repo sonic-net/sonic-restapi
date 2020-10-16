@@ -20,6 +20,7 @@ type ConfigResetStatusModel struct {
 type RouteModel struct {
     Cmd         string `json:"cmd,omitempty"`
     IPPrefix    string `json:"ip_prefix"`
+    IfName      string `json:"ifname,omitempty"`
     NextHopType string `json:"nexthop_type,omitempty"`
     NextHop     string `json:"nexthop"`
     MACAddress  string `json:"mac_address,omitempty"`
@@ -171,6 +172,7 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     required := struct {
         Cmd         *string `json:"cmd"`
         IPPrefix    *string `json:"ip_prefix"`
+        IfName      *string `json:"ifname"`
         NextHopType *string `json:"nexthop_type"`
         NextHop     *string `json:"nexthop"`
         MACAddress  *string `json:"mac_address"`
@@ -183,17 +185,19 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     if err != nil {
         return
     }
-
+    
     if required.Cmd == nil {
         err = &MissingValueError{"cmd"}
         return
     } else if required.IPPrefix == nil {
         err = &MissingValueError{"ip_prefix"}
         return
-    } else if required.NextHop == nil {
-        err = &MissingValueError{"nexthop"}
-        return
-    }
+    } else if required.IfName == nil {
+        if required.NextHop == nil {
+            err = &MissingValueError{"nexthop"}
+            return
+        }
+    } 
 
     if *required.Cmd != "add" && *required.Cmd != "delete" {
         err = &InvalidFormatError{Field: "cmd", Message: "Must be add/delete"}
@@ -211,7 +215,7 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         return
     }
 
-    if required.MACAddress != nil {
+    if required.IfName == nil && required.MACAddress != nil {
         _, err = net.ParseMAC(*required.MACAddress)
 
         if err != nil {
@@ -223,8 +227,13 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
 
     m.Cmd = *required.Cmd
     m.IPPrefix = *required.IPPrefix
-    m.NextHop = *required.NextHop
+    if required.NextHop != nil {
+        m.NextHop = *required.NextHop
+    }
     m.Vnid = required.Vnid
+    if required.IfName != nil {
+        m.IfName = *required.IfName
+    }
     return
 }
 
