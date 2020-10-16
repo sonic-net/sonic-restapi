@@ -1061,15 +1061,20 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
 
     var failed []RouteModel
 
+    tunnel_pt := swsscommon.NewProducerStateTable(db.swss_db, ROUTE_TUN_TB)
+    defer tunnel_pt.Delete()
+    local_pt := swsscommon.NewProducerStateTable(db.swss_db, LOCAL_ROUTE_TB)
+    defer local_pt.Delete()
+
     for _, r := range attr {
         if r.IfName == "" {
-            pt = swsscommon.NewProducerStateTable(db.swss_db, ROUTE_TUN_TB)
+            pt = tunnel_pt
             rt_tb_name = ROUTE_TUN_TB
             if *RunApiAsLocalTestDocker {
                 rt_tb_name = "_"+ROUTE_TUN_TB
             }            
         } else {
-            pt = swsscommon.NewProducerStateTable(db.swss_db, LOCAL_ROUTE_TB)
+            pt = local_pt
             rt_tb_name = LOCAL_ROUTE_TB
             if *RunApiAsLocalTestDocker {
                 rt_tb_name = "_"+LOCAL_ROUTE_TB
@@ -1131,7 +1136,9 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 }
             } else {
                 route_map["ifname"] = r.IfName
-                route_map["nexthop"] = r.NextHop
+                if r.NextHop != "" {
+                    route_map["nexthop"] = r.NextHop
+                }
             }
             pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
 		}

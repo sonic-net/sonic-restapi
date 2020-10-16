@@ -310,16 +310,6 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
             NextHop:     kvp["nexthop"],
         }
 
-        if vnid, ok := kvp["vni"]; ok {
-            routeModel.Vnid, _ = strconv.Atoi(vnid)
-        }
-
-        if vnidMatch >= 0 {
-            if vnidMatch != routeModel.Vnid {
-                continue
-            }
-        }
-
         if ifname, ok := kvp["ifname"]; ok {
             routeModel.IfName = ifname
         }
