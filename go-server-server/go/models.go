@@ -118,6 +118,7 @@ type TunnelDecapReturnModel struct {
 
 type VnetModel struct {
     Vnid int `json:"vnid"`
+    Ipv4MaxRoutes int `json:"ipv4_max_routes,omitempty"`
 }
 
 type VnetReturnModel struct {
@@ -309,6 +310,7 @@ func (m *TunnelDecapModel) UnmarshalJSON(data []byte) (err error) {
 func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
     required := struct {
         Vnid *int `json:"vnid"`
+        Ipv4MaxRoutes *int `json:"ipv4_max_routes,omitempty"`
     }{}
 
     err = json.Unmarshal(data, &required)
@@ -328,6 +330,7 @@ func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
     }
 
     m.Vnid = *required.Vnid
+    m.Ipv4MaxRoutes = 0
 
     return
 }

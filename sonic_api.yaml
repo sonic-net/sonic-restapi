@@ -1337,11 +1337,16 @@ definitions:
     type: object
     required:
       - vnid
+      - max_routes
     properties:
       vnid:
         type: integer
         format: int32
         description: vnid
+      max_routes:
+        type: integer
+        format: int32
+        description: maximum routes per vrf
   VlanEntry:
     type: object
     properties:
