@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "net"
     "strconv"
+    "fmt"
 )
 
 type HeartbeatReturnModel struct {
@@ -330,7 +331,9 @@ func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
     }
 
     m.Vnid = *required.Vnid
-    m.Ipv4MaxRoutes = 0
+    if required.Ipv4MaxRoutes != nil {
+        m.Ipv4MaxRoutes = *required.Ipv4MaxRoutes
+    }
 
     return
 }

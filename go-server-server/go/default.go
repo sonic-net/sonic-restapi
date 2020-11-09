@@ -930,13 +930,15 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
 
     pt := swsscommon.NewTable(db.swss_db, VNET_TB)
     defer pt.Delete()
-
-    pt.Set(vnet_id_str, map[string]string{
+    x := map[string]string{
         "vxlan_tunnel": "default_vxlan_tunnel",
         "vni": strconv.Itoa(attr.Vnid),
-        "ipv4_max_routes": "",
         "guid": vars["vnet_name"],
-    }, "SET", "")
+    }
+    if (attr.Ipv4MaxRoutes != 0) {
+        x["ipv4_max_routes"] = strconv.Itoa(attr.Ipv4MaxRoutes)
+    }
+    pt.Set(vnet_id_str, x, "SET", "")
 
     w.WriteHeader(http.StatusNoContent)
 }
