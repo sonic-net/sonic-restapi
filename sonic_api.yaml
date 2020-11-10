@@ -1333,6 +1333,15 @@ definitions:
       ip_addr:
         type: string
         description: tunnel local termination IP address
+  MaxRoutesEntry:
+    type: object
+    properties:
+      num:
+        description: maximum routes which can advertised
+        type: integer
+      threshold:
+        description: after what threshold should a warning be generated (1-100)
+        type: integer
   VnetEntry:
     type: object
     required:
@@ -1342,6 +1351,10 @@ definitions:
         type: integer
         format: int32
         description: vnid
+      ipv4_max_routes:
+        $ref: '#/definitions/MaxRoutesEntry'
+      ipv6_max_routes:
+        $ref: '#/definitions/MaxRoutesEntry'
   VlanEntry:
     type: object
     properties:

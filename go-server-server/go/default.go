@@ -873,6 +873,47 @@ func ConfigVrouterVrfIdGet(w http.ResponseWriter, r *http.Request) {
             Vnid: vnid,
         },
     }
+    var ipv4MaxRoutesNum int
+    ipv4MaxRoutesNumStr, ok := kv["ipv4_max_routes_num"]
+    if (ok) {
+        ipv4MaxRoutesNum, err = strconv.Atoi(ipv4MaxRoutesNumStr)
+        if err != nil {
+            WriteRequestError(w, http.StatusInternalServerError, "Internal service error, Non numeric ipv4_max_routes_num found in db", []string{}, "")
+            return
+        }
+        var ipv4MaxRoutesThreshold int
+        ipv4MaxRoutesThresholdStr, ok := kv["ipv4_max_routes_threshold"]
+        if (ok) {
+            ipv4MaxRoutesThreshold, err = strconv.Atoi(ipv4MaxRoutesThresholdStr)
+            if err != nil {
+                WriteRequestError(w, http.StatusInternalServerError, "Internal service error, Non numeric ipv4_max_routes_threshold found in db", []string{}, "")
+                return
+            }
+        }
+        tmpIpv4MaxRoutes := MaxRoutesModel { ipv4MaxRoutesNum, ipv4MaxRoutesThreshold }
+        output.Attr.Ipv4MaxRoutes = &tmpIpv4MaxRoutes
+    }
+
+    var ipv6MaxRoutesNum int
+    ipv6MaxRoutesNumStr, ok := kv["ipv6_max_routes_num"]
+    if (ok) {
+        ipv6MaxRoutesNum, err = strconv.Atoi(ipv6MaxRoutesNumStr)
+        if err != nil {
+            WriteRequestError(w, http.StatusInternalServerError, "Internal service error, Non numeric ipv6_max_routes_num found in db", []string{}, "")
+            return
+        }
+        var ipv6MaxRoutesThreshold int
+        ipv6MaxRoutesThresholdStr, ok := kv["ipv6_max_routes_threshold"]
+        if (ok) {
+            ipv6MaxRoutesThreshold, err = strconv.Atoi(ipv6MaxRoutesThresholdStr)
+            if err != nil {
+                WriteRequestError(w, http.StatusInternalServerError, "Internal service error, Non numeric ipv6_max_routes_threshold found in db", []string{}, "")
+                return
+            }
+        }
+        tmpIpv6MaxRoutes := MaxRoutesModel { ipv6MaxRoutesNum, ipv6MaxRoutesThreshold }
+        output.Attr.Ipv6MaxRoutes = &tmpIpv6MaxRoutes
+    }
 
     WriteRequestResponse(w, output, http.StatusOK)
 }
@@ -929,12 +970,21 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
 
     pt := swsscommon.NewTable(db.swss_db, VNET_TB)
     defer pt.Delete()
-
-    pt.Set(vnet_id_str, map[string]string{
+    x := map[string]string{
         "vxlan_tunnel": "default_vxlan_tunnel",
         "vni": strconv.Itoa(attr.Vnid),
         "guid": vars["vnet_name"],
-    }, "SET", "")
+    }
+
+    if (attr.Ipv4MaxRoutes != nil) {
+        x["ipv4_max_routes_num"] = strconv.Itoa(attr.Ipv4MaxRoutes.Num)
+        x["ipv4_max_routes_threshold"] = strconv.Itoa(attr.Ipv4MaxRoutes.Threshold)
+    }
+    if (attr.Ipv6MaxRoutes != nil) {
+        x["ipv6_max_routes_num"] = strconv.Itoa(attr.Ipv6MaxRoutes.Num)
+        x["ipv6_max_routes_threshold"] = strconv.Itoa(attr.Ipv6MaxRoutes.Threshold)
+    }
+    pt.Set(vnet_id_str, x, "SET", "")
 
     w.WriteHeader(http.StatusNoContent)
 }

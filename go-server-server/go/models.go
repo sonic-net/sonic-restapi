@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "net"
     "strconv"
+    "log"
 )
 
 type HeartbeatReturnModel struct {
@@ -116,8 +117,15 @@ type TunnelDecapReturnModel struct {
     Attr       TunnelDecapModel `json:"attr"`
 }
 
+type MaxRoutesModel struct {
+    Num int `json:"num"`
+    Threshold int `json:"threshold"`
+}
+
 type VnetModel struct {
     Vnid int `json:"vnid"`
+    Ipv4MaxRoutes *MaxRoutesModel `json:"ipv4_max_routes,omitempty"`
+    Ipv6MaxRoutes *MaxRoutesModel `json:"ipv6_max_routes,omitempty"`
 }
 
 type VnetReturnModel struct {
@@ -309,14 +317,17 @@ func (m *TunnelDecapModel) UnmarshalJSON(data []byte) (err error) {
 func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
     required := struct {
         Vnid *int `json:"vnid"`
+        Ipv4MaxRoutes **MaxRoutesModel `json:"ipv4_max_routes,omitempty"`
+        Ipv6MaxRoutes **MaxRoutesModel `json:"ipv6_max_routes,omitempty"`
     }{}
-
     err = json.Unmarshal(data, &required)
-
     if err != nil {
         return
     }
-
+    log.Printf(
+        "debug: UnmarshalJSON: VnetModel: %v",
+        required,
+    )
     if required.Vnid == nil {
         err = &MissingValueError{"vnid"}
         return
@@ -328,6 +339,15 @@ func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
     }
 
     m.Vnid = *required.Vnid
+    if required.Ipv4MaxRoutes != nil {
+        tmp := MaxRoutesModel {(*(*required.Ipv4MaxRoutes)).Num, (*required.Ipv4MaxRoutes).Threshold}
+        m.Ipv4MaxRoutes = &tmp
+    }
+
+    if required.Ipv6MaxRoutes != nil {
+        tmp := MaxRoutesModel {(*(*required.Ipv6MaxRoutes)).Num, (*required.Ipv6MaxRoutes).Threshold}
+        m.Ipv6MaxRoutes = &tmp
+    }
 
     return
 }
