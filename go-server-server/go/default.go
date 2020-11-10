@@ -866,6 +866,7 @@ func ConfigVrouterVrfIdGet(w http.ResponseWriter, r *http.Request) {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error, Non numeric vnid found in db", []string{}, "")
         return
     }
+
     output := VnetReturnModel{
         VnetName: vars["vnet_name"],
         Attr: VnetModel{

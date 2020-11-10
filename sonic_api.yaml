@@ -1346,7 +1346,6 @@ definitions:
     type: object
     required:
       - vnid
-      - max_routes
     properties:
       vnid:
         type: integer
