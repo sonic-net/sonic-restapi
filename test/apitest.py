@@ -449,7 +449,14 @@ class ra_client_positive_tests(rest_api_client):
         self.post_generic_vxlan_tunnel()
         r = self.post_config_vrouter_vrf_id("vnet-guid-1", {
             'vnid': 1001,
-            'ipv4_max_routes': 1000
+            'ipv4_max_routes': {
+                                    'num': 1000,
+                                    'threshold': 80,
+                                },
+            'ipv6_max_routes': {
+                                    'num': 2000,
+                                    'threshold': 80,
+                                },
         })
         self.assertEqual(r.status_code, 204)
 
@@ -457,9 +464,44 @@ class ra_client_positive_tests(rest_api_client):
         self.assertEqual(vrouter_table, {
 							b'vxlan_tunnel': b'default_vxlan_tunnel',
 							b'vni': b'1001',
-                            b'ipv4_max_routes': b'1000',
+                            b'ipv4_max_routes_num': b'1000',
+                            b'ipv4_max_routes_threshold': b'80',
+                            b'ipv6_max_routes_num': b'2000',
+                            b'ipv6_max_routes_threshold': b'80',
 							b'guid': b'vnet-guid-1'
 							})
+
+    def test_get_vrouter_with_max_routes(self):
+        self.post_generic_vxlan_tunnel()
+        r = self.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001,
+            'ipv4_max_routes': {
+                                    'num': 1000,
+                                    'threshold': 80,
+                                },
+            'ipv6_max_routes': {
+                                    'num': 2000,
+                                    'threshold': 80,
+                                },
+        })
+        self.assertEqual(r.status_code, 204)
+        r = self.get_config_vrouter_vrf_id("vnet-guid-1")
+        self.assertEqual(r.status_code, 200)
+        j = json.loads(r.text)
+        self.assertEqual(j, {
+            'vnet_id': "vnet-guid-1",
+            'attr': {
+                'vnid': 1001,
+                'ipv4_max_routes': {
+                                    'num': 1000,
+                                    'threshold': 80,
+                                },
+                'ipv6_max_routes': {
+                                    'num': 2000,
+                                    'threshold': 80,
+                                },
+            }
+        })
 
 # Vlan
     def test_vlan_wo_ippref_vnetid_all_verbs(self):
