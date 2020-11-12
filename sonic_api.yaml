@@ -1320,8 +1320,8 @@ paths:
       summary: Remove a QinQ router interface from a physical port
       description: If the router interface doesn't exist, '404' error will be returned.
       parameters:
-        - in: path
-          name: port
+        - name: port
+          in: path
           type: string
           required: true
           description: physical port that bound to the QinQ router interface
