@@ -1255,6 +1255,116 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 #----------------------------------------------
+# Setup route-map
+#----------------------------------------------
+  '/config/route-map/{route_map_name}':
+    put:
+      summary: Configure route-map that are applied with the redistribute command of dynamic routing protocols
+      parameters:
+        - name: route_map_name
+          in: path
+          required: true
+          type: string
+        - name: attr
+          in: body
+          required: true
+          description: Route map attributes
+          schema:
+            $ref: '#/definitions/RouteMapEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: get route-map information
+      parameters:
+        - name: route_map_name
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: OK
+          schema:
+            $ref: '#/definitions/RouteMapEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: delete route-map
+      parameters:
+        - name: route_map_name
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Schema definitions
 #----------------------------------------------
 definitions:
@@ -1400,3 +1510,12 @@ definitions:
       ip_addr:
         type: string
         description: IP address of directly attached device to the switch
+  RouteMapEntry:
+    type: object
+    properties:
+      condition:
+        type: string
+        description: "condition to match the routes on"
+      action:
+        type: string
+        description: "modify route info"
