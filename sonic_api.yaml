@@ -1255,6 +1255,285 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 #----------------------------------------------
+# QinQ subinterface object
+#----------------------------------------------
+  '/config/subinterface/qinq/{port}/{stag}/{ctag}':
+    put:
+      summary: Create/update QinQ router interface for a physical port
+      description: If the interface is already created, only QinQ attributes can be updated.
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: router interface name
+        - name: stag
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: QinQ outer tag
+        - name: ctag
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: QinQ inner tag
+        - in: body
+          name: attr
+          required: true
+          description: attributes for QinQ router interface
+          schema:
+            $ref: '#/definitions/QinQEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '405':
+          description: Method not allowed
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a QinQ router interface from a physical port
+      description: If the router interface doesn't exist, '404' error will be returned.
+      parameters:
+        - name: port
+          in: path
+          type: string
+          required: true
+          description: physical port that bound to the QinQ router interface
+        - name: stag
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: QinQ outer tag
+        - name: ctag
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: QinQ inner tag
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get QinQ router interface information
+      description: Return attributes for a given QinQ interface. If there're no interface with such parameters '404' error will be returned.
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: physical port that bound to the QinQ router interface
+        - name: stag
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: QinQ outer tag
+        - name: ctag
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: QinQ inner tag
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - port
+              - stag
+              - ctag
+              - attr
+            properties:
+              port:
+                type: string
+                description: physical port that bound to the QinQ router interface
+              stag:
+                type: integer
+                format: int32
+                description: QinQ outer tag
+              ctag:
+                type: integer
+                format: int32
+                description: QinQ inner tag
+              attr:
+                $ref: '#/definitions/QinQEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+
+  '/config/subinterface/qinq/{port}':
+    get:
+      summary: Get a list of all QinQ router interfaces for a port
+      description: If "port" is not found on the device, '404' error will be returned. If "port" is found, but there're no QinQ router interfaces for a port an empty list will be returned.
+      parameters:
+        - name: port
+          in: path
+          required: true
+          type: string
+          description: physical port that bound to the QinQ router interface
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              type: object
+              required:
+                - stag
+                - ctag
+                - attr
+              properties:
+                stag:
+                  type: integer
+                  format: int32
+                  description: QinQ outer tag
+                ctag:
+                  type: integer
+                  format: int32
+                  description: QinQ inner tag
+                attr:
+                  $ref: '#/definitions/QinQEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+
+  '/config/subinterface/qinq/{port}/{stag}/{ctag}/{shutdown}':
+    put:
+      summary: Shutdown or startup the subinterface.
+      description: If the subinterface doesn't exist, returns '404'
+      parameters:
+        - in: path
+          name: port
+          type: string
+          required: true
+          description: physical port that bound to the QinQ router interface
+        - name: stag
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: QinQ outer tag
+        - name: ctag
+          in: path
+          type: integer
+          format: int32
+          required: true
+          description: QinQ inner tag
+        - name: shutdown
+          in: path
+          required: true
+          type: boolean
+          description: set to true for shutdown or false for startup
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Schema definitions
 #----------------------------------------------
 definitions:
@@ -1400,3 +1679,43 @@ definitions:
       ip_addr:
         type: string
         description: IP address of directly attached device to the switch
+  QinQEntry:
+    type: object
+    required:
+      - description
+      - vrf_id
+    properties:
+      description:
+        type: string
+      vrf_id:
+        type: integer
+        format: int32
+        description: virtual router id
+      ip_addr:
+        type: string
+        description: subinterface ip address
+      mask:
+        type: string
+        description: subinterface mask
+      bfd:
+        $ref: '#/definitions/BfdEntry'
+      access_group:
+        type: object
+        description: add the existing acl to subinterface
+        properties:
+          access_list_name:
+            type: string
+          direction:
+            type: string
+            enum:
+              - in
+              - out
+  BfdEntry:
+    type: object
+    properties:
+      interval:
+        type: integer
+      min_rx:
+        type: integer
+      multiplier:
+        type: integer
