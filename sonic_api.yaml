@@ -1255,6 +1255,144 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 #----------------------------------------------
+# Route profile for vxlan routes
+#----------------------------------------------
+  '/config/vxlan/route_profile/{route_profile_name}':
+    put:
+      summary: Create/update route profile
+      description: defines a set of encap rules which are common for some scenarios. If the route_profile exists, update the attributes
+      parameters:
+        - name: route_profile_name
+          description: route profile name
+          in: path
+          required: true
+          type: string
+        - name: attr
+          in: body
+          required: true
+          description: attributes for route which needs to be added
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteProfileEntry'
+      responses:
+        '201':
+          description: OK
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                description: entry which was added
+                type: string
+                enum:
+                  - added
+                  - updated
+                  - failed
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove route profile
+      parameters:
+        - name: route_profile_name
+          description: route profile name
+          in: path
+          required: true
+          type: string
+      responses:
+        '201':
+          description: OK
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+                enum:
+                  - removed
+                  - failed
+              removed:
+                description: entry of the removed route profile
+                schema:
+                  $ref: '#/definitions/RouteProfileEntry'
+              failed:
+                description: failed to remove route profile
+                schema:
+                  type: '#/definitions/RouteProfileEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get info about the route profile
+      parameters:
+        - name: route_profile_name
+          description: route profile name
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/RouteProfileEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Schema definitions
 #----------------------------------------------
 definitions:
@@ -1318,6 +1456,13 @@ definitions:
         type: integer
         format: int32
         description: vxlan id to be used for the tunnel. Optional arg. If it isn't provided the default vxlan id defined for the vnet/vrf will be used as the destination vnid.
+      tag:
+        description: to differentiate routes for controlling redistribution using route policies
+        type: integer
+        format: integer64
+      tunnel_profile:
+        type: string
+        description: vxlan route-profile specifying the mode, src ports etc for vxlan-tunnel routes defined by RouteProfileEntry
       error_code:
         type: integer
         format: int32
@@ -1400,3 +1545,29 @@ definitions:
       ip_addr:
         type: string
         description: IP address of directly attached device to the switch
+  RouteProfileEntry:
+    type: object
+    required:
+      - ip_prefix
+      - nexthop_type
+      - nexthop
+    properties:
+      port_range:
+        type: object
+        properties:
+          start:
+            type: integer
+          end:
+            type: integer
+      mode:
+        type: string
+        enum:
+          - vxlan-default-mac
+          - vxlan-default
+      mtu:
+        type: integer
+      src_interface:
+        type: string
+      dst_port:
+        type: integer
+        format: int32
