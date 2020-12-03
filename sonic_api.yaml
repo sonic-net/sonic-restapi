@@ -1257,11 +1257,17 @@ paths:
 #----------------------------------------------
 # Tunnel encap object for vxlan and gre tunnels
 #----------------------------------------------
-  '/config/tunnel/encap/{tunnel_name}':
+  '/config/tunnel/encap/{tunnel_type}/{tunnel_name}':
     put:
       summary: Create a tunnel
       description: If a tunnel with this name doesn't exist yet then create a new tunnel with these parameters. If the tunnel already exists, it's attributes will be updated.
       parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
         - name: tunnel_name
           in: path
           type: string
@@ -1298,6 +1304,12 @@ paths:
       summary: Remove a tunnel
       description: If a tunnel with this name exists then remove it. If it doesn't exist return '404' error.
       parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
         - name: tunnel_name
           in: path
           type: string
@@ -1329,6 +1341,12 @@ paths:
       summary: Get information about a tunnel
       description: If a tunnel with this name exists then return an objects with the tunnel attributes. Otherwise return '404' error.
       parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
         - name: tunnel_name
           in: path
           type: string
@@ -1339,13 +1357,8 @@ paths:
           schema:
             type: object
             required:
-              - vnid
               - attr
             properties:
-              vnid:
-                type: integer
-                format: int32
-                description: vxlan id (24-bit)
               attr:
                 $ref: '#/definitions/TunnelEntry'
         '400':
@@ -1368,27 +1381,73 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
-  '/config/tunnel':
+#----------------------------------------------
+# All configured tunnels
+#----------------------------------------------
+  '/config/tunnel/encap/{tunnel_type}':
     get:
-      summary: Get a list of existing tunnels
-      description: Return a list of existing tunnels. If there're no tunnels to return, empty list will be returned.
+      summary: Get a list of existing tunnels of a tunnel_type
+      description: Return a list of existing tunnels of a type. If there're no tunnels to return, empty list will be returned.
+      parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
       responses:
         '200':
           description: OK
           schema:
             type: array
             items:
-              type: object
-              required:
-                - tunnel_name
-                - attr
-              properties:
-                vnid:
-                  type: string
-                attr:
-                  $ref: '#/definitions/TunnelEntry'
+              $ref: '#/definitions/TunnelEntry'
         '401':
           description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# Shutdown or startup a tunnel
+#----------------------------------------------
+  '/config/tunnel/encap/{tunnel_type}/{tunnel_name}/{shutdown}':
+    put:
+      summary: Shutdown or startup a tunnel
+      parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
+        - name: tunnel_name
+          in: path
+          type: string
+          required: true
+        - name: shutdown
+          in: path
+          required: true
+          type: boolean
+      responses:
+        '204':
+          description: OK
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -1547,16 +1606,8 @@ definitions:
         description: IP address of directly attached device to the switch
   TunnelEntry:
     type: object
-    required:
-      - name
-      - description
-      - src_ip
-      - vrf_id
-      - encap_src
-      - encap_dst
-      - dst_port
     properties:
-      name:
+      tunnel_name:
         type: string
       description:
         type: string
@@ -1571,22 +1622,7 @@ definitions:
         type: string
       encap_dst:
         type: string
-      mtu:
+      vni:
         type: integer
         format: int32
-      vxlan_tunnel:
-        type: object
-        properties:
-          mode:
-            type: string
-          vni:
-            type: integer
-            format: int32
-            description: vxlan id (24-bit)
-          tos:
-            type: integer
-      gre_tunnel:
-        type: object
-        properties:
-          key:
-            type: string
+        description: vxlan id (24-bit)
