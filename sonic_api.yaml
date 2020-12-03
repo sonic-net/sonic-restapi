@@ -1254,145 +1254,8 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
- #----------------------------------------------
-# Setup BGP Peer Policy Template
 #----------------------------------------------
-  '/config/bgp/policy_template/{template_name}':
-    put:
-      summary: Create Peer-policy template
-      parameters:
-        - name: template_name
-          in: path
-          required: true
-          type: string
-        - name: attr
-          in: body
-          required: true
-          description: attributes for peer policy
-          schema:
-            type: array
-            items:
-              $ref: '#/definitions/PeerPolicyTemplateEntry'
-      responses:
-        '201':
-          description: OK
-          schema:
-            type: object
-            required:
-              - added
-              - updated
-              - failed
-            properties:
-              added:
-                description: PeerPolicyTemplateEntry
-                schema:
-                  $ref: '#/definitions/PeerPolicyTemplateEntry'
-              updated:
-                description: Updated PeerPolicyTemplateEntry
-                schema:
-                  $ref: '#/definitions/PeerPolicyTemplateEntry'
-              failed:
-                description: Failed PeerPolicyTemplateEntry
-                schema:
-                  $ref: '#/definitions/PeerPolicyTemplateEntry'
-        '400':
-          description: Malformed arguments for API call
-          schema:
-            $ref: '#/definitions/Error'
-        '401':
-          description: Invalid authentication credentials
-          schema:
-            $ref: '#/definitions/Error'
-        '403':
-          description: Capacity insufficient
-          schema:
-            $ref: '#/definitions/Error'
-        '500':
-          description: Internal service error
-          schema:
-            $ref: '#/definitions/Error'
-        '503':
-          description: Maintanence mode
-          schema:
-            $ref: '#/definitions/Error'
-    delete:
-      summary: Remove Peer-policy template
-      parameters:
-        - name: template_name
-          in: path
-          required: true
-          type: string
-      responses:
-        '201':
-          description: OK
-          schema:
-            type: object
-            required:
-              - removed
-              - failed
-            properties:
-              removed:
-                description: details of removed peer policy
-                schema:
-                  $ref: '#/definitions/PeerPolicyTemplateEntry'
-              failed:
-                description: details of failed bgp config
-                schema:
-                  $ref: '#/definitions/PeerPolicyTemplateEntry'
-        '400':
-          description: Malformed arguments for API call
-          schema:
-            $ref: '#/definitions/Error'
-        '401':
-          description: Invalid authentication credentials
-          schema:
-            $ref: '#/definitions/Error'
-        '404':
-          description: Object not found
-          schema:
-            $ref: '#/definitions/Error'
-        '500':
-          description: Internal service error
-          schema:
-            $ref: '#/definitions/Error'
-        '503':
-          description: Maintanence mode
-          schema:
-            $ref: '#/definitions/Error'
-    get:
-      summary: Get Peer policy template
-      parameters:
-        - name: template_name
-          in: path
-          required: true
-          type: string
-      responses:
-        '200':
-          description: OK
-          schema:
-            $ref: '#/definitions/PeerPolicyTemplateEntry'
-        '400':
-          description: Malformed arguments for API call
-          schema:
-            $ref: '#/definitions/Error'
-        '401':
-          description: Invalid authentication credentials
-          schema:
-            $ref: '#/definitions/Error'
-        '404':
-          description: Object not found
-          schema:
-            $ref: '#/definitions/Error'
-        '500':
-          description: Internal service error
-          schema:
-            $ref: '#/definitions/Error'
-        '503':
-          description: Maintanence mode
-          schema:
-            $ref: '#/definitions/Error'
-#----------------------------------------------
-# Setup Global BGP
+# Setup Global BGP process
 #----------------------------------------------
   '/config/bgp/{asn}/{router_id}':
     put:
@@ -1407,35 +1270,10 @@ paths:
           in: path
           type: string
           required: true
-          description: ip address to identify the router
-        - name: attr
-          in: body
-          required: true
-          description: attributes for Global BGP config
-          schema:
-            $ref: '#/definitions/BgpEntry'
+          description: ip address to identify the router        
       responses:
         '201':
           description: OK
-          schema:
-            type: object
-            required:
-              - added
-              - updated
-              - failed
-            properties:
-              added:
-                description: Bgp config
-                schema:
-                  $ref: '#/definitions/BgpEntry'
-              updated:
-                description: Updated Bgp Config
-                schema:
-                  $ref: '#/definitions/BgpEntry'
-              failed:
-                description: Failed Bgp config
-                schemas:
-                  $ref: '#/definitions/BgpEntry'
         '400':
           description: Malformed arguments for API call
           schema:
@@ -1459,64 +1297,19 @@ paths:
     delete:
       summary: Remove BGP config
       parameters:
-        - name: attr
-          in: body
-          required: false
-          description: attributes for bgp config
-          schema:
-            $ref: '#/definitions/BgpEntry'
+        - name: asn
+          in: path
+          type: integer
+          required: true
+          description: setup the routing process with this asn
+        - name: router_id
+          in: path
+          type: string
+          required: true
+          description: ip address to identify the router        
       responses:
         '201':
-          description: OK
-          schema:
-            type: object
-            required:
-              - removed
-              - failed
-            properties:
-              removed:
-                description: details of removed bgp config
-                schema:
-                  $ref: '#/definitions/BgpEntry'
-              failed:
-                description: details of failed bgp config
-                schema:
-                  $ref: '#/definitions/BgpEntry'
-        '400':
-          description: Malformed arguments for API call
-          schema:
-            $ref: '#/definitions/Error'
-        '401':
-          description: Invalid authentication credentials
-          schema:
-            $ref: '#/definitions/Error'
-        '404':
-          description: Object not found
-          schema:
-            $ref: '#/definitions/Error'
-        '500':
-          description: Internal service error
-          schema:
-            $ref: '#/definitions/Error'
-        '503':
-          description: Maintanence mode
-          schema:
-            $ref: '#/definitions/Error'
-    get:
-      summary: Get BGP config
-      description: Get running BGP config.
-      parameters:
-        - name: attr
-          in: body
-          required: true
-          description: attributes for BGP
-          schema:
-            $ref: '#/definitions/BgpEntry'
-      responses:
-        '200':
-          description: OK
-          schema:
-            $ref: '#/definitions/BgpEntry'
+          description: OK          
         '400':
           description: Malformed arguments for API call
           schema:
@@ -1540,41 +1333,25 @@ paths:
 #----------------------------------------------
 # Setup BGP neighbors for a VRF
 #----------------------------------------------
-  '/config/bgp/neighbors/{vrf_id}':
+  '/config/bgp/vrouter/{vrf_id}/neighbors/{neighbor_ip}':
     put:
-      summary: Setup BGP neighbors on device per VRF
+      summary: Setup BGP neighbor on device per VRF. If this neighbor_ip exist, the neighbor attributes will be updated.
       parameters:
         - name: vrf_id
+          in: path
+          required: true
+        - name: neighbor_ip
           in: path
           required: true
         - name: attr
           in: body
           required: true
-          description: list of neighbors for this VRF
+          description: Attributes for this neighbor
           schema:
-            $ref: '#/definitions/NeighborsEntry'
+            $ref: '#/definitions/NeighborEntry'
       responses:
         '201':
-          description: OK
-          schema:
-            type: object
-            required:
-              - added
-              - updated
-              - failed
-            properties:
-              added:
-                description: list of added neighbors
-                schema:
-                  $ref: '#/definitions/NeighborsEntry'
-              updated:
-                description: list of updated neighbors
-                schema:
-                  $ref: '#/definitions/NeighborsEntry'
-              failed:
-                description: list of neighbors failed to be added
-                schemas:
-                  $ref: '#/definitions/NeighborsEntry'
+          description: OK          
         '400':
           description: Malformed arguments for API call
           schema:
@@ -1600,34 +1377,19 @@ paths:
           schema:
             $ref: '#/definitions/Error'
     delete:
-      summary: Remove BGP neighbors for a VRF
+      summary: Remove BGP neighbor for the VRF
       parameters:
         - name: vrf_id
           in: path
           required: true
-        - name: attr
-          in: body
-          required: true
-          description: list of neighbors for this routing instance to be removed
-          schema:
-            $ref: '#/definitions/NeighborsEntry'
+        - name: neighbor_ip
+          in: path
+          required: true        
       responses:
        '201':
-          description: OK
+          description: OK     
           schema:
-            type: object
-            required:
-              - removed
-              - failed
-            properties:
-              removed:
-                description: list of removed neighbors
-                schema:
-                  $ref: '#/definitions/NeighborsEntry'
-              failed:
-                description: list of neighbors failed to be removed
-                schemas:
-                  $ref: '#/definitions/NeighborsEntry'
+            $ref: '#/definitions/NeighborEntry'     
         '400':
           description: Malformed arguments for API call
           schema:
@@ -1649,197 +1411,25 @@ paths:
           schema:
             $ref: '#/definitions/Error'
     get:
-      summary: Get BGP neighbors for the VRF
+      summary: Get attributes of this neighbor in the VRF
       parameters:
         - name: vrf_id
           in: path
           required: true
-      responses:
-        '200':
-          description: OK
-          schema:
-            $ref: '#/definitions/NeighborsEntry'
-        '400':
-          description: Malformed arguments for API call
-          schema:
-            $ref: '#/definitions/Error'
-        '401':
-          description: Invalid authentication credentials
-          schema:
-            $ref: '#/definitions/Error'
-        '404':
-          description: Object not found
-          schema:
-            $ref: '#/definitions/Error'
-        '500':
-          description: Internal service error
-          schema:
-            $ref: '#/definitions/Error'
-        '503':
-          description: Maintanence mode
-          schema:
-            $ref: '#/definitions/Error'
-#----------------------------------------------
-# Setup global BGP neighbors
-#----------------------------------------------
-  '/config/bgp/neighbors':
-    put:
-      summary: Setup global BGP neighbors on device
-      parameters:
-        - name: attr
-          in: body
-          required: true
-          description: list of neighbors for this routing instance
-          schema:
-            $ref: '#/definitions/NeighborsEntry'
-      responses:
-        '201':
-          description: OK
-          schema:
-            type: object
-            required:
-              - added
-              - updated
-              - failed
-            properties:
-              added:
-                description: list of added neighbors
-                schema:
-                  $ref: '#/definitions/NeighborsEntry'
-              updated:
-                description: list of updated neighbors
-                schema:
-                  $ref: '#/definitions/NeighborsEntry'
-              failed:
-                description: list of neighbors failed to be added
-                schemas:
-                  $ref: '#/definitions/NeighborsEntry'
-        '400':
-          description: Malformed arguments for API call
-          schema:
-            $ref: '#/definitions/Error'
-        '401':
-          description: Invalid authentication credentials
-          schema:
-            $ref: '#/definitions/Error'
-        '403':
-          description: Capacity insufficient
-          schema:
-            $ref: '#/definitions/Error'
-        '404':
-          description: Object not found, if no routing instance exist
-          schema:
-            $ref: '#/definitions/Error'
-        '500':
-          description: Internal service error
-          schema:
-            $ref: '#/definitions/Error'
-        '503':
-          description: Maintanence mode
-          schema:
-            $ref: '#/definitions/Error'
-    delete:
-      summary: Remove BGP neighbors
-      parameters:
-        - name: attr
-          in: body
-          required: true
-          description: list of neighbors for this routing instance to be removed
-          schema:
-            $ref: '#/definitions/NeighborsEntry'
-      responses:
-        '201':
-          description: OK
-          schema:
-            type: object
-            required:
-              - removed
-              - failed
-            properties:
-              removed:
-                description: list of removed neighbors
-                schema:
-                  $ref: '#/definitions/NeighborsEntry'
-              failed:
-                description: list of neighbors failed to be removed
-                schemas:
-                  $ref: '#/definitions/NeighborsEntry'
-        '400':
-          description: Malformed arguments for API call
-          schema:
-            $ref: '#/definitions/Error'
-        '401':
-          description: Invalid authentication credentials
-          schema:
-            $ref: '#/definitions/Error'
-        '404':
-          description: Object not found
-          schema:
-            $ref: '#/definitions/Error'
-        '500':
-          description: Internal service error
-          schema:
-            $ref: '#/definitions/Error'
-        '503':
-          description: Maintanence mode
-          schema:
-            $ref: '#/definitions/Error'
-    get:
-      summary: Get BGP neighbors
-      responses:
-        '200':
-          description: OK
-          schema:
-            $ref: '#/definitions/NeighborsEntry'
-        '400':
-          description: Malformed arguments for API call
-          schema:
-            $ref: '#/definitions/Error'
-        '401':
-          description: Invalid authentication credentials
-          schema:
-            $ref: '#/definitions/Error'
-        '404':
-          description: Object not found
-          schema:
-            $ref: '#/definitions/Error'
-        '500':
-          description: Internal service error
-          schema:
-            $ref: '#/definitions/Error'
-        '503':
-          description: Maintanence mode
-          schema:
-            $ref: '#/definitions/Error'
-#----------------------------------------------
-# Bgp Neighbor shutdown for neighbors in global VRF
-#----------------------------------------------
-  '/config/bgp/neighbors/{neighbor_ip}/{shutdown}':
-    put:
-      summary: Shutdown or startup a neighbor.
-      parameters:
         - name: neighbor_ip
           in: path
           required: true
-          type: string
-        - name: shutdown
-          in: path
-          required: true
-          type: boolean
-          description: shutdown or bring up
       responses:
-        '204':
+        '200':
           description: OK
+          schema:
+            $ref: '#/definitions/NeighborEntry'
         '400':
           description: Malformed arguments for API call
           schema:
             $ref: '#/definitions/Error'
         '401':
           description: Invalid authentication credentials
-          schema:
-            $ref: '#/definitions/Error'
-        '403':
-          description: Capacity insufficient
           schema:
             $ref: '#/definitions/Error'
         '404':
@@ -1857,7 +1447,7 @@ paths:
 #----------------------------------------------
 # Bgp Neighbor shutdown for neighbors in a VRF
 #----------------------------------------------
-  '/config/bgp/neighbors/{vrf_id}/{neighbor_ip}/{shutdown}':
+  '/config/bgp/vrouter/{vrf_id}/neighbors/{neighbor_ip}/{shutdown}':
     put:
       summary: Shutdown or startup neighbor within a VRF.
       parameters:
@@ -1891,6 +1481,45 @@ paths:
             $ref: '#/definitions/Error'
         '404':
           description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# All Bgp Neighbors in a VRF
+#----------------------------------------------
+  '/config/bgp/vrouter/{vrf_id}/neighbors'
+    get:
+      summary: Get information about all neighbors on in a vrouter
+      description: Returns all the neighbors associated with requested vrouter. If the vrf_id does not exist, it returns '404' error.
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/NeighborEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vlan interface is not found
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -2056,49 +1685,10 @@ definitions:
         type: string
       max_routes:
         $ref: '#/definitions/MaxRoutesEntry'
-  BgpEntry:
+  NeighborEntry:
     type: object
     properties:
-      redistribute_route_map:
-        type: array
-        items:
-          type: object
-          properties:
-            address_family_type:
-              type: string
-            route_map_name:
-              type: string
-      shutdown:
-        type: boolean
-        description: shutdown the bgp process
-  NeighborsEntry:
-    type: array
-    items:
-      type: object
-      properties:
-        neighbor_ip:
-          type: string
-        neighbor_as:
-          type: integer
-        send_community:
-          type: boolean
-        remove_private_as:
-          type: boolean
-        as_override:
-          type: boolean
-        multihop:
-          type: boolean
-        route_map:
-          type: string
-        peer_session:
-            type: string
-        description:
-            type: string
-        max_routes:
-          $ref: '#/definitions/MaxRoutesEntry'
-        bfd:
-          $ref: '#/definitions/BfdEntry'
-        dampening:
-          type: boolean
-        password:
-          type: string
+      neighbor_ip:
+        type: string
+      neighbor_as:
+        type: integer
