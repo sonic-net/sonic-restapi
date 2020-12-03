@@ -1257,23 +1257,23 @@ paths:
 #----------------------------------------------
 # QinQ subinterface object
 #----------------------------------------------
-  '/config/subinterface/qinq/{port}/{stag}/{ctag}':
+  '/config/subinterface/qinq/{if_name}/{outer_tag}/{inner_tag}':
     put:
-      summary: Create/update QinQ router interface for a physical port
+      summary: Create/update QinQ router interface for a physical interface
       description: If the interface is already created, only QinQ attributes can be updated.
       parameters:
-        - name: port
+        - name: if_name
           in: path
           required: true
           type: string
-          description: router interface name
-        - name: stag
+          description: physical interface name
+        - name: outer_tag
           in: path
           type: integer
           format: int32
           required: true
           description: QinQ outer tag
-        - name: ctag
+        - name: inner_tag
           in: path
           type: integer
           format: int32
@@ -1317,21 +1317,21 @@ paths:
           schema:
             $ref: '#/definitions/Error'
     delete:
-      summary: Remove a QinQ router interface from a physical port
+      summary: Remove a QinQ router interface from a physical interface
       description: If the router interface doesn't exist, '404' error will be returned.
       parameters:
-        - name: port
+        - name: if_name
           in: path
-          type: string
           required: true
-          description: physical port that bound to the QinQ router interface
-        - name: stag
+          type: string
+          description: physical interface name
+        - name: outer_tag
           in: path
           type: integer
           format: int32
           required: true
           description: QinQ outer tag
-        - name: ctag
+        - name: inner_tag
           in: path
           type: integer
           format: int32
@@ -1364,18 +1364,18 @@ paths:
       summary: Get QinQ router interface information
       description: Return attributes for a given QinQ interface. If there're no interface with such parameters '404' error will be returned.
       parameters:
-        - name: port
+        - name: if_name
           in: path
           required: true
           type: string
-          description: physical port that bound to the QinQ router interface
-        - name: stag
+          description: physical interface name
+        - name: outer_tag
           in: path
           type: integer
           format: int32
           required: true
           description: QinQ outer tag
-        - name: ctag
+        - name: inner_tag
           in: path
           type: integer
           format: int32
@@ -1387,19 +1387,19 @@ paths:
           schema:
             type: object
             required:
-              - port
-              - stag
-              - ctag
+              - if_name
+              - outer_tag
+              - inner_tag
               - attr
             properties:
-              port:
+              if_name:
                 type: string
-                description: physical port that bound to the QinQ router interface
-              stag:
+                description: physical interface that binds to the QinQ router interface
+              outer_tag:
                 type: integer
                 format: int32
                 description: QinQ outer tag
-              ctag:
+              inner_tag:
                 type: integer
                 format: int32
                 description: QinQ inner tag
@@ -1426,16 +1426,16 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 
-  '/config/subinterface/qinq/{port}':
+  '/config/subinterface/qinq/{if_name}':
     get:
-      summary: Get a list of all QinQ router interfaces for a port
-      description: If "port" is not found on the device, '404' error will be returned. If "port" is found, but there're no QinQ router interfaces for a port an empty list will be returned.
+      summary: Get a list of all QinQ router interfaces for a physical interface
+      description: If "if_name" is not found on the device, '404' error will be returned. If "if_name" is found, but there're no QinQ router interfaces, an empty list will be returned.
       parameters:
-        - name: port
+        - name: if_name
           in: path
           required: true
           type: string
-          description: physical port that bound to the QinQ router interface
+          description: physical interface that binds to the QinQ router interfaces
       responses:
         '200':
           description: OK
@@ -1444,15 +1444,15 @@ paths:
             items:
               type: object
               required:
-                - stag
-                - ctag
+                - outer_tag
+                - inner_tag
                 - attr
               properties:
-                stag:
+                outer_tag:
                   type: integer
                   format: int32
                   description: QinQ outer tag
-                ctag:
+                inner_tag:
                   type: integer
                   format: int32
                   description: QinQ inner tag
@@ -1479,28 +1479,28 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 
-  '/config/subinterface/qinq/{port}/{stag}/{ctag}/{shutdown}':
+  '/config/subinterface/qinq/{if_name}/{outer_tag}/{inner_tag}/{shutdown}':
     put:
       summary: Shutdown or startup the subinterface.
       description: If the subinterface doesn't exist, returns '404'
       parameters:
         - in: path
-          name: port
+          name: if_name
           type: string
           required: true
-          description: physical port that bound to the QinQ router interface
-        - name: stag
+          description: physical interface that bound to the QinQ router interface
+        - name: outer_tag
           in: path
           type: integer
           format: int32
           required: true
-          description: QinQ outer tag
-        - name: ctag
+          description: QinQ outer tag of the subinterface
+        - name: inner_tag
           in: path
           type: integer
           format: int32
           required: true
-          description: QinQ inner tag
+          description: QinQ inner tag of the subinterface
         - name: shutdown
           in: path
           required: true
@@ -1681,9 +1681,6 @@ definitions:
         description: IP address of directly attached device to the switch
   QinQEntry:
     type: object
-    required:
-      - description
-      - vrf_id
     properties:
       description:
         type: string
@@ -1697,25 +1694,3 @@ definitions:
       mask:
         type: string
         description: subinterface mask
-      bfd:
-        $ref: '#/definitions/BfdEntry'
-      access_group:
-        type: object
-        description: add the existing acl to subinterface
-        properties:
-          access_list_name:
-            type: string
-          direction:
-            type: string
-            enum:
-              - in
-              - out
-  BfdEntry:
-    type: object
-    properties:
-      interval:
-        type: integer
-      min_rx:
-        type: integer
-      multiplier:
-        type: integer
