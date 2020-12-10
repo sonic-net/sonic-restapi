@@ -1333,7 +1333,7 @@ paths:
 #----------------------------------------------
 # Setup BGP neighbors for a VRF
 #----------------------------------------------
-  '/config/bgp/vrouter/{vrf_id}/neighbors/{neighbor_ip}':
+  '/config/bgp/vrf/{vrf_id}/neighbors/{neighbor_ip}':
     put:
       summary: Setup BGP neighbor on device per VRF. If this neighbor_ip exist, the neighbor attributes will be updated.
       parameters:
@@ -1447,7 +1447,7 @@ paths:
 #----------------------------------------------
 # Bgp Neighbor shutdown for neighbors in a VRF
 #----------------------------------------------
-  '/config/bgp/vrouter/{vrf_id}/neighbors/{neighbor_ip}/{shutdown}':
+  '/config/bgp/vrf/{vrf_id}/neighbors/{neighbor_ip}/{shutdown}':
     put:
       summary: Shutdown or startup neighbor within a VRF.
       parameters:
@@ -1494,7 +1494,7 @@ paths:
 #----------------------------------------------
 # All Bgp Neighbors in a VRF
 #----------------------------------------------
-  '/config/bgp/vrouter/{vrf_id}/neighbors'
+  '/config/bgp/vrf/{vrf_id}/neighbors'
     get:
       summary: Get information about all neighbors on in a vrouter
       description: Returns all the neighbors associated with requested vrouter. If the vrf_id does not exist, it returns '404' error.
