@@ -1615,9 +1615,8 @@ definitions:
         type: string
         format: ipv4
       vrf_id:
-        type: integer
-        format: int32
-        description: virtual router id
+        type: string
+        description: id representing the virtual routing instance (VRF) this tunnel is associated to.
       encap_src:
         type: string
       encap_dst:
