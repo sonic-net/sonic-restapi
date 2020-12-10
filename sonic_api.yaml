@@ -1686,7 +1686,7 @@ definitions:
         type: string
       vrf_id:
         type: string
-        description: id representing the routing instance
+        description: id representing the virtual routing instance (VRF) this Subinterface is associated to.
       ip_addr:
         type: string
         description: subinterface ip address
