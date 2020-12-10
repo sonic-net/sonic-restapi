@@ -1685,9 +1685,8 @@ definitions:
       description:
         type: string
       vrf_id:
-        type: integer
-        format: int32
-        description: virtual router id
+        type: string
+        description: id representing the routing instance
       ip_addr:
         type: string
         description: subinterface ip address
