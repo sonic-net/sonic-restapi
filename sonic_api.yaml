@@ -1255,6 +1255,124 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 #----------------------------------------------
+# VRF config API
+#----------------------------------------------
+  '/config/vrf/{vrf_id}':
+    post:
+      summary: Create a new VRF representing a virtual routing instance. If VRF exists, the attributes will be updated.
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: string
+          description: vrf_id can be a guid
+        - name: attr
+          in: body
+          required: true
+          description: attributes for VRF
+          schema:
+            $ref: '#/definitions/VrfEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get information about an existing VRF
+      description: Returns attributes for requested vrf_id.
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: string
+          description: vrf_id representing the virtual routing instance
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - vrf_id
+              - attr
+            properties:
+              vrf_id:
+                type: string
+              attr:
+                $ref: '#/definitions/VrfEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: VRF is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a VRF
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: string
+          description: vrf_id representing the virtual routing instance
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: VRF is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Resource Conflict. VRF is associated with other entities (Subinterface/Tunnel)
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Schema definitions
 #----------------------------------------------
 definitions:
@@ -1400,3 +1518,9 @@ definitions:
       ip_addr:
         type: string
         description: IP address of directly attached device to the switch
+  VrfEntry:
+    type: object
+    properties:
+      rd:
+        type: string
+        description: route distinguisher for this VRF to be added to routes in this VRF
