@@ -1692,4 +1692,4 @@ definitions:
         description: subinterface ip address
       mask:
         type: string
-        description: subinterface mask
+        description: subinterface ip mask
