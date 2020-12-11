@@ -1259,19 +1259,13 @@ paths:
 #----------------------------------------------
   '/config/vrf/{vrf_id}':
     post:
-      summary: Create a new VRF representing a virtual routing instance. If VRF exists, the attributes will be updated.
+      summary: Create a new VRF representing a virtual routing instance. If VRF exists, 409 conflict error will be returned
       parameters:
         - name: vrf_id
           in: path
           required: true
           type: string
           description: vrf_id can be a guid
-        - name: attr
-          in: body
-          required: true
-          description: attributes for VRF
-          schema:
-            $ref: '#/definitions/VrfEntry'
       responses:
         '204':
           description: OK
@@ -1281,6 +1275,10 @@ paths:
             $ref: '#/definitions/Error'
         '401':
           description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Resource Conflict
           schema:
             $ref: '#/definitions/Error'
         '403':
@@ -1518,9 +1516,3 @@ definitions:
       ip_addr:
         type: string
         description: IP address of directly attached device to the switch
-  VrfEntry:
-    type: object
-    properties:
-      rd:
-        type: string
-        description: route distinguisher for this VRF to be added to routes in this VRF
