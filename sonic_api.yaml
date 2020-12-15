@@ -1676,15 +1676,6 @@ definitions:
       ip_addr:
         type: string
         description: IP address of directly attached device to the switch
-  PeerPolicyTemplateEntry:
-    type: object
-    properties:
-      route_map:
-        type: string
-      prefix_list:
-        type: string
-      max_routes:
-        $ref: '#/definitions/MaxRoutesEntry'
   NeighborEntry:
     type: object
     properties:
