@@ -1309,12 +1309,6 @@ paths:
             type: object
             required:
               - vrf_id
-              - attr
-            properties:
-              vrf_id:
-                type: string
-              attr:
-                $ref: '#/definitions/VrfEntry'
         '400':
           description: Malformed arguments for API call
           schema:
