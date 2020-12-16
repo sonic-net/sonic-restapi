@@ -1255,6 +1255,123 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 #----------------------------------------------
+# Loopback interface object
+#----------------------------------------------
+  '/config/interface/loopback/{id}':
+    put:
+      summary: Create/update loopback interface.
+      description: If the interface is already exists, update the attr
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: integer
+          description: loopback interface number
+        - in: body
+          name: attr
+          required: true
+          description: attributes loopback interface
+          schema:
+            $ref: '#/definitions/LoopbackEntry'
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove loopback interface
+      description: If the loopback interface doesn't exist, return '404'
+      parameters:
+        - in: path
+          name: id
+          type: integer
+          required: true
+          description: loopback interface number
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get loopback interface information
+      description: If the loopback interface doesn't exist, return '404'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: integer
+          description: loopback interface number
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - id
+              - attr
+            properties:
+              id:
+                type: integer
+                description: loopback interface number
+              attr:
+                $ref: '#/definitions/LoopbackEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Schema definitions
 #----------------------------------------------
 definitions:
@@ -1400,3 +1517,18 @@ definitions:
       ip_addr:
         type: string
         description: IP address of directly attached device to the switch
+  LoopbackEntry:
+    type: object
+    required:
+      - description
+    properties:
+      description:
+        type: string
+      ipv4_addr:
+        type: string
+      ipv6_addr:
+        type: string
+      ip_redirects:
+        type: boolean
+      ip_proxy_arp:
+        type: boolean
