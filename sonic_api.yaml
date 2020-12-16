@@ -1689,7 +1689,7 @@ definitions:
         description: id representing the virtual routing instance (VRF) this Subinterface is associated to.
       ip_addr:
         type: string
-        description: subinterface ip address
+        description: subinterface ipv4 address
       mask:
         type: string
-        description: subinterface ip mask
+        description: subinterface ipv4 mask
