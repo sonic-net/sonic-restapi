@@ -64,22 +64,22 @@
 # POST Requests:
 # REST API creation(POST) dependency list:
 # 1. VxLAN VTEP: /config/tunnel/decap/vxlan OR Day 0 configuration. No dependency. 
-# 2. VRF/VNET: /config/vrouter/{vnet_id} depends on 1(VxLAN VTEP)
+# 2. Vrouter/VNET: /config/vrouter/{vnet_id} depends on 1(VxLAN VTEP)
 # 3. VLAN: /config/interface/vlan Depends on 2(VNET) if vlan needs association to vrf/vnet
 # 4. Vlan member: /config/interface/vlan/{vlan_id}/member Depends on 3(VLAN)
 # 5. Vlan Neighbor: /config/interface/vlan/{vlan_id}/neighbor Depends on 3(VLAN)
-# 6. VRF/VNET Routes: /config/vrouter/{vnet_id}/routes depends on 2(VNET)
+# 6. Vrouter/VNET Routes: /config/vrouter/{vnet_id}/routes depends on 2(VNET)
 #
 # DELETE Requests:
 # All children/dependent elements must be deleted prior to deleting any parent config elements
 # This is required for data integrity and sanity of DBs.
 # eg: Vlan Neighbors and Vlan members should be deleted before deleting the Vlan itself 
 # REST API deletion(DELETE) dependency list:
-# 1. VRF/VNET Routes: /config/vrouter/{vnet_id}/routes. No dependency
+# 1. Vrouter/VNET Routes: /config/vrouter/{vnet_id}/routes. No dependency
 # 2. Vlan Neighbor: /config/interface/vlan/{vlan_id}/neighbor. No dependency
 # 3. Vlan member: /config/interface/vlan/{vlan_id}/member. No dependency
 # 4. VLAN: /config/interface/vlan Depends on 2(VNET). Dependes on successful deletion on all child elements 2(Vlan Neighbor) and 3(Vlan member)
-# 5. VRF/VNET: /config/vrouter/{vnet_id}. Depends on successful deletion of all child elements 4(Vlan) and 1(Routes)
+# 5. Vrouter/VNET: /config/vrouter/{vnet_id}. Depends on successful deletion of all child elements 4(Vlan) and 1(Routes)
 # 6. VxLAN VTEP: /config/tunnel/decap/vxlan. Depends on successful deletion of all child elements 5(VRF/VNET)
 #
 # Some details about '40X' error responses:
@@ -251,8 +251,8 @@ paths:
 #----------------------------------------------
   '/config/vrouter/{vnet_id}':
     post:
-      summary: Create a new virtual router
-      description: If a virtual router/vnet with specified vnet_id doesn't exist, new vnet with empty virtual table would be created. If a vnet exists already, it will return error '409', sub-code '0'. If this API is called without a vxlan local vtep created(should be created as a Day 0 config), there will be a failure with code '409' sub-code '1'.
+      summary: Create a new virtual network router
+      description: If a virtual network router/vnet with specified vnet_id doesn't exist, new vnet with empty virtual table would be created. If a vnet exists already, it will return error '409', sub-code '0'. If this API is called without a vxlan local vtep created(should be created as a Day 0 config), there will be a failure with code '409' sub-code '1'.
       parameters:
         - name: vnet_id
           in: path
@@ -262,7 +262,7 @@ paths:
         - name: attr
           in: body
           required: true
-          description: attributes for virtual router
+          description: attributes for virtual network router
           schema:
             $ref: '#/definitions/VnetEntry'
       responses:
@@ -281,7 +281,7 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         '409':
-          description: Resource Conflict. VRF/VNET already exists OR dependency VxLAN VTEP not found. 
+          description: Resource Conflict. Virtual network router /VNET already exists OR dependency VxLAN VTEP not found.
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -293,7 +293,7 @@ paths:
           schema:
             $ref: '#/definitions/Error'
     get:
-      summary: Get information about an existing virtual router
+      summary: Get information about an existing virtual network router
       description: Returns attributes for requested vnet_id. If the vnet is not defined it returns '404' error.
       parameters:
         - name: vnet_id
@@ -324,7 +324,7 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         '404':
-          description: Virtual router is not found
+          description: Virtual network router is not found
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -336,8 +336,8 @@ paths:
           schema:
             $ref: '#/definitions/Error'
     delete:
-      summary: Remove a virtual router
-      description: Remove a virtual router which is defined by vnet_id. If a vnet with 'vnet_id' is not defined the API will return '404'. If the delete is called before all associated VNET routes or Vlans are deleted, it will return error '409' sub-code 2
+      summary: Remove a virtual network router
+      description: Remove a virtual network router which is defined by vnet_id. If a vnet with 'vnet_id' is not defined the API will return '404'. If the delete is called before all associated VNET routes or Vlans are deleted, it will return error '409' sub-code 2
       parameters:
         - name: vnet_id
           in: path
@@ -356,11 +356,11 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         '404':
-          description: Virtual router is not found
+          description: Virtual network router is not found
           schema:
             $ref: '#/definitions/Error'
         '409':
-          description: Resource Conflict. Routes exist on VRF/VNET and Virtual router may not be deleted prior to deleting all routes.
+          description: Resource Conflict. Routes exist on Virtual network router/VNET and it may not be deleted prior to deleting all routes.
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -974,7 +974,7 @@ paths:
 #----------------------------------------------
   '/config/vrouter/{vnet_id}/routes':
     patch:
-      summary: Update/modify IP routes for a virtual router
+      summary: Update/modify IP routes for a virtual network router
       description: This API call receives a list of route entries to be added/modified/deleted from the virtual routing table defined by 'vnet_id'. If an object with vnet_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry already exists in the virtual routing table, the attributes of the rouing entry will be updated. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set
       parameters:
         - name: vnet_id
@@ -985,7 +985,7 @@ paths:
         - name: attr
           in: body
           required: true
-          description: attributes for virtual router IP prefix
+          description: attributes for virtual network router IP prefix
           schema:
             type: array
             items:
@@ -1030,8 +1030,8 @@ paths:
           schema:
             $ref: '#/definitions/Error'
     delete:
-      summary: Remove IP routes for a virtual router
-      description: This API call will remove all route entries from a virtual router defined by 'vnet_id'. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing was unsuccessful it will be added as a member of the "failed" list along with attributes for "error_code" and "error_msg" populated. 
+      summary: Remove IP routes for a virtual network router
+      description: This API call will remove all route entries from a virtual network router defined by 'vnet_id'. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing was unsuccessful it will be added as a member of the "failed" list along with attributes for "error_code" and "error_msg" populated.
       parameters:
         - name: vnet_id
           in: path
@@ -1080,8 +1080,8 @@ paths:
           schema:
             $ref: '#/definitions/Error'
     get:
-      summary: Get IP routes for a given virtual router
-      description: Return a list of routing entries for a given virtual router defined by "vnet_id" parameter. If there're no routing entries an empty list would be returned. The output list could be filterd by "vnid" and "ip_prefix" parameters. If one of the parameters is defined for the request, the output will contain only routing entries which have this parameter in their attributes.
+      summary: Get IP routes for a given virtual network router
+      description: Return a list of routing entries for a given virtual network router defined by "vnet_id" parameter. If there're no routing entries an empty list would be returned. The output list could be filterd by "vnid" and "ip_prefix" parameters. If one of the parameters is defined for the request, the output will contain only routing entries which have this parameter in their attributes.
       parameters:
         - name: vnet_id
           in: path
@@ -1244,6 +1244,116 @@ paths:
             $ref: '#/definitions/Error'
         '404':
           description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# VRF config API
+#----------------------------------------------
+  '/config/vrf/{vrf_id}':
+    post:
+      summary: Create a new VRF representing a virtual routing instance. If VRF exists, 409 conflict error will be returned
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: string
+          description: vrf_id can be a guid
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Resource Conflict
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get information about an existing VRF
+      description: Returns attributes for requested vrf_id.
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: string
+          description: vrf_id representing the virtual routing instance
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - vrf_id
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: VRF is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a VRF
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: string
+          description: vrf_id representing the virtual routing instance
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: VRF is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: Resource Conflict. VRF is associated with other entities (Subinterface/Tunnel)
           schema:
             $ref: '#/definitions/Error'
         '500':
