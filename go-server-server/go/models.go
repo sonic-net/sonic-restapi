@@ -210,9 +210,12 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         return
     }
 
-    if !IsValidIPBoth(*required.NextHop) {
-        err = &InvalidFormatError{Field: "nexthop", Message: "Invalid IP address"}
-        return
+    if required.NextHop != nil {
+        if !IsValidIPBoth(*required.NextHop) {
+            err = &InvalidFormatError{Field: "nexthop", Message: "Invalid IP address"}
+            return
+        }
+        m.NextHop = *required.NextHop
     }
 
     if required.IfName == nil && required.MACAddress != nil {
@@ -227,9 +230,6 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
 
     m.Cmd = *required.Cmd
     m.IPPrefix = *required.IPPrefix
-    if required.NextHop != nil {
-        m.NextHop = *required.NextHop
-    }
     m.Vnid = required.Vnid
     if required.IfName != nil {
         m.IfName = *required.IfName
