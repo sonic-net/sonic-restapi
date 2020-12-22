@@ -1417,10 +1417,6 @@ paths:
             $ref: '#/definitions/Error'
         '405':
           description: Method not allowed
-         schema:
-            $ref: '#/definitions/Error'
-        '405':
-          description: Method not allowed
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -1500,7 +1496,7 @@ paths:
         '200':
           description: OK
           schema:
-          type: object
+            type: object
             required:
               - if_name
               - outer_tag
@@ -1540,7 +1536,6 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
-
   '/config/subinterface/qinq/{if_name}':
     get:
       summary: Get a list of all QinQ router interfaces for a physical interface
@@ -1593,7 +1588,6 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
- 
   '/config/subinterface/qinq/{if_name}/{outer_tag}/{inner_tag}/{shutdown}':
     put:
       summary: Shutdown or startup the subinterface.
