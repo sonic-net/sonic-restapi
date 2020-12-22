@@ -1947,9 +1947,9 @@ paths:
           schema:
             $ref: '#/definitions/TunnelEntry'
       responses:
-      '204':
+        '204':
           description: OK
-      '401':
+        '401':
           description: Invalid authentication credentials
           schema:
             $ref: '#/definitions/Error'
