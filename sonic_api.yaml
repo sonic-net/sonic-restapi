@@ -1654,7 +1654,7 @@ paths:
       parameters:
         - name: asn
           in: path
-          type: integer
+          type: string
           required: true
           description: setup the routing process with this asn
         - name: router_id
@@ -1690,7 +1690,7 @@ paths:
       parameters:
         - name: asn
           in: path
-          type: integer
+          type: string
           required: true
           description: setup the routing process with this asn
         - name: router_id
