@@ -1924,6 +1924,211 @@ paths:
             $ref: '#/definitions/Error'
 
 #----------------------------------------------
+# Tunnel encap object for vxlan and gre tunnels
+#----------------------------------------------
+  '/config/tunnel/encap/{tunnel_type}/{tunnel_name}':
+    put:
+      summary: Create a tunnel
+      description: If a tunnel with this name doesn't exist yet then create a new tunnel with these parameters. If the tunnel already exists, it's attributes will be updated.
+      parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
+        - name: tunnel_name
+          in: path
+          type: string
+          required: true
+        - name: attr
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TunnelEntry'
+      responses:
+        '204':
+          description: OK
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove a tunnel
+      description: If a tunnel with this name exists then remove it. If it doesn't exist return '404' error.
+      parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
+        - name: tunnel_name
+          in: path
+          type: string
+          required: true
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get information about a tunnel
+      description: If a tunnel with this name exists then return an objects with the tunnel attributes. Otherwise return '404' error.
+      parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
+        - name: tunnel_name
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - attr
+            properties:
+              attr:
+                $ref: '#/definitions/TunnelEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+         description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+                
+#----------------------------------------------
+# All configured tunnels
+#----------------------------------------------
+  '/config/tunnel/encap/{tunnel_type}':
+    get:
+      summary: Get a list of existing tunnels of a tunnel_type
+      description: Return a list of existing tunnels of a type. If there're no tunnels to return, empty list will be returned.
+      parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/TunnelEntry'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'            
+#----------------------------------------------
+# Shutdown or startup a tunnel
+#----------------------------------------------
+  '/config/tunnel/encap/{tunnel_type}/{tunnel_name}/{shutdown}':
+    put:
+      summary: Shutdown or startup a tunnel
+      parameters:
+        - name: tunnel_type
+          in: path
+          type: string
+          required: true
+          enum:
+            - vxlan
+        - name: tunnel_name
+          in: path
+          type: string
+          required: true
+        - name: shutdown
+          in: path
+          required: true
+          type: boolean
+      responses:
+        '204':
+          description: OK
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Schema definitions
 #----------------------------------------------
 definitions:
@@ -2090,3 +2295,24 @@ definitions:
         type: string
       neighbor_as:
         type: integer
+  TunnelEntry:
+    type: object
+    properties:
+      tunnel_name:
+        type: string
+      description:
+        type: string
+      src_ip:
+        type: string
+        format: ipv4
+      vrf_id:
+        type: string
+        description: id representing the virtual routing instance (VRF) this tunnel is associated to.
+      encap_src:
+        type: string
+      encap_dst:
+        type: string
+      vni:
+        type: integer
+        format: int32
+        description: vxlan id (24-bit)
