@@ -2274,6 +2274,15 @@ definitions:
       ip_addr:
         type: string
         description: IP address of directly attached device to the switch
+  BfdEntry:
+    type: object
+    properties:
+      tx_interval:
+        type: integer
+      rx_interval:
+        type: integer
+      multiplier:
+        type: integer
   QinQEntry:
     type: object
     properties:
@@ -2288,6 +2297,8 @@ definitions:
       mask:
         type: string
         description: subinterface ipv4 mask
+      bfd_attr:
+        $ref: '#/definitions/BfdEntry'
   NeighborEntry:
     type: object
     properties:
@@ -2295,6 +2306,9 @@ definitions:
         type: string
       neighbor_as:
         type: integer
+      bfd:
+        type: boolean
+        description: enable or disable BFD for this neighbor. Notify when neighbor goes down as per the bfd attributes defined on the interface this neighbor is connected to.
   TunnelEntry:
     type: object
     properties:
