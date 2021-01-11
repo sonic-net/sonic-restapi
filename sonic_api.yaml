@@ -1266,6 +1266,12 @@ paths:
           required: true
           type: string
           description: vrf_id can be a guid
+        - name: attr
+          in: body
+          required: true
+          description: attributes for VRF
+          schema:
+            $ref: '#/definitions/VrfEntry'
       responses:
         '204':
           description: OK
@@ -1309,6 +1315,12 @@ paths:
             type: object
             required:
               - vrf_id
+              - attr
+            properties:
+              vrf_id:
+                type: string
+              attr:
+                $ref: '#/definitions/VrfEntry'
         '400':
           description: Malformed arguments for API call
           schema:
@@ -2295,6 +2307,8 @@ definitions:
         type: string
       neighbor_as:
         type: integer
+      max_routes:
+        $ref: '#/definitions/MaxRoutesEntry'
   TunnelEntry:
     type: object
     properties:
@@ -2316,3 +2330,17 @@ definitions:
         type: integer
         format: int32
         description: vxlan id (24-bit)
+  VrfEntry:
+    type: object
+    properties:
+      ipv4_max_routes:
+        $ref: '#/definitions/MaxRoutesEntry'
+  MaxRoutesEntry:
+    type: object
+    properties:
+      num:
+        description: maximum routes allowed for this entity (vrf/neighbor)
+        type: integer
+      threshold:
+        description: after what threshold should a warning be generated (1-100)
+        type: integer
