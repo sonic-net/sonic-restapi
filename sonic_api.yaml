@@ -2277,12 +2277,32 @@ definitions:
   BfdEntry:
     type: object
     properties:
+      if_name:
+        type: string
       tx_interval:
         type: integer
+        description: interval that this system will use between transmission of control packets
       rx_interval:
         type: integer
+        descrition: minimum interval this system is capable of receiving control packets
       multiplier:
         type: integer
+        description: detection multiplier to detect packet loss for incoming packets
+      echo_interval:
+        type: integer
+        description: minimum interval for transmission of echo packets
+      echo_mode:
+        type: boolean
+        description: enables or disables echo packets
+      passive_mode:
+        type: boolean
+        description: does not start the connection and wait for control packets to start replying to
+      minimum_ttl:
+        type: integer
+        description: used when the peers are multihop
+      shutdown:
+        type: boolean
+        description: set to false to enable
   QinQEntry:
     type: object
     properties:
@@ -2297,8 +2317,6 @@ definitions:
       mask:
         type: string
         description: subinterface ipv4 mask
-      bfd_attr:
-        $ref: '#/definitions/BfdEntry'
   NeighborEntry:
     type: object
     properties:
@@ -2306,9 +2324,9 @@ definitions:
         type: string
       neighbor_as:
         type: integer
-      bfd:
-        type: boolean
-        description: enable or disable BFD for this neighbor. Notify when neighbor goes down as per the bfd attributes defined on the interface this neighbor is connected to.
+      bfd_attr:
+        $ref: '#/definitions/BfdEntry'
+        description: bfd attributes for this neighbor
   TunnelEntry:
     type: object
     properties:
