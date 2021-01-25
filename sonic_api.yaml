@@ -1268,8 +1268,8 @@ paths:
           description: vrf_id can be a guid
         - name: attr
           in: body
-          required: true
-          description: attributes for VRF
+          required: false
+          description: optional attributes for VRF
           schema:
             $ref: '#/definitions/VrfEntry'
       responses:
