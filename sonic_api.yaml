@@ -2281,25 +2281,36 @@ definitions:
         type: string
       tx_interval:
         type: integer
-        description: interval that this system will use between transmission of control packets
+        description: interval in milliseconds that this system will use between transmission of control packets
+        default: 300
       rx_interval:
         type: integer
-        descrition: minimum interval this system is capable of receiving control packets
+        descrition: minimum in milliseconds interval this system is capable of receiving control packets
+        default: 300
       multiplier:
         type: integer
         description: detection multiplier to detect packet loss for incoming packets
+        minimum: 1
+        maximum: 255
+        default: 3
       echo_interval:
         type: integer
-        description: minimum interval for transmission of echo packets
+        description: minimum interval in milliseconds for transmission of echo packets
+        default: 300
       echo_mode:
         type: boolean
         description: enables or disables echo packets
+        default: false
       passive_mode:
         type: boolean
         description: does not start the connection and wait for control packets to start replying to
+        default: false
       minimum_ttl:
         type: integer
-        description: used when the peers are multihop
+        description: used when the peers are multihop. Default value of 255 indicate only one hop between peers
+        minimum: 1
+        maximum: 255
+        default: 255
       shutdown:
         type: boolean
         description: set to false to enable
