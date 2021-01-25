@@ -1364,7 +1364,271 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
-
+#----------------------------------------------
+# Route object for VRF
+#----------------------------------------------
+  '/config/vrf/{vrf_id}/routes':
+    patch:
+      summary: Update/modify IP routes for a VRF
+      description: This API call receives a list of route entries to be added/modified/deleted from the virtual routing table defined by 'vrf_id'. If an object with vrf_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry already exists in the virtual routing table, the attributes of the rouing entry will be updated. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set
+      parameters:
+        - name: vrf_id
+          in: path
+          type: string
+          required: true
+          description: vrf_id representing the virtual routing instance
+        - name: attr
+          in: body
+          required: true
+          description: array of attributes for the routes
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteEntry'
+      responses:
+        '204':
+          description: OK
+        '207':
+          description: Multi-Status
+          schema:
+            type: object
+            required:
+              - failed
+            properties:
+              failed:
+                description: list of failed routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: VRF not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove IP routes for a virtual routing instance
+      description: This API call will remove all route entries from a virtual routing instance defined by 'vrf_id''. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing was unsuccessful it will be added as a member of the "failed" list along with attributes for "error_code" and "error_msg" populated.
+      parameters:
+        - name: vrf_id
+          in: path
+          type: string
+          required: true
+          description: vrf_id representing the virtual routing instance
+        - name: vnid
+          in: query
+          required: false
+          type: integer
+          format: int32
+          description: vxlan id (24-bit). Allows to remove routes with defined vnid only. Applicable for routes with nexthop_type 'vxlan-tunnel'. Otherwise '400' error will be returned
+      responses:
+        '204':
+          description: OK
+        '207':
+          description: Multi-Status
+          schema:
+            type: object
+            required:
+              - failed
+            properties:
+              failed:
+                description: list of failed routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get IP routes for a given virtual routing instance
+      description: Return a list of routing entries for a given virtual routing instance defined by "vrf_id" parameter. If there're no routing entries an empty list would be returned. The output list could be filterd by "vnid" and "ip_prefix" parameters. If one of the parameters is defined for the request, the output will contain only routing entries which have this parameter in their attributes.
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: string
+          description: vrf_id representing the virtual routing instance
+        - name: vnid
+          in: query
+          required: false
+          type: integer
+          format: int32
+          description: vxlan id (24-bit). Allows to output routes with defined vnid only. Applicable for routes with nexthop_type 'vxlan-tunnel'. Otherwise '400' error will be returned
+        - name: ip_prefix
+          in: query
+          required: false
+          type: string
+          description: destination IP address block. If presented, get will return information about only this ip prefix
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
+# Route profile for routes
+#----------------------------------------------
+  '/config/route_profile/{route_profile_name}':
+    put:
+      summary: Create/update route profile
+      description: defines a set of encap rules which are common for some scenarios. If the route_profile exists, update the attributes
+      parameters:
+        - name: route_profile_name
+          description: route profile name
+          in: path
+          required: true
+          type: string
+        - name: attr
+          in: body
+          required: true
+          description: attributes for route which needs to be added
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteProfileEntry'
+      responses:
+        '201':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove route profile
+      parameters:
+        - name: route_profile_name
+          description: route profile name
+          in: path
+          required: true
+          type: string
+      responses:
+        '201':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get info about the route profile
+      parameters:
+        - name: route_profile_name
+          description: route profile name
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/RouteProfileEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
 #----------------------------------------------
 # QinQ subinterface object
 #----------------------------------------------
@@ -2199,6 +2463,9 @@ definitions:
       error_msg:
         type: string
         description: error message for the failing route
+      route_profile_name:
+        type: string
+        description: name of the vxlan route-profile specifying the mode, src ports etc for vxlan-tunnel routes defined by RouteProfileEntry. Valid only is the nexthop_type is vxlan_tunnel. If the specified route_profile_name is not predefined, this route will be added to failed routes list
   TunnelDecapEntry:
     type: object
     required:
@@ -2316,3 +2583,25 @@ definitions:
         type: integer
         format: int32
         description: vxlan id (24-bit)
+  RouteProfileEntry:
+    type: object
+    properties:
+      src_port_range:
+        type: object
+        properties:
+          start:
+            type: integer
+          end:
+            type: integer
+      mode:
+        type: string
+        enum:
+          - vxlan-default-mac
+          - vxlan-default
+      mtu:
+        type: integer
+      src_interface:
+        type: string
+      dst_port:
+        type: integer
+        format: int32
