@@ -2463,9 +2463,6 @@ definitions:
       error_msg:
         type: string
         description: error message for the failing route
-      route_profile_name:
-        type: string
-        description: name of the vxlan route-profile specifying the mode, src ports etc for vxlan-tunnel routes defined by RouteProfileEntry. Valid only is the nexthop_type is vxlan_tunnel. If the specified route_profile_name is not predefined, this route will be added to failed routes list
   TunnelDecapEntry:
     type: object
     required:
@@ -2583,25 +2580,3 @@ definitions:
         type: integer
         format: int32
         description: vxlan id (24-bit)
-  RouteProfileEntry:
-    type: object
-    properties:
-      src_port_range:
-        type: object
-        properties:
-          start:
-            type: integer
-          end:
-            type: integer
-      mode:
-        type: string
-        enum:
-          - vxlan-default-mac
-          - vxlan-default
-      mtu:
-        type: integer
-      src_interface:
-        type: string
-      dst_port:
-        type: integer
-        format: int32
