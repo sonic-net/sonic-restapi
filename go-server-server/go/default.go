@@ -913,7 +913,14 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    vnet_id = CacheGenAndSetVnetGuidId(vars["vnet_name"])
+    guid := CacheGetVniId(uint32(attr.Vnid))
+    if guid != "" {
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+              "Object already exists: " + strconv.Itoa(attr.Vnid), []string{}, "")
+        return
+    }
+
+    vnet_id = CacheGenAndSetVnetGuidId(vars["vnet_name"], uint32(attr.Vnid))
     vnet_id_str := VNET_NAME_PREF + strconv.FormatUint(uint64(vnet_id), 10)
 
     kv, err = GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vnet_id_str))
