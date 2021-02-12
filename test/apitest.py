@@ -221,6 +221,14 @@ class rest_api_client(unittest.TestCase):
             'vnid': 1001
         })
         self.assertEqual(rv.status_code, 409) 
+        rv = self.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001
+        })
+        self.assertEqual(rv.status_code, 409)
+        rv = self.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 2001
+        })
+        self.assertEqual(rv.status_code, 409)
 
     def post_generic_vlan_and_deps(self):
         self.post_generic_vrouter_and_deps()
