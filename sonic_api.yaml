@@ -1130,11 +1130,10 @@ paths:
 # tunnel decapsulation endpoint object
 #----------------------------------------------
   '/config/tunnel/decap/{tunnel_type}':
-  # VxLan VTEP comes as a base config, BB should never call this. Invoking it will trigger no effective configuration changes, calling POST or DELETE will reult in success with return code '204', calling GET will return the VTEP IP configured at day 0.
     post:
       summary: Setup or update tunnel decapsulation parameters
       description: >-
-          For vxlan tunnel, this defines the Virtual Tunnel End point IP address used in all L3 vxlan traffic to/from SONiC. For now, this will return '204' in order to implement as a no-op. 
+          For vxlan tunnel, this defines the Virtual Tunnel End point IP address used in all L3 vxlan traffic to/from SONiC. Modifying or deleting is not currently supported.
       parameters:
         - name: tunnel_type
           in: path
