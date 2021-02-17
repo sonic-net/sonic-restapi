@@ -211,6 +211,25 @@ class rest_api_client(unittest.TestCase):
         })
         self.assertEqual(rv.status_code, 204)   
 
+    def post_generic_vrouter_and_deps_duplicate(self):
+        self.post_generic_vxlan_tunnel()
+        rv = self.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001
+        })
+        self.assertEqual(rv.status_code, 204)
+        rv = self.post_config_vrouter_vrf_id("vnet-guid-10", {
+            'vnid': 1001
+        })
+        self.assertEqual(rv.status_code, 409) 
+        rv = self.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001
+        })
+        self.assertEqual(rv.status_code, 409)
+        rv = self.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 2001
+        })
+        self.assertEqual(rv.status_code, 409)
+
     def post_generic_vlan_and_deps(self):
         self.post_generic_vrouter_and_deps()
         rv = self.post_config_vlan(2, {'vnet_id' : 'vnet-guid-1', 'ip_prefix' : '10.1.1.0/24'})
@@ -387,6 +406,10 @@ class ra_client_positive_tests(rest_api_client):
 
     def  test_get_vrouter(self):
         self.post_generic_vrouter_and_deps()
+        self.check_vrouter_exists("vnet-guid-1",1001)
+
+    def test_duplicate_vni(self):
+        self.post_generic_vrouter_and_deps_duplicate()
         self.check_vrouter_exists("vnet-guid-1",1001)
 
     def test_delete_vrouter(self):

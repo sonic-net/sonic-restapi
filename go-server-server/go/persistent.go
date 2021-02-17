@@ -25,6 +25,7 @@ var swss_ctr_DB swsscommon.DBConnector
 var trustedCertCommonNames []string
 
 var vnetGuidMap map[string]uint32
+var vniVnetMap map[uint32]string
 var vnetGuidIdUsed []bool
 var nextGuidId uint32
 var localTunnelLpbkIps []string
@@ -111,6 +112,7 @@ func InitialiseVariables() {
 
 func genVnetGuidMap() {
     vnetGuidMap = make(map[string]uint32)
+    vniVnetMap = make(map[uint32]string)
     var max_ind, i uint32 = 0, 0
     db := &conf_db_ops
     kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VNET_TB, "*"))
@@ -135,8 +137,14 @@ func genVnetGuidMap() {
              log.Printf("error: Found nil guid %s %s", k, vnet_id_str)
              continue
          }
+         if v["vni"] == "" {
+            log.Printf("error: Found nil vni %s %s", k, vnet_id_str)
+            continue
+        }
          log.Printf("info: storing vnet-guid: %s, vnet_id %d", v["guid"], vnet_id)
          vnetGuidMap[v["guid"]] = vnet_id
+         vni, _ := strconv.Atoi(v["vni"])
+         vniVnetMap[uint32(vni)] = v["guid"]
          if vnet_id > max_ind {
              max_ind = vnet_id
          }
@@ -409,8 +417,14 @@ func CacheGetVnetGuidId(GUID string) (val uint32) {
     return
 }
 
-func CacheGenAndSetVnetGuidId(GUID string) (val uint32) {
+func CacheGetVniId(VNI uint32) (val string) {
+    val = vniVnetMap[VNI]
+    return
+}
+
+func CacheGenAndSetVnetGuidId(GUID string, VNI uint32) (val uint32) {
     vnetGuidMap[GUID] = nextGuidId
+    vniVnetMap[VNI] = GUID
     val = nextGuidId
     if nextGuidId == (uint32)(len(vnetGuidIdUsed) + 1) {
         vnetGuidIdUsed = append(vnetGuidIdUsed, true)
@@ -435,6 +449,12 @@ func CacheDeleteVnetGuidId(GUID string) {
          nextGuidId = i
     }
     delete(vnetGuidMap, GUID)
+    for k, v := range vniVnetMap {
+        if v == GUID {
+            delete(vniVnetMap, k)
+            break
+        }
+    }
 }
 
 func generateDBTableKey(separator string, vars ...string) (string) {
