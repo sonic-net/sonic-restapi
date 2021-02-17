@@ -131,19 +131,19 @@ func IsValidIPBoth(ipstr string) bool {
 }
 
 func ParseIPBothPrefix(ipprefix string) (ipstr string, length int, err error) {
-    ip, net, err := net.ParseCIDR(ipprefix)
+    ip, network, err := net.ParseCIDR(ipprefix)
     if err != nil {
         return
     }
 
     ipstr = ip.String()
-    length, _ = net.Mask.Size()
+    length, _ = network.Mask.Size()
 
     return
 }
 
 func ParseIPPrefix(ipprefix string) (ipstr string, length int, err error) {
-    ip, net, err := net.ParseCIDR(ipprefix)
+    ip, network, err := net.ParseCIDR(ipprefix)
     if err != nil {
         return
     }
@@ -154,7 +154,7 @@ func ParseIPPrefix(ipprefix string) (ipstr string, length int, err error) {
     }
 
     ipstr = ip.String()
-    length, _ = net.Mask.Size()
+    length, _ = network.Mask.Size()
 
     return
 }
