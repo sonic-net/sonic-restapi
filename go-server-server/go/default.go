@@ -773,8 +773,6 @@ func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    w.WriteHeader(http.StatusNoContent)
-/* Comment out all the code below this point in this fn once Day 0 config for VTEP is complete */
     var attr TunnelDecapModel
 
     err = ReadJSONBody(w, r, &attr)
@@ -785,13 +783,13 @@ func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
 
     kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, "default_vxlan_tunnel"))
     if err != nil {
-        /* WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "") */
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
     if kv != nil {
-        /* WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS, 
-               "Object already exists: Default Vxlan VTEP", []string{}, "") */
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+               "Object already exists: Default Vxlan VTEP", []string{}, "")
         return
     }
 
@@ -803,6 +801,8 @@ func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
     }, "SET", "")
 
     CacheTunnelLpbkIps(attr.IPAddr, true)
+
+    w.WriteHeader(http.StatusNoContent)
 }
 
 func ConfigTunnelEncapVxlanVnidDelete(w http.ResponseWriter, r *http.Request) {
