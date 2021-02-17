@@ -522,7 +522,7 @@ class ra_client_positive_tests(rest_api_client):
     def test_vlan_with_ippref_all_verbs(self):
         # post
         self.post_generic_vrouter_and_deps()
-        r = self.post_config_vlan(2, {'ip_prefix':'10.0.1.1/24'})
+        r = self.post_config_vlan(2, {'ip_prefix':'10.0.1.0/24'})
         self.assertEqual(r.status_code, 204)
 
         # get
@@ -535,7 +535,7 @@ class ra_client_positive_tests(rest_api_client):
         })
         vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {b'vlanid': b'2'})
-        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.0/24')
         self.assertEqual(vlan_intf_table, {b'':b''})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_intf_table, {})
@@ -545,13 +545,13 @@ class ra_client_positive_tests(rest_api_client):
         self.assertEqual(r.status_code, 204)
         vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {})
-        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.0/24')
         self.assertEqual(vlan_intf_table, {})
 
     def test_vlan_all_args_all_verbs(self):
         # post
         self.post_generic_vrouter_and_deps()
-        r = self.post_config_vlan(2, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        r = self.post_config_vlan(2, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.0/24'})
         self.assertEqual(r.status_code, 204)
 
         # get
@@ -560,11 +560,11 @@ class ra_client_positive_tests(rest_api_client):
         j = json.loads(r.text)
         self.assertEqual(j, {
             'vlan_id': 2,
-            'attr': {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'}
+            'attr': {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.0/24'}
         })
         vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {b'vlanid': b'2'})
-        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.0/24')
         self.assertEqual(vlan_intf_table, {b'':b''})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_intf_table, {b'proxy_arp': b'enabled', b'vnet_name': VNET_NAME_PREF+'1'})
@@ -576,7 +576,7 @@ class ra_client_positive_tests(rest_api_client):
         self.assertEqual(vlan_table, {})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_intf_table, {})
-        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
+        vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.0/24')
         self.assertEqual(vlan_intf_table, {})
 
     def test_get_vlans_per_vnetid_1digitvlans(self):
@@ -588,18 +588,18 @@ class ra_client_positive_tests(rest_api_client):
         self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
         self.post_config_vrouter_vrf_id('vnet-guid-2', {'vnid': 2001})
         #create vlan interfaces
-        self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.4.1/24'})
-        self.post_config_vlan(4, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.3.1/24'})
+        self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.4.0/24'})
+        self.post_config_vlan(4, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.3.0/24'})
 
-        self.post_config_vlan(5, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.4.1/24'})
-        self.post_config_vlan(6, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.3.1/24'})
+        self.post_config_vlan(5, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.4.0/24'})
+        self.post_config_vlan(6, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.3.0/24'})
         # get vlans for vnet-guid-1
         r_vnet1 = self.get_config_interface_vlans('vnet-guid-1')
         r_vnet2 = self.get_config_interface_vlans('vnet-guid-2')
         j_vnet1 = json.loads(r_vnet1.text)
         j_vnet2 = json.loads(r_vnet2.text)
-        k_vnet1 = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":3,"ip_prefix":"10.0.4.1/24"},{"vlan_id":4,"ip_prefix":"10.0.3.1/24"}]}
-        k_vnet2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":5,"ip_prefix":"10.2.4.1/24"},{"vlan_id":6,"ip_prefix":"10.2.3.1/24"}]}
+        k_vnet1 = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":3,"ip_prefix":"10.0.4.0/24"},{"vlan_id":4,"ip_prefix":"10.0.3.0/24"}]}
+        k_vnet2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":5,"ip_prefix":"10.2.4.0/24"},{"vlan_id":6,"ip_prefix":"10.2.3.0/24"}]}
         for key,value in j_vnet1.iteritems():
             if type(value)!=list:
                 #print("not type list",value)
@@ -624,18 +624,18 @@ class ra_client_positive_tests(rest_api_client):
         self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
         self.post_config_vrouter_vrf_id('vnet-guid-2', {'vnid': 2002})
         #create vlan interfaces
-        self.post_config_vlan(1111, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
-        self.post_config_vlan(2222, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+        self.post_config_vlan(1111, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.0/24'})
+        self.post_config_vlan(2222, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.0/24'})
         self.post_config_vlan(3000, {'vnet_id' : 'vnet-guid-2'})
-        self.post_config_vlan(4000, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.2.1/24'})
+        self.post_config_vlan(4000, {'vnet_id' : 'vnet-guid-2', 'ip_prefix':'10.2.2.0/24'})
 
         # get vlans for vnet-guid-1
         r = self.get_config_interface_vlans('vnet-guid-1')
         j = json.loads(r.text)
         r2 = self.get_config_interface_vlans('vnet-guid-2')
         j2 = json.loads(r2.text)
-        k = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":1111,"ip_prefix":"10.0.1.1/24"},{"vlan_id":2222,"ip_prefix":"10.0.2.1/24"}]}
-        k2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":3000},{"vlan_id":4000,"ip_prefix":"10.2.2.1/24"}]}
+        k = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":1111,"ip_prefix":"10.0.1.0/24"},{"vlan_id":2222,"ip_prefix":"10.0.2.0/24"}]}
+        k2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":3000},{"vlan_id":4000,"ip_prefix":"10.2.2.0/24"}]}
         for key,value in j.iteritems():
             if type(value)!=list:
                 #print("not type list",value)
@@ -660,13 +660,13 @@ class ra_client_positive_tests(rest_api_client):
         # create vnet_id/vrf
         self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
         #create vlan interfaces
-        self.post_config_vlan(3000, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        self.post_config_vlan(3000, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.0/24'})
         self.post_config_vlan(3001, {'vnet_id' : 'vnet-guid-1'})
 
         # get all vlans
         r = self.get_config_vlans_all()
         j = json.loads(r.text)
-        k = {"attr":[{"vlan_id":3000,"ip_prefix":"10.0.1.1/24","vnet_id":"vnet-guid-1"},{"vlan_id":3001,"vnet_id":"vnet-guid-1"}]}
+        k = {"attr":[{"vlan_id":3000,"ip_prefix":"10.0.1.0/24","vnet_id":"vnet-guid-1"},{"vlan_id":3001,"vnet_id":"vnet-guid-1"}]}
         for key,value in j.iteritems():
             if type(value)!=list:
                 self.assertEqual(k[key],j[key])
@@ -681,7 +681,7 @@ class ra_client_positive_tests(rest_api_client):
         vlans = [3,4]
         members = ["Ethernet2", "Ethernet3", "Ethernet4"]
         self.post_generic_vrouter_and_deps()
-        r = self.post_config_vlan(vlan0, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        r = self.post_config_vlan(vlan0, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.0/24'})
         self.assertEqual(r.status_code, 204)
         for member in members:
            r = self.post_config_vlan_member(vlan0, member, {'tagging_mode' : 'untagged'})
@@ -695,7 +695,7 @@ class ra_client_positive_tests(rest_api_client):
                       'attr': {'tagging_mode' : 'untagged'}
            })
         for vlan in vlans:
-             r = self.post_config_vlan(vlan, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+             r = self.post_config_vlan(vlan, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.0/24'})
              self.assertEqual(r.status_code, 204)
              # post
              for member in members:
@@ -717,7 +717,7 @@ class ra_client_positive_tests(rest_api_client):
         members = ['Ethernet2', 'Ethernet3']
         self.post_generic_vrouter_and_deps()
         for vlan in vlans:
-             r = self.post_config_vlan(vlan, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+             r = self.post_config_vlan(vlan, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.0/24'})
              self.assertEqual(r.status_code, 204)
              # post
              for member in members:
@@ -768,7 +768,7 @@ class ra_client_positive_tests(rest_api_client):
         # create vnet_id/vrf
         self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
         #create vlan interface 2
-        self.post_config_vlan(2, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        self.post_config_vlan(2, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.0/24'})
         members = ["Ethernet2", "Ethernet3", "Ethernet4"]
         for member in members:
             self.post_config_vlan_member(2, member, {'tagging_mode' : 'untagged'})
@@ -811,7 +811,7 @@ class ra_client_positive_tests(rest_api_client):
         # create vnet_id/vrf
         self.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
         #create vlan interface 2
-        self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.1/24'})
+        self.post_config_vlan(3, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.2.0/24'})
         self.post_config_vlan_neighbor(3, "10.10.20.10")
         self.post_config_vlan_neighbor(3, "10.10.30.10")
 
@@ -891,9 +891,18 @@ class ra_client_positive_tests(rest_api_client):
         self.assertEqual(r.status_code, 204)
         routes = []
         for i in range (1,7):
-             for ci in cidr:
-		routes.append({'cmd':'add',
-                            'ip_prefix':'10.1.'+str(i)+'.1/'+str(ci),
+            routes.append({'cmd':'add',
+                            'ip_prefix':'10.1.'+str(i)+'.0/'+str(24),
+                            'nexthop':'34.53.'+str(i)+'.0',
+                            'vnid': 1 + i%5,
+                            'mac_address':'00:08:aa:bb:cd:'+hex(15+i)[2:]})
+            routes.append({'cmd':'add',
+                            'ip_prefix':'10.1.'+str(i)+'.0/'+str(30),
+                            'nexthop':'34.53.'+str(i)+'.0',
+                            'vnid': 1 + i%5,
+                            'mac_address':'00:08:aa:bb:cd:'+hex(15+i)[2:]})
+            routes.append({'cmd':'add',
+                            'ip_prefix':'10.1.'+str(i)+'.1/'+str(32),
                             'nexthop':'34.53.'+str(i)+'.0',
                             'vnid': 1 + i%5,
                             'mac_address':'00:08:aa:bb:cd:'+hex(15+i)[2:]})
@@ -933,9 +942,16 @@ class ra_client_positive_tests(rest_api_client):
         self.assertEqual(r.status_code, 204)
         routes = []
         for i in range (1,7):
-             for ci in cidr:
-		routes.append({'cmd':'add',
-                            'ip_prefix':'10.1.'+str(i)+'.1/'+str(ci),
+		    routes.append({'cmd':'add',
+                            'ip_prefix':'10.1.'+str(i)+'.0/'+str(24),
+                            'nexthop':'34.53.'+str(i)+'.0',
+                            'ifname': 'Vlan3005'})
+		    routes.append({'cmd':'add',
+                            'ip_prefix':'10.1.'+str(i)+'.0/'+str(30),
+                            'nexthop':'34.53.'+str(i)+'.0',
+                            'ifname': 'Vlan3005'})
+		    routes.append({'cmd':'add',
+                            'ip_prefix':'10.1.'+str(i)+'.1/'+str(32),
                             'nexthop':'34.53.'+str(i)+'.0',
                             'ifname': 'Vlan3005'})
 
