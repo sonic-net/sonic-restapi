@@ -136,9 +136,12 @@ func ParseIPBothPrefix(ipprefix string) (ipstr string, length int, err error) {
         return
     }
 
-    ipstr = ip.String()
-    length, _ = network.Mask.Size()
-
+    if ip.String() == strings.Split(network.String(), "/")[0] {
+        ipstr = ip.String()
+        length, _ = network.Mask.Size()
+    } else {
+        err = errors.New("Incorrect IP Prefix")
+    }
     return
 }
 
