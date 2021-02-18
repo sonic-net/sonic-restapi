@@ -356,12 +356,11 @@ class ra_client_positive_tests(rest_api_client):
         r = self.post_config_tunnel_decap_tunnel_type('vxlan', {
             'ip_addr': '74.32.6.0'
         })
-        self.assertEqual(r.status_code, 204)
+        self.assertEqual(r.status_code, 409)
 
         tunnel_table = self.configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel')
         self.assertEqual(tunnel_table, {b'src_ip': b'34.53.1.0'})
         l.info("Tunnel table is %s", tunnel_table)
-        self.helper_get_config_tunnel_decap_tunnel_type()
 
     def test_delete_config_tunnel_decap_tunnel_type(self):
         self.post_generic_vxlan_tunnel()
@@ -370,7 +369,6 @@ class ra_client_positive_tests(rest_api_client):
         # The delete is a no-op and should return 204, moreover the tunnel should not be deleted 
         tunnel_table = self.configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel')
         self.assertEqual(tunnel_table, {b'src_ip': b'34.53.1.0'})
-        self.helper_get_config_tunnel_decap_tunnel_type()
 
 
 # Encap
@@ -1145,7 +1143,10 @@ class ra_client_negative_tests(rest_api_client):
         self.assertEqual(r.status_code, 204)
 
         # Routes Dependency
-        self.post_generic_vrouter_and_deps()
+        rv = self.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001
+        })
+        self.assertEqual(rv.status_code, 204)
         r = self.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [{'cmd':'add', 'ip_prefix':'10.1.2.0/24', 'nexthop':'192.168.2.1'}])
         self.assertEqual(r.status_code, 204)
         r = self.delete_config_vrouter_vrf_id("vnet-guid-1")
