@@ -2129,6 +2129,121 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 #----------------------------------------------
+# Setup BFD session
+#----------------------------------------------
+  '/config/bfd/{bfd_session}':
+    put:
+      summary: Setup BFD session
+      description: If a BFD session with this name exists, updates are only allowed on "shutdown" status. For any other change, return '500' error
+      parameters:
+        - name: bfd_session
+          in: path
+          type: string
+          maxLength: 32
+          required: true
+          description: uniquely identifiable string (32 characters) to represent a BFD session. This will be referred to while setting up the Neighbor for a certain interface to receive BFD notification
+        - name: attr
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/BfdEntry'
+      responses:
+        '204':
+          description: OK
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove the bfd session
+      description: If the session is running (not shutdown), return '500' error with message asking for shutdown first before attempting to remove. If this session doesn't exist return '404' error.
+      parameters:
+        - name: bfd_session
+          in: path
+          type: string
+          maxLength: 32
+          required: true
+          description: uniquely identifiable string (32 characters) to represent a BFD session.
+      responses:
+        '204':
+          description: OK
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get information about a bfd_session
+      description: If a bfd session with this name exists then return an objects with the bfd attributes. Otherwise return '404' error.
+      parameters:
+        - name: bfd_session
+          in: path
+          type: string
+          maxLength: 32
+          required: true
+          description: uniquely identifiable string (32 characters) to represent a BFD session.
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - attr
+            properties:
+              attr:
+                $ref: '#/definitions/BfdEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+         description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Schema definitions
 #----------------------------------------------
 definitions:
@@ -2279,6 +2394,7 @@ definitions:
     properties:
       if_name:
         type: string
+        description: source of the BFD
       tx_interval:
         type: integer
         description: interval in milliseconds that this system will use between transmission of control packets
@@ -2335,9 +2451,9 @@ definitions:
         type: string
       neighbor_as:
         type: integer
-      bfd_attr:
-        $ref: '#/definitions/BfdEntry'
-        description: bfd attributes for this neighbor
+      bfd_session:
+        type: 'string'
+        description: a previously setup bfd_session name. This is an optional parameter. If the bfd_session name is not provided, bfd is disabled for this neighbor.
   TunnelEntry:
     type: object
     properties:
