@@ -531,7 +531,7 @@ class ra_client_positive_tests(rest_api_client):
         j = json.loads(r.text)
         self.assertEqual(j, {
             'vlan_id': 2,
-            'attr': {'ip_prefix':'10.0.1.1/24'}
+            'attr': {'ip_prefix':'10.0.1.0/24'}
         })
         vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_table, {b'vlanid': b'2'})
@@ -936,7 +936,7 @@ class ra_client_positive_tests(rest_api_client):
     def test_patch_routes_drop_bm_routes_local(self):
         cidr = [24,30,32]
         self.post_generic_vrouter_and_deps()
-        rv = self.post_config_vlan(2, {'vnet_id':'vnet-guid-1', 'ip_prefix':'10.1.1.0/24'})
+        rv = self.post_config_vlan(2, {'vnet_id':'vnet-guid-1', 'ip_prefix':'10.1.3.0/24'})
         self.assertEqual(rv.status_code, 204)
         r = self.post_config_vlan(3, {'vnet_id':'vnet-guid-1', 'ip_prefix':'10.1.5.0/24'})
         self.assertEqual(r.status_code, 204)
@@ -967,13 +967,12 @@ class ra_client_positive_tests(rest_api_client):
              else:
                   routes_not_bm.append(route)
         self.check_routes_exist_in_loc_route_tb(1, routes_not_bm)
+        logging.warning(routes_not_bm)
         self.check_routes_dont_exist_in_loc_route_tb(1, routes_bm)
 
         r = self.get_config_vrouter_vrf_id_routes("vnet-guid-1")
         self.assertEqual(r.status_code, 200)
         j = json.loads(r.text)
-        j.remove({'nexthop': '', 'ifname': 'Vlan3', 'ip_prefix': '10.1.5.0/24'})
-        j.remove({'nexthop': '', 'ifname': 'Vlan2', 'ip_prefix': '10.1.1.0/24'})
         self.assertItemsEqual(j, routes_not_bm)
         for route in routes_bm:
              route['cmd'] = 'delete'
