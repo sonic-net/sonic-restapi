@@ -241,6 +241,7 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
      defer vlan_pt.Delete()
      vlan_pt.Set(vlan_name, map[string]string{
           "vlanid": vars["vlan_id"],
+          "host_ifname": "Mon"+vlan_name,
      }, "SET", "")
 
     vlan_if_pt := swsscommon.NewTable(db.swss_db, VLAN_INTF_TB)
