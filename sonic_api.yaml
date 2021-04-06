@@ -1381,7 +1381,7 @@ paths:
   '/config/vrf/{vrf_id}/routes':
     patch:
       summary: Update/modify IP routes for a VRF
-      description: This API call receives a list of route entries to be added/modified/deleted from the virtual routing table defined by 'vrf_id'. If an object with vrf_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry already exists in the virtual routing table, the attributes of the rouing entry will be updated. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set
+      description: This API call receives a list of route entries to be added/modified/deleted from the virtual routing table defined by 'vrf_id'. API shall operate on default vrf if the 'vrf_id' is specified as 'default'. It is not required by the user to create 'default' vrf. For non-default vrf, if an object with vrf_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry already exists in the virtual routing table, the attributes of the rouing entry will be updated. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set
       parameters:
         - name: vrf_id
           in: path
@@ -1437,7 +1437,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove IP routes for a virtual routing instance
-      description: This API call will remove all route entries from a virtual routing instance defined by 'vrf_id''. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing was unsuccessful it will be added as a member of the "failed" list along with attributes for "error_code" and "error_msg" populated.
+      description: This API call will remove all route entries from a virtual routing instance defined by 'vrf_id' or 'default' vrf. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing was unsuccessful it will be added as a member of the "failed" list along with attributes for "error_code" and "error_msg" populated.
       parameters:
         - name: vrf_id
           in: path
@@ -2346,14 +2346,14 @@ definitions:
       nexthop:
         type: string
         description: >-
-          ip address of nexthop.
+          ip address of nexthop. 'comma' seperated list for ecmp (equal cost multipath) routes; User can optionally specify emtpy '' strings for positional arguments.
           When nexthop_type is 'ip', then nexthop is the CE IP address;
           When nexthop_type is 'vxlan_tunnel', the next hop is the PA address of the customer VM
       mac_address:
         type: string
         description: mac_address of the target VM
       ifname:
-        type: string
+        type: string. 'comma' seperated list for ecmp routes; User can optionally specify empty '' strings for positional arguments.
         description: Interface name for local route. When ifname is mentioned, nexthop is optional
       vnid:
         type: integer
