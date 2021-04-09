@@ -84,7 +84,7 @@ func InitialiseVariables() {
         now := time.Now().In(loc)
         ServerResetTime = fmt.Sprintf("%v", now)
 
-        newuuid := uuid.NewV4()
+        newuuid,_ := uuid.NewV4()
         ServerResetGuid = newuuid.String()
 
         err = CacheSetConfigResetInfo(ServerResetGuid, ServerResetTime)
