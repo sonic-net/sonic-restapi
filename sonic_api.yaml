@@ -974,8 +974,8 @@ paths:
 #----------------------------------------------
   '/config/vrouter/{vnet_id}/routes':
     patch:
-      summary: Update/modify IP routes for a virtual network router
-      description: This API call receives a list of route entries to be added/modified/deleted from the virtual routing table defined by 'vnet_id'. If an object with vnet_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry already exists in the virtual routing table, the attributes of the rouing entry will be updated. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set
+      summary: Add/Delete IP routes for a virtual network router. Modifying an existing route is not currently supported
+      description: This API call receives a list of route entries to be added/deleted from the virtual routing table defined by 'vnet_id'. If an object with vnet_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set
       parameters:
         - name: vnet_id
           in: path
@@ -1130,11 +1130,10 @@ paths:
 # tunnel decapsulation endpoint object
 #----------------------------------------------
   '/config/tunnel/decap/{tunnel_type}':
-  # VxLan VTEP comes as a base config, BB should never call this. Invoking it will trigger no effective configuration changes, calling POST or DELETE will reult in success with return code '204', calling GET will return the VTEP IP configured at day 0.
     post:
       summary: Setup or update tunnel decapsulation parameters
       description: >-
-          For vxlan tunnel, this defines the Virtual Tunnel End point IP address used in all L3 vxlan traffic to/from SONiC. For now, this will return '204' in order to implement as a no-op. 
+          For vxlan tunnel, this defines the Virtual Tunnel End point IP address used in all L3 vxlan traffic to/from SONiC. Modifying or deleting is not currently supported.
       parameters:
         - name: tunnel_type
           in: path
@@ -1266,6 +1265,12 @@ paths:
           required: true
           type: string
           description: vrf_id can be a guid
+        - name: attr
+          in: body
+          required: false
+          description: optional attributes for VRF
+          schema:
+            $ref: '#/definitions/VrfEntry'
       responses:
         '204':
           description: OK
@@ -1309,6 +1314,12 @@ paths:
             type: object
             required:
               - vrf_id
+              - attr
+            properties:
+              vrf_id:
+                type: string
+              attr:
+                $ref: '#/definitions/VrfEntry'
         '400':
           description: Malformed arguments for API call
           schema:
@@ -1364,7 +1375,163 @@ paths:
           description: Maintanence mode
           schema:
             $ref: '#/definitions/Error'
-
+#----------------------------------------------
+# Route object for VRF
+#----------------------------------------------
+  '/config/vrf/{vrf_id}/routes':
+    patch:
+      summary: Update/modify IP routes for a VRF
+      description: This API call receives a list of route entries to be added/modified/deleted from the virtual routing table defined by 'vrf_id'. API shall operate on default vrf if the 'vrf_id' is specified as 'default'. It is not required by the user to create 'default' vrf. For non-default vrf, if an object with vrf_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry already exists in the virtual routing table, the attributes of the rouing entry will be updated. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set
+      parameters:
+        - name: vrf_id
+          in: path
+          type: string
+          required: true
+          description: vrf_id representing the virtual routing instance
+        - name: attr
+          in: body
+          required: true
+          description: array of attributes for the routes
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteEntry'
+      responses:
+        '204':
+          description: OK
+        '207':
+          description: Multi-Status
+          schema:
+            type: object
+            required:
+              - failed
+            properties:
+              failed:
+                description: list of failed routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '403':
+          description: Capacity insufficient
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: VRF not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    delete:
+      summary: Remove IP routes for a virtual routing instance
+      description: This API call will remove all route entries from a virtual routing instance defined by 'vrf_id' or 'default' vrf. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing was unsuccessful it will be added as a member of the "failed" list along with attributes for "error_code" and "error_msg" populated.
+      parameters:
+        - name: vrf_id
+          in: path
+          type: string
+          required: true
+          description: vrf_id representing the virtual routing instance
+        - name: vnid
+          in: query
+          required: false
+          type: integer
+          format: int32
+          description: vxlan id (24-bit). Allows to remove routes with defined vnid only. Applicable for routes with nexthop_type 'vxlan-tunnel'. Otherwise '400' error will be returned
+      responses:
+        '204':
+          description: OK
+        '207':
+          description: Multi-Status
+          schema:
+            type: object
+            required:
+              - failed
+            properties:
+              failed:
+                description: list of failed routes
+                type: array
+                items:
+                  $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      summary: Get IP routes for a given virtual routing instance
+      description: Return a list of routing entries for a given virtual routing instance defined by "vrf_id" parameter. If there're no routing entries an empty list would be returned. The output list could be filterd by "vnid" and "ip_prefix" parameters. If one of the parameters is defined for the request, the output will contain only routing entries which have this parameter in their attributes.
+      parameters:
+        - name: vrf_id
+          in: path
+          required: true
+          type: string
+          description: vrf_id representing the virtual routing instance
+        - name: vnid
+          in: query
+          required: false
+          type: integer
+          format: int32
+          description: vxlan id (24-bit). Allows to output routes with defined vnid only. Applicable for routes with nexthop_type 'vxlan-tunnel'. Otherwise '400' error will be returned
+        - name: ip_prefix
+          in: query
+          required: false
+          type: string
+          description: destination IP address block. If presented, get will return information about only this ip prefix
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RouteEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
 #----------------------------------------------
 # QinQ subinterface object
 #----------------------------------------------
@@ -2294,7 +2461,7 @@ definitions:
       nexthop:
         type: string
         description: >-
-          ip address of nexthop.
+          ip address of nexthop. 'comma' seperated list for ecmp (equal cost multipath) routes; User can optionally specify emtpy '' strings for positional arguments.
           When nexthop_type is 'ip', then nexthop is the CE IP address;
           When nexthop_type is 'vxlan_tunnel', the next hop is the PA address of the customer VM
       mac_address:
@@ -2302,7 +2469,7 @@ definitions:
         description: mac_address of the target VM
       ifname:
         type: string
-        description: Interface name for local route. When ifname is mentioned, nexthop is optional
+        description: Interface name for local route. When ifname is mentioned, nexthop is optional. 'comma' seperated list for ecmp routes; User can optionally specify empty '' strings for positional arguments.
       vnid:
         type: integer
         format: int32
@@ -2454,6 +2621,8 @@ definitions:
       bfd_session:
         type: 'string'
         description: a previously setup bfd_session name. This is an optional parameter. If the bfd_session name is not provided, bfd is disabled for this neighbor.
+      max_routes:
+        $ref: '#/definitions/MaxRoutesEntry'
   TunnelEntry:
     type: object
     properties:
@@ -2475,3 +2644,17 @@ definitions:
         type: integer
         format: int32
         description: vxlan id (24-bit)
+  VrfEntry:
+    type: object
+    properties:
+      ipv4_max_routes:
+        $ref: '#/definitions/MaxRoutesEntry'
+  MaxRoutesEntry:
+    type: object
+    properties:
+      num:
+        description: maximum routes allowed for this entity (vrf/neighbor)
+        type: integer
+      threshold:
+        description: after what threshold should a warning be generated (1-100)
+        type: integer

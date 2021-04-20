@@ -241,6 +241,7 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
      defer vlan_pt.Delete()
      vlan_pt.Set(vlan_name, map[string]string{
           "vlanid": vars["vlan_id"],
+          "host_ifname": "Mon"+vlan_name,
      }, "SET", "")
 
     vlan_if_pt := swsscommon.NewTable(db.swss_db, VLAN_INTF_TB)
@@ -773,8 +774,6 @@ func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    w.WriteHeader(http.StatusNoContent)
-/* Comment out all the code below this point in this fn once Day 0 config for VTEP is complete */
     var attr TunnelDecapModel
 
     err = ReadJSONBody(w, r, &attr)
@@ -785,13 +784,13 @@ func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
 
     kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, "default_vxlan_tunnel"))
     if err != nil {
-        /* WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "") */
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
     if kv != nil {
-        /* WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS, 
-               "Object already exists: Default Vxlan VTEP", []string{}, "") */
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+               "Object already exists: Default Vxlan VTEP", []string{}, "")
         return
     }
 
@@ -803,6 +802,8 @@ func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
     }, "SET", "")
 
     CacheTunnelLpbkIps(attr.IPAddr, true)
+
+    w.WriteHeader(http.StatusNoContent)
 }
 
 func ConfigTunnelEncapVxlanVnidDelete(w http.ResponseWriter, r *http.Request) {
@@ -913,7 +914,14 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    vnet_id = CacheGenAndSetVnetGuidId(vars["vnet_name"])
+    guid := CacheGetVniId(uint32(attr.Vnid))
+    if guid != "" {
+        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+              "Object already exists: " + strconv.Itoa(attr.Vnid), []string{}, "")
+        return
+    }
+
+    vnet_id = CacheGenAndSetVnetGuidId(vars["vnet_name"], uint32(attr.Vnid))
     vnet_id_str := VNET_NAME_PREF + strconv.FormatUint(uint64(vnet_id), 10)
 
     kv, err = GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vnet_id_str))
