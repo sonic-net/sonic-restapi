@@ -272,6 +272,20 @@ var routes = Routes{
     },
 
     Route{
+        "ConfigVrfVrfIdRoutesGet",
+        "GET",
+        "/v1/config/vrf/{vrf_id}/routes",
+        ConfigVrfVrfIdRoutesGet,
+    },
+
+    Route{
+        "ConfigVrfVrfIdRoutesPatch",
+        "PATCH",
+        "/v1/config/vrf/{vrf_id}/routes",
+        ConfigVrfVrfIdRoutesPatch,
+    },
+
+    Route{
         "StateInterfacePortGet",
         "GET",
         "/v1/state/interface/{port}",
