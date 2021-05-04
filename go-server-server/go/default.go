@@ -1226,8 +1226,8 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             }
 
             pt.Set(generateDBTableKey(db.separator,vrf_id_str, r.IPPrefix), route_map, "SET", "")
-		}
-	}
+        }
+    }
 
     if len(failed) > 0 {
         output := RouteReturnModel {
