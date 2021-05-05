@@ -1210,6 +1210,16 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 pt.Del(generateDBTableKey(db.separator, vrf_id_str, r.IPPrefix), "DEL", "")
             }
         } else {
+            if cur_route != nil {
+                if cur_route["nexthop"] != r.NextHop ||
+                   cur_route["ifname"] != r.IfName {
+                    /* Delete and re-add the route as it is not identical */
+                    pt.Del(generateDBTableKey(db.separator,vrf_id_str, r.IPPrefix), "DEL", "")
+                } else {
+                    /* Identical route */
+                    continue
+                }
+            }
             route_map := make(map[string]string)
             if r.IfName == "" {
                 route_map["nexthop"] = r.NextHop
@@ -1221,8 +1231,6 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             }
             if r.IfName == "null" {
                 route_map["blackhole"] = "true"
-            } else {
-                route_map["blackhole"] = "false"
             }
 
             pt.Set(generateDBTableKey(db.separator,vrf_id_str, r.IPPrefix), route_map, "SET", "")
