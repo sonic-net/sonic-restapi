@@ -1162,6 +1162,141 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+    vars := mux.Vars(r)
+    var rt_tb_key string
+    vrf_id_str := vars["vrf_id"]
+
+    if vrf_id_str != "default" {
+        // Only default is supported
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    var attr []RouteModel
+
+    err := ReadJSONBody(w, r, &attr)
+    if err != nil {
+        // The error is already handled in this case
+        return
+    }
+
+    pt := swsscommon.NewTable(db.swss_db, STATIC_ROUTE_TB)
+    defer pt.Delete()
+
+    var rt_tb_name string
+    var failed []RouteModel
+
+    for _, r := range attr {
+
+        rt_tb_name = STATIC_ROUTE_TB
+        rt_tb_key = generateDBTableKey(db.separator, rt_tb_name, vrf_id_str, r.IPPrefix)
+
+        cur_route, err := GetKVs(db.db_num, rt_tb_key)
+        if err != nil {
+            r.Error_code = http.StatusInternalServerError
+            r.Error_msg = "Internal service error"
+            failed = append(failed, r)
+        }
+
+        if r.Cmd == "delete" {
+            if cur_route == nil {
+                r.Error_code = http.StatusNotFound
+                r.Error_msg = "Not found"
+                failed = append(failed, r)
+            } else {
+                pt.Del(generateDBTableKey(db.separator, vrf_id_str, r.IPPrefix), "DEL", "")
+            }
+        } else {
+            if cur_route != nil {
+                if cur_route["nexthop"] != r.NextHop ||
+                   cur_route["ifname"] != r.IfName {
+                    /* Delete and re-add the route as it is not identical */
+                    pt.Del(generateDBTableKey(db.separator,vrf_id_str, r.IPPrefix), "DEL", "")
+                } else {
+                    /* Identical route */
+                    continue
+                }
+            }
+            route_map := make(map[string]string)
+            if r.IfName == "" {
+                route_map["nexthop"] = r.NextHop
+            } else {
+                route_map["ifname"] = r.IfName
+                if r.NextHop != "" {
+                    route_map["nexthop"] = r.NextHop
+                }
+            }
+            if r.IfName == "null" {
+                route_map["blackhole"] = "true"
+            }
+
+            pt.Set(generateDBTableKey(db.separator,vrf_id_str, r.IPPrefix), route_map, "SET", "")
+        }
+    }
+
+    if len(failed) > 0 {
+        output := RouteReturnModel {
+            Failed:  failed,
+        }
+        WriteRequestResponse(w, output, http.StatusMultiStatus)
+    } else {
+        w.WriteHeader(http.StatusNoContent)
+    }
+}
+
+func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    vars := mux.Vars(r)
+    vrf_id_str := vars["vrf_id"]
+
+    ipprefix := "*"
+    if len(r.URL.Query()["ip_prefix"]) == 1 {
+        ipprefix = r.URL.Query()["ip_prefix"][0]
+        _, _, err := ParseIPPrefix(ipprefix)
+        if err != nil {
+            WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"ip_prefix"}, "Invalid ip_prefix")
+            return
+        }
+    } else if len(r.URL.Query()["ip_prefix"]) > 1 {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"ip_prefix"}, "May only specify one ip_prefix")
+        return
+    }
+
+    db := &conf_db_ops
+    var pattern string
+
+    rt_tb_name := STATIC_ROUTE_TB
+
+    pattern = generateDBTableKey(db.separator, rt_tb_name, vrf_id_str, ipprefix)
+    routes := []RouteModel{}
+
+    kv, err := GetKVsMulti(db.db_num, pattern)
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    for k, kvp := range kv {
+        ipprefix := strings.Split(k, db.separator)[2]
+
+        routeModel := RouteModel{
+            IPPrefix:    ipprefix,
+            NextHop:     kvp["nexthop"],
+        }
+
+        if ifname, ok := kvp["ifname"]; ok {
+            routeModel.IfName = ifname
+        }
+
+        routes = append(routes, routeModel)
+    }
+
+    WriteRequestResponse(w, routes, http.StatusOK)
+}
+
 func StateInterfaceGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 

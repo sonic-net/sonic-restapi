@@ -174,6 +174,9 @@ class rest_api_client(unittest.TestCase):
     def patch_config_vrouter_vrf_id_routes(self, vrf_id, value):
         return self.patch('v1/config/vrouter/{vrf_id}/routes'.format(vrf_id=vrf_id), value)
 
+    def patch_config_vrf_vrf_id_routes(self, vrf_id, value):
+        return self.patch('v1/config/vrf/{vrf_id}/routes'.format(vrf_id=vrf_id), value)
+
     def delete_config_vrouter_vrf_id_routes(self, vrf_id, vnid=None, value=None):
         params = {}
         if vnid != None:
@@ -187,6 +190,12 @@ class rest_api_client(unittest.TestCase):
         if ip_prefix != None:
             params['ip_prefix'] = ip_prefix
         return self.get('v1/config/vrouter/{vrf_id}/routes'.format(vrf_id=vrf_id), params=params)
+
+    def get_config_vrf_vrf_id_routes(self, vrf_id, ip_prefix=None):
+        params = {}
+        if ip_prefix != None:
+            params['ip_prefix'] = ip_prefix
+        return self.get('v1/config/vrf/{vrf_id}/routes'.format(vrf_id=vrf_id), params=params)
 
     # In memory DB restart
     def post_config_restart_in_mem_db(self):
@@ -482,7 +491,7 @@ class ra_client_positive_tests(rest_api_client):
             'attr': {}
         })
         vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
-        self.assertEqual(vlan_table, {b'vlanid': b'2'})
+        self.assertEqual(vlan_table, {'host_ifname': 'MonVlan2', b'vlanid': b'2'})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_intf_table, {})
 
@@ -507,7 +516,7 @@ class ra_client_positive_tests(rest_api_client):
             'attr': {'vnet_id':'vnet-guid-1'}
         })
         vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
-        self.assertEqual(vlan_table, {b'vlanid': b'2'})
+        self.assertEqual(vlan_table, {'host_ifname': 'MonVlan2', b'vlanid': b'2'})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
         self.assertEqual(vlan_intf_table, {b'proxy_arp': b'enabled', b'vnet_name': VNET_NAME_PREF + '1'})
 
@@ -534,7 +543,7 @@ class ra_client_positive_tests(rest_api_client):
             'attr': {'ip_prefix':'10.0.1.1/24'}
         })
         vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
-        self.assertEqual(vlan_table, {b'vlanid': b'2'})
+        self.assertEqual(vlan_table, {'host_ifname': 'MonVlan2', b'vlanid': b'2'})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
         self.assertEqual(vlan_intf_table, {b'':b''})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
@@ -563,7 +572,7 @@ class ra_client_positive_tests(rest_api_client):
             'attr': {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'}
         })
         vlan_table = self.configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
-        self.assertEqual(vlan_table, {b'vlanid': b'2'})
+        self.assertEqual(vlan_table, {'host_ifname': 'MonVlan2', b'vlanid': b'2'})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
         self.assertEqual(vlan_intf_table, {b'':b''})
         vlan_intf_table = self.configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
@@ -1080,6 +1089,84 @@ class ra_client_positive_tests(rest_api_client):
         j = json.loads(r.text)
         self.assertItemsEqual(j, routes_cleaned)
         
+    def test_vrf_routes_all_verbs(self):
+        routes = []
+        routes.append({'cmd':'add',
+                            'ip_prefix':'20.1.2.0/24',
+                            'nexthop':'192.168.2.200'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'30.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'40.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201,192.168.2.202',
+                            'ifname':'Ethernet0,Ethernet4,Ethernet8'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'50.1.2.0/24',
+                            'ifname':'Ethernet0,Ethernet4'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'60.1.2.0/24',
+                            'ifname':'Ethernet8'})
+
+
+        # Patch add
+        r = self.patch_config_vrf_vrf_id_routes("default", routes)
+        self.assertEqual(r.status_code, 204)
+
+        for route in routes:
+             del route['cmd']
+             if 'nexthop' not in route:
+                 route['nexthop'] = ''
+
+        r = self.get_config_vrf_vrf_id_routes("default")
+        self.assertEqual(r.status_code, 200)
+        j = json.loads(r.text)
+        self.assertItemsEqual(j, routes)
+
+        # Patch del
+        for route in routes:
+            route['cmd'] = 'delete'
+            if route['nexthop'] == '':
+                del route['nexthop']
+
+        r = self.patch_config_vrf_vrf_id_routes("default", routes)
+        self.assertEqual(r.status_code, 204)
+
+        r = self.get_config_vrf_vrf_id_routes("default")
+        self.assertEqual(r.status_code, 200)
+        j = json.loads(r.text)
+        routes = []
+        self.assertItemsEqual(j, routes)
+
+        # Test modify
+        routes.append({'cmd':'add',
+                            'ip_prefix':'40.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201',
+                            'ifname':'Ethernet0,Ethernet4'})
+
+        r = self.patch_config_vrf_vrf_id_routes("default", routes)
+        self.assertEqual(r.status_code, 204)
+
+        for route in routes:
+            route['nexthop'] = '192.168.2.200,192.168.2.201,10.1.1.1'
+            route['ifname'] = 'Ethernet0,Ethernet4,Vlan1000'
+
+        r = self.patch_config_vrf_vrf_id_routes("default", routes)
+        self.assertEqual(r.status_code, 204)
+
+        for route in routes:
+            del route['cmd']
+
+        r = self.get_config_vrf_vrf_id_routes("default")
+        self.assertEqual(r.status_code, 200)
+
+        j = json.loads(r.text)
+        self.assertItemsEqual(j, routes)
+
     def test_local_subnet_route_addition(self):
         self.post_generic_vlan_and_deps()
         local_route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')

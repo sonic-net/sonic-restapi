@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "net"
     "strconv"
+    "strings"
 )
 
 type HeartbeatReturnModel struct {
@@ -211,7 +212,7 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     }
 
     if required.NextHop != nil {
-        if !IsValidIPBoth(*required.NextHop) {
+        if !strings.Contains(*required.NextHop, ",") && !IsValidIPBoth(*required.NextHop) {
             err = &InvalidFormatError{Field: "nexthop", Message: "Invalid IP address"}
             return
         }
