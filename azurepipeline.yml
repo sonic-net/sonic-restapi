@@ -1,0 +1,44 @@
+trigger:
+  branches:
+    include:
+      - "*"
+pr:
+  branches:
+    include:
+    - "*"
+pool:
+  vmImage: ubuntu-18.04
+container:
+  sonicdev-microsoft.azurecr.io:443/sonic-slave-stretch
+
+jobs:
+- job: Build
+  steps:
+    - script: |
+        set -x
+        docker ps | grep rest-api-image-test_local | cut -d' ' -f 1 | xargs -i docker kill {}
+        docker images | grep rest | cut -d' ' -f 1 | xargs -i docker rmi {}
+        sudo rm -rf debian
+      displayName: 'Clean Up'
+    - checkout: self
+      clean: true
+    - script: |
+        set -ex
+        find debs -name *.deb | xargs -i mv {} debs
+        ./build.sh
+        docker images
+        docker run -d --rm -p8090:8090 -p6379:6379 --name rest-api --cap-add NET_ADMIN --privileged -t rest-api-image-test_local:latest
+      displayName: 'Build image'
+    - script: |
+        set -ex
+        cd test
+        python apitest.py
+        docker exec rest-api cat /tmp/rest-api.err.log
+      displayName: Test
+    - script: | 
+        set -x
+        docker ps | grep rest-api-image-test_local | cut -d' ' -f 1 | xargs -i docker kill {}
+        docker images | grep rest | cut -d' ' -f 1 | xargs -i docker rmi {}
+        sudo rm -rf debian
+      displayName: 'Clean Up'
+      condition: always()
