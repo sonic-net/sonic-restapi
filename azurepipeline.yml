@@ -37,6 +37,7 @@ jobs:
         python apitest.py
         docker exec rest-api cat /tmp/rest-api.err.log
       displayName: Test
+    - script: find ./
     - publish: $(Build.SourcesDirectory)
       artifact: 'sonic-restapi'
       displayName: "Archive artifacts"
