@@ -11,8 +11,6 @@ jobs:
 - job: Build
   pool:
     vmImage: ubuntu-18.04
-  container:
-    sonicdev-microsoft.azurecr.io:443/sonic-slave-stretch
   steps:
     - script: |
         set -x
