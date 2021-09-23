@@ -29,7 +29,9 @@ jobs:
       displayName: 'Build image'
     - script: |
         set -ex
+        # setup test env, TODO
         pip install requests
+        # test
         cd test
         python apitest.py
         docker exec rest-api cat /tmp/rest-api.err.log
