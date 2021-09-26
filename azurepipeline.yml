@@ -18,8 +18,11 @@ jobs:
         set -ex
         ./build.sh
         docker run -d --rm -p8090:8090 -p6379:6379 --name rest-api --cap-add NET_ADMIN --privileged -t rest-api-image-test_local:latest
-        cp debs/sonic-rest-api-dbgsym_1.0.1_amd64.deb $(Build.ArtifactStagingDirectory)
-        cp debs/sonic-rest-api_1.0.1_amd64.deb $(Build.ArtifactStagingDirectory)
+        docker save rest-api-image-test_local | gzip > rest-api-image-test_local.gz
+        docker save rest-api-build-image | gzip > rest-api-build-image.gz
+        cp *.gz $(Build.ArtifactStagingDirectory)
+        mkdir $(Build.ArtifactStagingDirectory)/debs
+        cp debs/*.deb $(Build.ArtifactStagingDirectory)/debs
         cp debian/sonic-rest-api/usr/sbin/go-server-server $(Build.ArtifactStagingDirectory)
       displayName: 'Build image'
     - script: |
