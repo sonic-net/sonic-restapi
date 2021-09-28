@@ -1075,6 +1075,25 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     defer local_pt.Delete()
 
     for _, r := range attr {
+
+        /*
+        Reject incorrect CIDR address such as 10.20.30.4/24
+        Accept only correct CIDR addresses such as 10.20.30.0/24 or 10.20.30.4/32 
+        */
+
+        ip, network, err := net.ParseCIDR(r.IPPrefix)
+        if err != nil {
+            r.Error_msg = "Incorrect IP Prefix"
+            failed = append(failed, r)
+            continue
+        }
+
+        if ip.String() != strings.Split(network.String(), "/")[0] {
+            r.Error_msg = "Incorrect IP Prefix"
+            failed = append(failed, r)
+            continue
+        }
+
         if r.IfName == "" {
             pt = tunnel_pt
             rt_tb_name = ROUTE_TUN_TB
@@ -1190,6 +1209,24 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     var failed []RouteModel
 
     for _, r := range attr {
+
+        /*
+        Reject incorrect CIDR address such as 10.20.30.4/24
+        Accept only correct CIDR addresses such as 10.20.30.0/24 or 10.20.30.4/32 
+        */
+
+        ip, network, err := net.ParseCIDR(r.IPPrefix)
+        if err != nil {
+            r.Error_msg = "Incorrect IP Prefix"
+            failed = append(failed, r)
+            continue
+        }
+
+        if ip.String() != strings.Split(network.String(), "/")[0] {
+            r.Error_msg = "Incorrect IP Prefix"
+            failed = append(failed, r)
+            continue
+        }
 
         rt_tb_name = STATIC_ROUTE_TB
         rt_tb_key = generateDBTableKey(db.separator, rt_tb_name, vrf_id_str, r.IPPrefix)
