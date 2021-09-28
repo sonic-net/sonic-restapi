@@ -1,0 +1,38 @@
+trigger:
+  branches:
+    include:
+      - "*"
+pr:
+  branches:
+    include:
+    - "*"
+
+jobs:
+- job: Build
+  pool:
+    vmImage: ubuntu-18.04
+  steps:
+    - checkout: self
+      clean: true
+    - script: |
+        set -ex
+        ./build.sh
+        docker run -d --rm -p8090:8090 -p6379:6379 --name rest-api --cap-add NET_ADMIN --privileged -t rest-api-image-test_local:latest
+        docker save rest-api-image-test_local | gzip > rest-api-image-test_local.gz
+        docker save rest-api-build-image | gzip > rest-api-build-image.gz
+        cp *.gz $(Build.ArtifactStagingDirectory)
+        mkdir $(Build.ArtifactStagingDirectory)/debs
+        cp debs/*.deb $(Build.ArtifactStagingDirectory)/debs
+        cp debian/sonic-rest-api/usr/sbin/go-server-server $(Build.ArtifactStagingDirectory)
+      displayName: 'Build image'
+    - script: |
+        set -ex
+        pip install requests
+        pip install redis
+        cd test
+        python apitest.py
+        docker exec rest-api cat /tmp/rest-api.err.log
+      displayName: Test
+    - publish: $(Build.ArtifactStagingDirectory)/
+      artifact: 'sonic-restapi'
+      displayName: "Archive artifacts"
