@@ -1076,6 +1076,11 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
 
     for _, r := range attr {
 
+        /*
+        Reject incorrect CIDR address such as 10.20.30.4/24
+        Accept only correct CIDR addresses such as 10.20.30.0/24 or 10.20.30.4/32 
+        */
+
         ip, network, err := net.ParseCIDR(r.IPPrefix)
         if err != nil {
             r.Error_msg = "Incorrect IP Prefix"
@@ -1204,6 +1209,11 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     var failed []RouteModel
 
     for _, r := range attr {
+
+        /*
+        Reject incorrect CIDR address such as 10.20.30.4/24
+        Accept only correct CIDR addresses such as 10.20.30.0/24 or 10.20.30.4/32 
+        */
 
         ip, network, err := net.ParseCIDR(r.IPPrefix)
         if err != nil {
