@@ -36,18 +36,3 @@ jobs:
     - publish: $(Build.ArtifactStagingDirectory)/
       artifact: 'sonic-restapi'
       displayName: "Archive artifacts"
-
-    - task: PublishCodeCoverageResults@1
-      inputs:
-        codeCoverageTool: Cobertura
-        summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage.xml'
-        reportDirectory: '$(System.DefaultWorkingDirectory)/htmlcov/'
-      displayName: 'Publish Python test coverage'
-
-    - task: PublishTestResults@2
-      inputs:
-        testResultsFiles: '$(System.DefaultWorkingDirectory)/test-results.xml'
-        testRunTitle: Python 2
-        failTaskOnFailedTests: true
-      condition: succeededOrFailed()
-      displayName: 'Publish Python 2 test results'
