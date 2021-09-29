@@ -30,7 +30,7 @@ jobs:
         pip install requests
         pip install redis
         cd test
-        python apitest.py
+        pytest -v
         docker exec rest-api cat /tmp/rest-api.err.log
       displayName: Test
     - publish: $(Build.ArtifactStagingDirectory)/
