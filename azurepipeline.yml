@@ -29,6 +29,7 @@ jobs:
         set -ex
         pip install requests
         pip install redis
+        pip install -U pytest
         cd test
         pytest -v
         docker exec rest-api cat /tmp/rest-api.err.log
