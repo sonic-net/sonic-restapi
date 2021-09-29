@@ -3,24 +3,12 @@ import logging
 import requests
 
 # DB Names
-VXLAN_TUNNEL_TB   = "VXLAN_TUNNEL"
-VNET_TB           = "VNET"
-VLAN_TB           = "VLAN"
-VLAN_INTF_TB      = "VLAN_INTERFACE"
-VLAN_MEMB_TB      = "VLAN_MEMBER"
-VLAN_NEIGH_TB     = "NEIGH"
 ROUTE_TUN_TB      = "_VNET_ROUTE_TUNNEL_TABLE"
 LOCAL_ROUTE_TB    = "_VNET_ROUTE_TABLE"
-CFG_ROUTE_TUN_TB  = "VNET_ROUTE_TUNNEL"
-CFG_LOCAL_ROUTE_TB = "VNET_ROUTE"
 
 # DB Helper constants
 VNET_NAME_PREF    = "Vnet"
 VLAN_NAME_PREF    = "Vlan"
-
-RESRC_EXISTS = 0
-DEP_MISSING = 1
-DELETE_DEP = 2
 
 TEST_HOST = 'http://localhost:8090/'
 

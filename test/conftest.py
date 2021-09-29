@@ -11,6 +11,7 @@ def setup_restapi_client():
     cache.flushdb()
     configdb = redis.StrictRedis('localhost', 6379, 4)
     configdb.flushdb()
+
     restapi_client = RESTAPI_client(db)
     restapi_client.post_config_restart_in_mem_db()
 
@@ -25,4 +26,3 @@ def setup_restapi_client():
     assert keys == []
 
     yield db, cache, configdb, restapi_client
-    

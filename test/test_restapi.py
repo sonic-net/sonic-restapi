@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 
-import datetime
-import json
-import requests
-import time
-#import unittest
 import logging
 import json
-import redis
 
 # DB Names
 VXLAN_TUNNEL_TB   = "VXLAN_TUNNEL"
@@ -30,7 +24,7 @@ DEP_MISSING = 1
 DELETE_DEP = 2
 
 
-class Test_ra_client_positive_tests:
+class TestRestApiPositive:
     """Normal behaviour tests"""
     # Helper func
     def check_vrouter_exists(self, restapi_client, vnet_id, vnid):
@@ -78,7 +72,7 @@ class Test_ra_client_positive_tests:
         r = restapi_client.post_config_reset_status({'reset_status': 'boolean'})
         assert r.status_code == 400
 
-# Decap
+    # Decap
     def test_post_config_tunnel_decap_tunnel_type(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
         r = restapi_client.post_config_tunnel_decap_tunnel_type('vxlan', {
@@ -106,7 +100,7 @@ class Test_ra_client_positive_tests:
         assert tunnel_table == {b'src_ip': b'34.53.1.0'}
 
 
-# Encap
+    # Encap
     def test_post_encap(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
         r = restapi_client.post_config_tunnel_encap_vxlan_vnid(101, None)
@@ -125,7 +119,7 @@ class Test_ra_client_positive_tests:
         assert r.status_code == 204
 
 
-# Vrouter
+    # Vrouter
     def test_post_vrouter(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
         restapi_client.post_generic_vxlan_tunnel()
@@ -211,7 +205,7 @@ class Test_ra_client_positive_tests:
                      }
              
 
-# Vlan
+    # Vlan
     def test_vlan_wo_ippref_vnetid_all_verbs(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
         # post
@@ -401,7 +395,7 @@ class Test_ra_client_positive_tests:
                 #print("is type list",value)
                 assert sorted(value) == sorted(k2.values()[0])
 
-# Vlan Get
+    # Vlan Get
     def test_get_all_vlans(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         # create vxlan tunnel
@@ -426,7 +420,7 @@ class Test_ra_client_positive_tests:
                 if item not in value:
                     assert False
 
-# Vlan Member
+    # Vlan Member
     def test_vlan_member_tagged_untagged_interop(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         vlan0 = 2
@@ -534,7 +528,7 @@ class Test_ra_client_positive_tests:
             )
 
 
-# Vlan Neighbor
+    # Vlan Neighbor
     def test_vlan_neighbor_all_verbs(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
         # post
@@ -579,7 +573,7 @@ class Test_ra_client_positive_tests:
             {"vlan_id":3,"attr":[{"ip_addr":"10.10.20.10"},{"ip_addr":"10.10.30.10"}]}
             )
 
-# Routes
+    # Routes
     def test_patch_update_routes_with_optional_args(self, setup_restapi_client):
         db, _, _, restapi_client = setup_restapi_client
         restapi_client.post_generic_vlan_and_deps()
@@ -959,9 +953,9 @@ class Test_ra_client_positive_tests:
         r = restapi_client.post_ping({"ip_addr" : "8.8.8.8"})
         assert r.status_code == 200
         
-class Test_ra_client_negative_tests():
+class TestRestApiNegative():
     """Invalid input tests"""
-# Decap:
+    # Decap:
     def test_delete_config_tunnel_decap_tunnel_type_not_vxlan(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         r = restapi_client.delete_config_tunnel_decap_tunnel_type('not_vxlan')
@@ -978,7 +972,7 @@ class Test_ra_client_negative_tests():
         j = json.loads(r.text)
         assert ['tunnel_type'] == j['error']['fields']
 
-# Vrouter: 
+    # Vrouter: 
     def test_delete_vrouter_with_dependencies(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         # Init
@@ -1074,7 +1068,7 @@ class Test_ra_client_negative_tests():
         j = json.loads(r.text)
         assert ['vnid'] == j['error']['fields']
 
-# Vlan
+    # Vlan
     def test_post_vlan_which_exists(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         restapi_client.post_generic_vlan_and_deps()
@@ -1215,7 +1209,7 @@ class Test_ra_client_negative_tests():
         j = json.loads(r.text)
         assert r.status_code ==404
 
-# Vlan Member
+    # Vlan Member
     def test_post_vlan_mem_which_exists_tagged(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         restapi_client.post_generic_vlan_and_deps()
@@ -1279,7 +1273,7 @@ class Test_ra_client_negative_tests():
         j = json.loads(r.text)
         assert ['if_name'] == j['error']['fields']
 
-# Vlan Neighbor
+    # Vlan Neighbor
     def test_post_vlan_neighbor_which_exists(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         restapi_client.post_generic_vlan_and_deps()
@@ -1329,7 +1323,7 @@ class Test_ra_client_negative_tests():
         j = json.loads(r.text)
         assert ['ip_addr'] == j['error']['fields']
 
-# Routes
+    # Routes
     def test_patch_delete_routes_not_created(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         restapi_client.post_generic_vlan_and_deps()
