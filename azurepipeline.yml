@@ -39,14 +39,18 @@ jobs:
         docker exec rest-api ls
         docker cp rest-api:/coverage.cov ./
         docker run -d --rm=true --name rest-api_build -v /tmp/target:/src -v $(pwd):/src/rest -w /src/rest rest-api-build-image tail -f /dev/null
-        docker exec rest-api_build ls
-        docker cp cover.sh rest-api_build:/src/rest
-        docker cp coverage.cov rest-api_build:/src/rest
-        docker exec rest-api_build ls
+        mkdir htmlcov
         docker exec rest-api_build sh /src/rest/cover.sh
-        docker exec rest-api_build ls
         ls
+        ls htmlcov
       displayName: Test
     - publish: $(Build.ArtifactStagingDirectory)/
       artifact: 'sonic-restapi'
       displayName: "Archive artifacts"
+
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/htmlcov/'
+      displayName: 'Publish test coverage'
