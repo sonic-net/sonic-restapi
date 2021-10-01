@@ -52,6 +52,7 @@ RUN mkdir /usr/sbin/cert/client
 RUN mkdir /usr/sbin/cert/server
 COPY cert/client/* /usr/sbin/cert/client/
 COPY cert/server/* /usr/sbin/cert/server/
+COPY files/server_kill.py /usr/bin/server_kill.py
 
 RUN ln -s -f /usr/sbin/cert/client/restapiclient.crt.1 /usr/sbin/cert/client/restapiclient.crt
 RUN ln -s -f /usr/sbin/cert/server/restapiserver.crt.1 /usr/sbin/cert/server/restapiserver.crt
