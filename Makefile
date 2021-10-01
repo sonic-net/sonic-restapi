@@ -11,11 +11,15 @@ all: install build
 
 install: build
 	/usr/bin/install -D $(GOPATH)/bin/go-server-server debian/sonic-rest-api/usr/sbin/go-server-server
+	/usr/bin/install -D $(GOPATH)/bin/go-server-server.test debian/sonic-rest-api/usr/sbin/go-server-server.test
 
-build: $(GOPATH)/bin/go-server-server
+build: $(GOPATH)/bin/go-server-server $(GOPATH)/bin/go-server-server.test
 
 $(GOPATH)/bin/go-server-server: libcswsscommon $(GOPATH)/src/go-server-server/main.go
 	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) build -v
+
+$(GOPATH)/bin/go-server-server.test: libcswsscommon $(GOPATH)/src/go-server-server/main.go
+	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) test -c -covermode=count -coverpkg "go-server-server/go" -v -o $(GOPATH)/bin/go-server-server.test
 
 $(GOPATH)/src/go-server-server/main.go:
 	mkdir -p               $(GOPATH)/src
