@@ -36,13 +36,10 @@ jobs:
         docker exec rest-api ps aux
         sleep 600
         cd ..
-        docker exec rest-api ls
         docker cp rest-api:/coverage.cov ./
         docker run -d --rm=true --name rest-api_build -v /tmp/target:/src -v $(pwd):/src/rest -w /src/rest rest-api-build-image tail -f /dev/null
         mkdir htmlcov
         docker exec rest-api_build sh /src/rest/cover.sh
-        ls
-        ls htmlcov
       displayName: Test
     - publish: $(Build.ArtifactStagingDirectory)/
       artifact: 'sonic-restapi'
