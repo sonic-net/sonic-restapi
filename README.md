@@ -17,7 +17,7 @@ This is a configuration agent which exposes HTTPS endpoints to perform dynamic n
 #### Run Rest-API container locally on a VM and execute unit tests
   1. `docker run -d --rm -p8090:8090 -p6379:6379 --name rest-api --cap-add NET_ADMIN --privileged -t rest-api-image-test_local:latest`
   2. `cd test`
-  3. `python apitest.py`
+  3. `pytest -v`
   
 ####  Login to Rest-API container and check logs
   1. `docker exec -it rest-api bash`
