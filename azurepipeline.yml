@@ -33,7 +33,21 @@ jobs:
         cd test
         pytest -v
         docker exec rest-api cat /tmp/rest-api.err.log
+        docker exec rest-api ps aux
+        sleep 600
+        cd ..
+        docker cp rest-api:/coverage.cov ./
+        docker run -d --rm=true --name rest-api_build -v /tmp/target:/src -v $(pwd):/src/rest -w /src/rest rest-api-build-image tail -f /dev/null
+        mkdir htmlcov
+        docker exec rest-api_build sh /src/rest/cover.sh
       displayName: Test
     - publish: $(Build.ArtifactStagingDirectory)/
       artifact: 'sonic-restapi'
       displayName: "Archive artifacts"
+
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: Cobertura
+        summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage.xml'
+        reportDirectory: '$(System.DefaultWorkingDirectory)/htmlcov/'
+      displayName: 'Publish test coverage'

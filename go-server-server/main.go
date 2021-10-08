@@ -79,7 +79,10 @@ func StartHttpsServer(handler http.Handler, messenger <-chan int, wgroup *sync.W
         case 0:
             // Signal from signal_handler
             log.Printf("info: Terminating...")
-            os.Exit(0)
+            if (!*sw.SystemTestFlag) {
+                os.Exit(0)
+            }
+            return
         }
     }
 }
@@ -93,6 +96,7 @@ func signal_handler(messenger chan<- int, wgroup *sync.WaitGroup) {
 
     <-sigchannel
     messenger <- 0
+    log.Printf("info: Signal Handler returning...")
     return
 }
 
@@ -173,8 +177,10 @@ func main() {
         wgroup.Add(1)
         go StartHttpsServer(router, messenger, &wgroup)
         
-        wgroup.Add(1)
-        go monitor_certs(messenger, &wgroup)
+        if (!*sw.SystemTestFlag) {
+            wgroup.Add(1)
+            go monitor_certs(messenger, &wgroup)
+        }
     }
 
     wgroup.Add(1)
