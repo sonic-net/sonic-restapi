@@ -11,9 +11,16 @@ jobs:
 - job: Build
   pool:
     vmImage: ubuntu-18.04
+
+  variables:
+    DIFF_COVER_CHECK_THRESHOLD: 0
+    DIFF_COVER_ENABLE: 'true'
+    DIFF_COVER_WORKING_DIRECTORY: $(System.DefaultWorkingDirectory)
+
   steps:
     - checkout: self
       clean: true
+
     - script: |
         set -ex
         ./build.sh
@@ -25,6 +32,7 @@ jobs:
         cp debs/*.deb $(Build.ArtifactStagingDirectory)/debs
         cp debian/sonic-rest-api/usr/sbin/go-server-server $(Build.ArtifactStagingDirectory)
       displayName: 'Build image'
+
     - script: |
         set -ex
         pip install requests
@@ -41,9 +49,19 @@ jobs:
         mkdir htmlcov
         docker exec rest-api_build sh /src/rest/cover.sh
       displayName: Test
+
     - publish: $(Build.ArtifactStagingDirectory)/
       artifact: 'sonic-restapi'
       displayName: "Archive artifacts"
+
+    - script: |
+        set -ex
+        # Install .NET CORE
+        curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+        sudo apt-add-repository https://packages.microsoft.com/ubuntu/18.04/prod
+        sudo apt-get update
+        sudo apt-get install -y dotnet-sdk-5.0
+      displayName: "Install .NET CORE"
 
     - task: PublishCodeCoverageResults@1
       inputs:
