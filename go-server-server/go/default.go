@@ -937,13 +937,21 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
 
     pt := swsscommon.NewTable(db.swss_db, VNET_TB)
     defer pt.Delete()
-
-    pt.Set(vnet_id_str, map[string]string{
-        "vxlan_tunnel": "default_vxlan_tunnel",
-        "vni": strconv.Itoa(attr.Vnid),
-        "guid": vars["vnet_name"],
-    }, "SET", "")
-
+    
+    if vnet_id_str == "Vnet-default"{
+        pt.Set(vnet_id_str, map[string]string{
+            "vxlan_tunnel": "default_vxlan_tunnel",
+            "vni": strconv.Itoa(attr.Vnid),
+            "guid": vars["vnet_name"],
+            "scope": "default",
+        }, "SET", "")        
+    } else {
+        pt.Set(vnet_id_str, map[string]string{
+            "vxlan_tunnel": "default_vxlan_tunnel",
+            "vni": strconv.Itoa(attr.Vnid),
+            "guid": vars["vnet_name"],
+        }, "SET", "")           
+    }
     w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1135,7 +1143,9 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 if r.IfName == "" {
                     if cur_route["endpoint"] != r.NextHop ||
                         cur_route["mac_address"] != r.MACAddress ||
-                        cur_route["vni"] != strconv.Itoa(r.Vnid) {
+                        cur_route["vni"] != strconv.Itoa(r.Vnid) ||
+                        cur_route["weight"] != r.Weight ||
+                        cur_route["profile"] != r.Profile {
                             /* Delete and re-add the route as it is not identical */
                             pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
                     } else {
@@ -1166,6 +1176,12 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 if r.NextHop != "" {
                     route_map["nexthop"] = r.NextHop
                 }
+            }
+            if r.Weight != "" {
+                route_map["weight"] = r.Weight
+            }
+            if r.Profile != "" {
+                route_map["profile"] = r.Profile
             }
             pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
 		}
@@ -1269,7 +1285,12 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             if r.IfName == "null" {
                 route_map["blackhole"] = "true"
             }
-
+            if r.Weight != "" {
+                route_map["weight"] = r.Weight
+            }
+            if r.Profile != "" {
+                route_map["profile"] = r.Profile
+            }
             pt.Set(generateDBTableKey(db.separator,vrf_id_str, r.IPPrefix), route_map, "SET", "")
         }
     }
@@ -1328,6 +1349,13 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
             routeModel.IfName = ifname
         }
 
+        if weight, ok := kvp["weight"]; ok {
+            routeModel.Weight = weight
+        }
+
+        if profile, ok := kvp["profile"]; ok {
+            routeModel.Profile = profile
+        }
         routes = append(routes, routeModel)
     }
 

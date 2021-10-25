@@ -308,6 +308,14 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
             routeModel.MACAddress = mac
         }
 
+        if weight, ok := kvp["weight"]; ok {
+            routeModel.Weight = weight
+        }
+
+        if profile, ok := kvp["profile"]; ok {
+            routeModel.Profile = profile
+        }
+
         routes = append(routes, routeModel)
     }
 
@@ -323,6 +331,13 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
             routeModel.IfName = ifname
         }
 
+        if weight, ok := kvp["weight"]; ok {
+            routeModel.Weight = weight
+        }
+
+        if profile, ok := kvp["profile"]; ok {
+            routeModel.Profile = profile
+        }
         routes = append(routes, routeModel)
     }
     return
