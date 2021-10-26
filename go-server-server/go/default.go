@@ -938,7 +938,8 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
     pt := swsscommon.NewTable(db.swss_db, VNET_TB)
     defer pt.Delete()
     
-    if vnet_id_str == "Vnet-default"{
+    log.Printf("debug: vnet_id_str: "+vnet_id_str)
+    if strings.Compare(vars["vnet_name"], "Vnet-default") == 0 {
         pt.Set(vnet_id_str, map[string]string{
             "vxlan_tunnel": "default_vxlan_tunnel",
             "vni": strconv.Itoa(attr.Vnid),

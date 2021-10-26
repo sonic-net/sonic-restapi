@@ -135,6 +135,22 @@ class TestRestApiPositive:
 							b'guid': b'vnet-guid-1'
 							}
 
+    def test_post_vrouter_default(self, setup_restapi_client):
+        _, _, configdb, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vxlan_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("Vnet-default", {
+            'vnid': 2001
+        })
+        assert r.status_code == 204
+
+        vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
+        assert vrouter_table == {
+							b'vxlan_tunnel': b'default_vxlan_tunnel',
+							b'vni': b'2001',
+							b'guid': b'Vnet-default',
+                            b'scope': b'default'
+							}
+
     def test_get_vrouter(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         restapi_client.post_generic_vrouter_and_deps()
@@ -917,6 +933,12 @@ class TestRestApiPositive:
         routes.append({'cmd':'add',
                             'ip_prefix':'60.1.2.0/24',
                             'ifname':'Ethernet8'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'70.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201,192.168.2.202',
+                            'weight':'10,20',
+                            'profile':'profile1'})
 
 
         # Patch add
