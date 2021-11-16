@@ -26,6 +26,8 @@ type RouteModel struct {
     NextHop     string `json:"nexthop"`
     MACAddress  string `json:"mac_address,omitempty"`
     Vnid        int    `json:"vnid,omitempty"`
+    Weight      string `json:"weight,omitempty"`
+    Profile     string `json:"profile,omitempty"`
     Error_code  int    `json:"error_code,omitempty"`
     Error_msg   string `json:"error_msg,omitempty"`
 }
@@ -178,6 +180,8 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         NextHop     *string `json:"nexthop"`
         MACAddress  *string `json:"mac_address"`
         Vnid        int     `json:"vnid"`
+        Weight      *string `json:"weight"`
+        Profile     *string `json:"profile"`
         Error       string  `json:"error"`
     }{}
 
@@ -234,6 +238,12 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     m.Vnid = required.Vnid
     if required.IfName != nil {
         m.IfName = *required.IfName
+    }
+    if required.Weight != nil {
+        m.Weight = *required.Weight
+    }
+    if required.Profile != nil {
+        m.Profile = *required.Profile
     }
     return
 }
