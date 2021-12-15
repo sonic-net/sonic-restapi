@@ -135,6 +135,27 @@ class TestRestApiPositive:
 							b'guid': b'vnet-guid-1'
 							}
 
+    def test_post_vrouter_duplicate(self, setup_restapi_client):
+        _, _, configdb, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vxlan_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001
+        })
+        assert r.status_code == 204
+
+        vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
+        assert vrouter_table == {
+							b'vxlan_tunnel': b'default_vxlan_tunnel',
+							b'vni': b'1001',
+							b'guid': b'vnet-guid-1'
+							}
+
+        r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-2", {
+            'vnid': 1001
+        })
+        assert r.status_code == 409
+        assert r.json()['error']['message'] == "Object already exists {\"vni\":\"1001\", \"vnet_name\":\"vnet-guid-1\"}"
+
     def test_post_vrouter_default(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
         restapi_client.post_generic_vxlan_tunnel()
