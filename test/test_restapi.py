@@ -154,7 +154,7 @@ class TestRestApiPositive:
             'vnid': 1001
         })
         assert r.status_code == 409
-        assert r.json()['error']['message'] == "Object already exists: vni=1001 vnet_name=vnet-guid-1"
+        assert r.json()['error']['message'] == "Object already exists {\"vni\":\"1001\", \"vnet_name\":\"vnet-guid-1\"}"
 
     def test_post_vrouter_default(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
