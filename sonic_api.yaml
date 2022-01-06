@@ -162,91 +162,95 @@ paths:
 #----------------------------------------------
 # Config Reset Status API
 #----------------------------------------------
-#  '/config/resetstatus':
-#    get:
-#      summary: API for caller to check the status of the config in the DB
-#      description: Returns a JSON response with the config reset status
-#      responses:
-#        '200':
-#          description: OK
-#          schema:
-#            type: object
-#            required:
-#              - reset_status
-#            properties:
-#              reset_status:
-#                type: string
-#                description: configuration reset status.
-#        '401':
-#          description: Invalid authentication credentials
-#          schema:
-#            $ref: '#/definitions/Error'
-#        '500':
-#          description: Internal service error
-#          schema:
-#            $ref: '#/definitions/Error'
-#        '503':
-#          description: Maintanence mode
-#          schema:
-#            $ref: '#/definitions/Error'
-#    post:
-#      summary: API for caller to set the status of the config in the DB
-#      description: Returns a JSON response with the config reset status after the change
-#      parameters:
-#        - name: reset_status
-#          in: body
-#          required: true
-#          type: string
-#          description: The value of configuration reset status. Only true or false accepted
-#      responses:
-#        '200':
-#          description: OK
-#        '401':
-#          description: Invalid authentication credentials
-#          schema:
-#            $ref: '#/definitions/Error'
-#        '500':
-#          description: Internal service error
-#          schema:
-#            $ref: '#/definitions/Error'
-#        '503':
-#          description: Maintanence mode
-#          schema:
-#            $ref: '#/definitions/Error'
+# schema_violation | Schema violation: must NOT have additional properties (paths > /config/resetstatus > post > parameters > 0)
+# schema_violation | Schema violation: must have required property 'schema' (paths > /config/resetstatus > post > parameters > 0)
+  '/config/resetstatus':
+    get:
+      summary: API for caller to check the status of the config in the DB
+      description: Returns a JSON response with the config reset status
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - reset_status
+            properties:
+              reset_status:
+                type: string
+                description: configuration reset status.
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      summary: API for caller to set the status of the config in the DB
+      description: Returns a JSON response with the config reset status after the change
+      parameters:
+        - name: reset_status
+          in: body
+          required: true
+          type: string
+          description: The value of configuration reset status. Only true or false accepted
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
 #----------------------------------------------
 # Operations
 #----------------------------------------------
-#  '/operations/ping':
-#    post:
-#      summary: pings an ip address from a VRF context, if provided
-#      description: Returns a JSON response object with packets transmitted, received, maxRTT, minRTT, avgRTT. When specified vnet_id doesn't exist in the config_db, returns 404 Object not found.
-#      parameters:
-#        - name: ip_address
-#          in: body
-#          required: true
-#          type: string
-#          description: IP address of the device to ping
-#        - name: vnet_id
-#          in: body
-#          required: false
-#          type: string
-#          description: vnet_id containing the vnet guid as a string
-#        - name: count
-#          in: body
-#          required: false
-#          type: string
-#          description: value for -c parameter of ping
-#      responses:
-#        '200':
-#          description: OK
-#        '404':
-#          description: Object not found
-#          schema:
-#            $ref: '#/definitions/Error'
-#        '500':
-#          description: Internal service error
-#          schema:
-#            $ref: '#/definitions/Error'
+# schema_violation | Schema violation: must have required property 'schema' (paths > /operations/ping > post > parameters > 0)
+# schema_violation | Schema violation: must NOT have additional properties (paths > /operations/ping > post > parameters > 1)
+  '/operations/ping':
+    post:
+      summary: pings an ip address from a VRF context, if provided
+      description: Returns a JSON response object with packets transmitted, received, maxRTT, minRTT, avgRTT. When specified vnet_id doesn't exist in the config_db, returns 404 Object not found.
+      parameters:
+        - name: ip_address
+          in: body
+          required: true
+          type: string
+          description: IP address of the device to ping
+        - name: vnet_id
+          in: body
+          required: false
+          type: string
+          description: vnet_id containing the vnet guid as a string
+        - name: count
+          in: body
+          required: false
+          type: string
+          description: value for -c parameter of ping
+      responses:
+        '200':
+          description: OK
+        '404':
+          description: Object not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
 #----------------------------------------------
 # Virtual router object
 #----------------------------------------------
@@ -506,52 +510,52 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 # path parameter with no path value for vnet_id
-#  '/config/interface/vlans':
-#    get:
-#      summary: Get information about existing vlan interfaces for given vnet_id
-#      description: Returns attributes for vlans of requested vnet_id. If the vnet_id does not exist, it returns a '404' error.
-#      parameters:
-#        - name: vnet_id
-#          in: path
-#          type: string
-#          required: true
-#          description: vnet_id containing the vnet guid as a string
-#      responses:
-#        '200':
-#          description: OK
-#          schema:
-#            type: object
-#            required:
-#              - vnet_id
-#              - attr
-#            properties:
-#              vnet_id:
-#                type: string
-#                description: vnet_id containing the vnet guid as a string
-#              attr:
-#                type: array
-#                items:
-#                 $ref: '#/definitions/VlansEntry'
-#        '400':
-#          description: Malformed arguments for API call
-#          schema:
-#            $ref: '#/definitions/Error'
-#        '401':
-#          description: Invalid authentication credentials
-#          schema:
-#            $ref: '#/definitions/Error'
-#        '404':
-#          description: Vnet_id is not found
-#          schema:
-#            $ref: '#/definitions/Error'
-#        '500':
-#          description: Internal service error
-#          schema:
-#            $ref: '#/definitions/Error'
-#        '503':
-#          description: Maintanence mode
-#          schema:
-#            $ref: '#/definitions/Error'
+  '/config/interface/vlans':
+    get:
+      summary: Get information about existing vlan interfaces for given vnet_id
+      description: Returns attributes for vlans of requested vnet_id. If the vnet_id does not exist, it returns a '404' error.
+      parameters:
+        - name: vnet_id
+          in: path
+          type: string
+          required: true
+          description: vnet_id containing the vnet guid as a string
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            required:
+              - vnet_id
+              - attr
+            properties:
+              vnet_id:
+                type: string
+                description: vnet_id containing the vnet guid as a string
+              attr:
+                type: array
+                items:
+                 $ref: '#/definitions/VlansEntry'
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vnet_id is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
   '/config/interface/vlans/all':
     get:
       summary: Get information about all existing vlans configured in the system
