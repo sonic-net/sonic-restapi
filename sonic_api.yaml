@@ -123,6 +123,7 @@ paths:
     get:
       summary: the heartbeat API for caller to check the status of the server
       description: Returns Ok when server is live. Also returns API version, config reset time info of the server and available routes.
+      operationId: getHeartbeat
       responses:
         '200':
           description: OK
@@ -167,6 +168,7 @@ paths:
   '/config/resetstatus':
     get:
       summary: API for caller to check the status of the config in the DB
+      operationId: getResetStatus
       description: Returns a JSON response with the config reset status
       responses:
         '200':
@@ -193,12 +195,14 @@ paths:
             $ref: '#/definitions/Error'
     post:
       summary: API for caller to set the status of the config in the DB
+      operationId: setResetStatus
       description: Returns a JSON response with the config reset status after the change
       parameters:
         - name: reset_status
           in: body
           required: true
-          type: string
+          schema:
+            type: boolean
           description: The value of configuration reset status. Only true or false accepted
       responses:
         '200':
@@ -223,23 +227,26 @@ paths:
   '/operations/ping':
     post:
       summary: pings an ip address from a VRF context, if provided
+      operationId: pingIp
       description: Returns a JSON response object with packets transmitted, received, maxRTT, minRTT, avgRTT. When specified vnet_id doesn't exist in the config_db, returns 404 Object not found.
       parameters:
-        - name: ip_address
+        - name: pingRequest
           in: body
           required: true
-          type: string
-          description: IP address of the device to ping
-        - name: vnet_id
-          in: body
-          required: false
-          type: string
-          description: vnet_id containing the vnet guid as a string
-        - name: count
-          in: body
-          required: false
-          type: string
-          description: value for -c parameter of ping
+          schema: 
+            type: object
+            required:
+              - ip_address
+            properties:
+              ip_address:
+                type: string
+                description: IP address of the device to ping
+              vnet_id: 
+                type: string
+                description: vnet_id containing the vnet guid as a string
+              count:
+                type: string
+                description: value for -c parameter of ping
       responses:
         '200':
           description: OK
@@ -258,6 +265,7 @@ paths:
     post:
       summary: Create a new virtual network router
       description: If a virtual network router/vnet with specified vnet_id doesn't exist, new vnet with empty virtual table would be created. If a vnet exists already, it will return error '409', sub-code '0'. If this API is called without a vxlan local vtep created(should be created as a Day 0 config), there will be a failure with code '409' sub-code '1'.
+      operationId: addVRouter
       parameters:
         - name: vnet_id
           in: path
@@ -300,6 +308,7 @@ paths:
     get:
       summary: Get information about an existing virtual network router
       description: Returns attributes for requested vnet_id. If the vnet is not defined it returns '404' error.
+      operationId: getVRouter
       parameters:
         - name: vnet_id
           in: path
@@ -343,6 +352,7 @@ paths:
     delete:
       summary: Remove a virtual network router
       description: Remove a virtual network router which is defined by vnet_id. If a vnet with 'vnet_id' is not defined the API will return '404'. If the delete is called before all associated VNET routes or Vlans are deleted, it will return error '409' sub-code 2
+      operationId: deleteVRouter
       parameters:
         - name: vnet_id
           in: path
@@ -383,6 +393,7 @@ paths:
     post:
       summary: Create a new vlan interface
       description: Create a new vlan interface with name Vlan{vlan_id} and vlanid set to vlan_id. If such a vlan interface already exists then this method returns the error '409' sub-code 0. If a vnet with specified vnet_id in attr does not exist this function will return error '409' sub-code 1. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      operationId: addVlan
       parameters:
         - name: vlan_id
           in: path
@@ -430,6 +441,7 @@ paths:
     get:
       summary: Get information about an existing vlan interface
       description: Returns attributes for requested vlan. If the vlan interface does not exist on SONiC it returns a '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      operationId: getVlan
       parameters:
         - name: vlan_id
           in: path
@@ -475,6 +487,7 @@ paths:
     delete:
       summary: Remove a vlan interface
       description: Remove a vlan interface which is defined by vlan_id. If the vlan interface does not exist on SONiC it returns a '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If the delete is called before all associated vlan neighbors/members are deleted, this will return error '409' conflict with sub-code 2. 
+      operationId: deleteVlan
       parameters:
         - name: vlan_id
           in: path
@@ -514,6 +527,7 @@ paths:
     get:
       summary: Get information about existing vlan interfaces for given vnet_id
       description: Returns attributes for vlans of requested vnet_id. If the vnet_id does not exist, it returns a '404' error.
+      operationId: getVlansByVnet
       parameters:
         - name: vnet_id
           in: path
@@ -560,6 +574,7 @@ paths:
     get:
       summary: Get information about all existing vlans configured in the system
       description: Returns attributes for vlans. If no vlans exist, it returns a '404' error.
+      operationId: getAllVlans
       responses:
         '200':
           description: OK
@@ -597,6 +612,7 @@ paths:
     post:
       summary: Add a physical port to a vlan interface
       description: Add a member to interface Vlan{vlan_id}. If the vlan interface does not exist on SONiC it returns a '404' error. If such a member is already present on this Vlan interface the API returns '409' sub-code 0. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'. If attr with tagging mode is provided it will be honored in config, if not, the default tagging mode will be set to 'untagged'. Vlan members may be tagged or untagged, but, the Vlan member port may be untagged in only one Vlan interface, deviations from this will cause the API to return '409' sub-code 0. 
+      operationId: addPortToVlan
       parameters:
         - name: vlan_id
           in: path
@@ -649,6 +665,7 @@ paths:
     get:
       summary: Get information about an existing vlan port member on an existing vlan interface
       description: Returns attributes for requested vlan member. If the vlan/vlan member is not defined/present on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      operationId: getVlanPortInfo
       parameters:
         - name: vlan_id
           in: path
@@ -703,6 +720,7 @@ paths:
     delete:
       summary: Remove a vlan member from a vlan interface
       description: Remove a vlan member from a vlan interface which is defined by vlan_id. If the Vlan interface does not exist on SONiC OR a vlan member 'if_name' is not present on the interface the API will return '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      operationId: deletePortFromVlan
       parameters:
         - name: vlan_id
           in: path
@@ -742,6 +760,7 @@ paths:
     get:
       summary: Get information about all existing vlan port member interfaces for an existing vlan interface
       description: Returns attributes of all the member interfaces for given vlan. If the vlan is not defined/present on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      operationId: getVlanMembers
       parameters:
         - name: vlan_id
           in: path
@@ -792,6 +811,7 @@ paths:
     post:
       summary: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery 
       description: Add the connected end host's IP address to the vlan interface for arp assist and neighbor discovery. If such a neighbor already exists on this Vlan interface then this method returns the error '409' sub-code 0, if the Vlan interface doesn't exist on SONiC this returns error '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      operationId: addVlanNeighbor
       parameters:
         - name: vlan_id
           in: path
@@ -838,6 +858,7 @@ paths:
     get:
       summary: Get information about an existing vlan neighbor on an existing vlan interface
       description: Returns HTTP success/failure code for requested neighbor. If the vlan interface/vlan neighbor does not exist on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      operationId: getVlanNeighborInfo
       parameters:
         - name: vlan_id
           in: path
@@ -876,6 +897,7 @@ paths:
     delete:
       summary: Remove a vlan neighbor from a vlan interface
       description: Remove a vlan neighbor from a vlan interface which is defined by vlan_id. If a vlan interface with 'vlan_id' is not present on SONiC OR a vlan neighbor 'ip_addr' is not present on the interface the API will return '404'. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      operationId: deleteVlanNeighbor
       parameters:
         - name: vlan_id
           in: path
@@ -915,6 +937,7 @@ paths:
     get:
       summary: Get information about all vlan neighbors on an existing vlan interface
       description: Returns all the neighbors associated with requested vlan. If the vlan interface does not exist on SONiC it returns '404' error. If the vlan_id passed is less than 2 or greater than 4094 the API will respond with error '400'.
+      operationId: getVlanNeighbors
       parameters:
         - name: vlan_id
           in: path
@@ -970,6 +993,7 @@ paths:
           required: true
           type: integer
       description: Return success for now 
+      operationId: addVxlanEncap
       responses:
         '204':
           description: OK
@@ -979,10 +1003,12 @@ paths:
           in: path
           required: true
           type: integer
+      operationId: getVxlanEncap
       responses:
         '204':
           description: OK
     delete:
+      operationId: deleteVxlanEncap
       parameters:
         - name: vnid
           in: path
@@ -1000,6 +1026,7 @@ paths:
     patch:
       summary: Add/Delete IP routes for a virtual network router. Modifying an existing route is not currently supported
       description: This API call receives a list of route entries to be added/deleted from the virtual routing table defined by 'vnet_id'. If an object with vnet_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set
+      operationId: patchRoutesByVRouter
       parameters:
         - name: vnet_id
           in: path
@@ -1056,6 +1083,7 @@ paths:
     delete:
       summary: Remove IP routes for a virtual network router
       description: This API call will remove all route entries from a virtual network router defined by 'vnet_id'. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing was unsuccessful it will be added as a member of the "failed" list along with attributes for "error_code" and "error_msg" populated.
+      operationId: deleteRoutesByVRouter
       parameters:
         - name: vnet_id
           in: path
@@ -1106,6 +1134,7 @@ paths:
     get:
       summary: Get IP routes for a given virtual network router
       description: Return a list of routing entries for a given virtual network router defined by "vnet_id" parameter. If there're no routing entries an empty list would be returned. The output list could be filterd by "vnid" and "ip_prefix" parameters. If one of the parameters is defined for the request, the output will contain only routing entries which have this parameter in their attributes.
+      operationId: getRoutesByVRouter
       parameters:
         - name: vnet_id
           in: path
@@ -1155,6 +1184,7 @@ paths:
 #----------------------------------------------
   '/config/tunnel/decap/{tunnel_type}':
     post:
+      operationId: addTunnelDecap
       summary: Setup or update tunnel decapsulation parameters
       description: >-
           For vxlan tunnel, this defines the Virtual Tunnel End point IP address used in all L3 vxlan traffic to/from SONiC. Modifying or deleting is not currently supported.
@@ -1205,6 +1235,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get tunnel decapsulation parameters
+      operationId: getTunnelDecap
       parameters:
         - name: tunnel_type
           in: path
@@ -1250,6 +1281,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove tunnel decapsulation information. For now, this will not delete the object, it will just return success '204' in order to implement as no-op.
+      operationId: deleteTunnelDecap
       parameters:
         - name: tunnel_type
           in: path
@@ -1283,6 +1315,7 @@ paths:
   '/config/vrf/{vrf_id}':
     post:
       summary: Create a new VRF representing a virtual routing instance. If VRF exists, 409 conflict error will be returned
+      operationId: addVRF
       parameters:
         - name: vrf_id
           in: path
@@ -1324,6 +1357,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get information about an existing VRF
+      operationId: getVRF
       description: Returns attributes for requested vrf_id.
       parameters:
         - name: vrf_id
@@ -1366,6 +1400,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove a VRF
+      operationId: removeVRF
       parameters:
         - name: vrf_id
           in: path
@@ -1405,6 +1440,7 @@ paths:
   '/config/vrf/{vrf_id}/routes':
     patch:
       summary: Update/modify IP routes for a VRF
+      operationId: patchRoutesByVRF
       description: This API call receives a list of route entries to be added/modified/deleted from the virtual routing table defined by 'vrf_id'. API shall operate on default vrf if the 'vrf_id' is specified as 'default'. It is not required by the user to create 'default' vrf. For non-default vrf, if an object with vrf_id doesn't exist this will return an error code '404'. The 'cmd' attribute will determine whether this is an add or delete request. For 'add' operations the API will try to insert every route entry individually. If a route entry already exists in the virtual routing table, the attributes of the rouing entry will be updated. If a route entry doesn't exist in the routing table yet, it will be inserted there. If something went wrong the route entry will be returned as member of "failed" list with "error_code" attr set to some HTTP error code and "error_msg" attr set to some custom error string. Similarly for 'delete' operations the API will try to delete every route entry individually, if the delete fails it will be returned as a member of the "failed" list with attrs "error_code" and "error_msg" set. User can specify if the route must be persitent and saved to config. This is a per-route optional attribute with default set as 'false'. For non-persistent routes, the client is expected to refresh at periodic intervals. If not refreshed, the default expiry is 180 sec and the route gets marked for deletion and later removed in the next cycle. In effect, the non-refreshed route can get removed anytime between 180 - 360 sec. User is not expected to configure a route first as persistent and then as non-persistent or vice versa. In such cases, persistent takes precedence.
       parameters:
         - name: vrf_id
@@ -1461,6 +1497,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove IP routes for a virtual routing instance
+      operationId: deleteRoutesByVRF
       description: This API call will remove all route entries from a virtual routing instance defined by 'vrf_id' or 'default' vrf. If 'vnid' query parameter is defined, this API call will remove only routes for which nexthop tunnel is 'vnid'. If the removing was unsuccessful it will be added as a member of the "failed" list along with attributes for "error_code" and "error_msg" populated.
       parameters:
         - name: vrf_id
@@ -1511,6 +1548,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get IP routes for a given virtual routing instance
+      operationId: getRoutesByVRF
       description: Return a list of routing entries for a given virtual routing instance defined by "vrf_id" parameter. If there're no routing entries an empty list would be returned. The output list could be filterd by "vnid" and "ip_prefix" parameters. If one of the parameters is defined for the request, the output will contain only routing entries which have this parameter in their attributes.
       parameters:
         - name: vrf_id
@@ -1562,6 +1600,7 @@ paths:
   '/config/subinterface/qinq/{if_name}/{outer_tag}/{inner_tag}':
     put:
       summary: Create/update QinQ router interface for a physical interface
+      operationId: addQinQInterface
       description: If the interface is already created, only QinQ attributes can be updated.
       parameters:
         - name: if_name
@@ -1620,6 +1659,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove a QinQ router interface from a physical interface
+      operationId: deleteQinQInterface
       description: If the router interface doesn't exist, '404' error will be returned.
       parameters:
         - name: if_name
@@ -1664,6 +1704,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get QinQ router interface information
+      operationId: getQinQInterfaceByParams
       description: Return attributes for a given QinQ interface. If there're no interface with such parameters '404' error will be returned.
       parameters:
         - name: if_name
@@ -1731,6 +1772,7 @@ paths:
   '/config/subinterface/qinq/{if_name}':
     get:
       summary: Get a list of all QinQ router interfaces for a physical interface
+      operationId: getQinQInterfaceByPhysicalInterface
       description: If "if_name" is not found on the device, '404' error will be returned. If "if_name" is found, but there're no QinQ router interfaces, an empty list will be returned.
       parameters:
         - name: if_name
@@ -1784,6 +1826,7 @@ paths:
   '/config/subinterface/qinq/{if_name}/{outer_tag}/{inner_tag}/{shutdown}':
     put:
       summary: Shutdown or startup the subinterface.
+      operationId: controlQinQSubinterface
       description: If the subinterface doesn't exist, returns '404'
       parameters:
         - in: path
@@ -1841,6 +1884,7 @@ paths:
 #----------------------------------------------
   '/config/bgp/{asn}/{router_id}':
     put:
+      operationId: addBgp
       summary: Setup Global BGP configurations on device
       parameters:
         - name: asn
@@ -1878,6 +1922,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove BGP config
+      operationId: removeBgp
       parameters:
         - name: asn
           in: path
@@ -1917,6 +1962,7 @@ paths:
 #----------------------------------------------
   '/config/bgp/vrf/{vrf_id}/neighbors/{neighbor_ip}':
     put:
+      operationId: addBGPNeighborToVRF
       summary: Setup BGP neighbor on device per VRF. If this neighbor_ip exist, the neighbor attributes will be updated.
       parameters:
         - name: vrf_id
@@ -1962,6 +2008,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove BGP neighbor for the VRF
+      operationId: deleteBGPNeighborFromVRF
       parameters:
         - name: vrf_id
           in: path
@@ -1998,6 +2045,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get attributes of this neighbor in the VRF
+      operationId: getBGPNeighborInVRF
       parameters:
         - name: vrf_id
           in: path
@@ -2038,6 +2086,7 @@ paths:
   '/config/bgp/vrf/{vrf_id}/neighbors/{neighbor_ip}/{shutdown}':
     put:
       summary: Shutdown or startup neighbor within a VRF.
+      operationId: controlBgpNeighborInVRF
       parameters:
         - name: vrf_id
           in: path
@@ -2086,6 +2135,7 @@ paths:
   '/config/bgp/vrf/{vrf_id}/neighbors':
     get:
       summary: Get information about all neighbors on in a vrouter
+      operationId: getAllBgpNeighborsInVRF
       description: Returns all the neighbors associated with requested vrouter. If the vrf_id does not exist, it returns '404' error.
       parameters:
         - name: vrf_id
@@ -2126,6 +2176,7 @@ paths:
   '/config/tunnel/encap/{tunnel_type}/{tunnel_name}':
     put:
       summary: Create a tunnel
+      operationId: addTunnel
       description: If a tunnel with this name doesn't exist yet then create a new tunnel with these parameters. If the tunnel already exists, it's attributes will be updated.
       parameters:
         - name: tunnel_type
@@ -2168,6 +2219,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove a tunnel
+      operationId: deleteTunnel
       description: If a tunnel with this name exists then remove it. If it doesn't exist return '404' error.
       parameters:
         - name: tunnel_type
@@ -2205,6 +2257,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get information about a tunnel
+      operationId: getTunnel
       description: If a tunnel with this name exists then return an objects with the tunnel attributes. Otherwise return '404' error.
       parameters:
         - name: tunnel_type
@@ -2254,6 +2307,7 @@ paths:
   '/config/tunnel/encap/{tunnel_type}':
     get:
       summary: Get a list of existing tunnels of a tunnel_type
+      operationId: getAllTunnelsByType
       description: Return a list of existing tunnels of a type. If there're no tunnels to return, empty list will be returned.
       parameters:
         - name: tunnel_type
@@ -2287,6 +2341,7 @@ paths:
   '/config/tunnel/encap/{tunnel_type}/{tunnel_name}/{shutdown}':
     put:
       summary: Shutdown or startup a tunnel
+      operationId: controlTunnel
       parameters:
         - name: tunnel_type
           in: path
@@ -2331,6 +2386,7 @@ paths:
   '/config/bfd/{bfd_session}':
     put:
       summary: Setup BFD session
+      operationId: addBFDSession
       description: If a BFD session with this name exists, updates are only allowed on "shutdown" status. For any other change, return '500' error
       parameters:
         - name: bfd_session
@@ -2369,6 +2425,7 @@ paths:
             $ref: '#/definitions/Error'
     delete:
       summary: Remove the bfd session
+      operationId: deleteBFDSession
       description: If the session is running (not shutdown), return '500' error with message asking for shutdown first before attempting to remove. If this session doesn't exist return '404' error.
       parameters:
         - name: bfd_session
@@ -2402,6 +2459,7 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: Get information about a bfd_session
+      operationId: getBFDSession
       description: If a bfd session with this name exists then return an objects with the bfd attributes. Otherwise return '404' error.
       parameters:
         - name: bfd_session
