@@ -1943,7 +1943,7 @@ paths:
           in: path
           required: true        
       responses:
-       '201':
+        '201':
           description: OK     
           schema:
             $ref: '#/definitions/NeighborEntry'     
@@ -2052,7 +2052,7 @@ paths:
 #----------------------------------------------
 # All Bgp Neighbors in a VRF
 #----------------------------------------------
-  '/config/bgp/vrf/{vrf_id}/neighbors'
+  '/config/bgp/vrf/{vrf_id}/neighbors':
     get:
       summary: Get information about all neighbors on in a vrouter
       description: Returns all the neighbors associated with requested vrouter. If the vrf_id does not exist, it returns '404' error.
@@ -2209,7 +2209,7 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         '500':
-         description: Internal service error
+          description: Internal service error
           schema:
             $ref: '#/definitions/Error'
         '503':
@@ -2402,7 +2402,7 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         '500':
-         description: Internal service error
+          description: Internal service error
           schema:
             $ref: '#/definitions/Error'
         '503':
