@@ -493,7 +493,7 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         '409':
-          description:
+          description: Conflict
           schema:
             $ref: '#/definitions/Error'
         '500':
@@ -1897,9 +1897,11 @@ paths:
         - name: vrf_id
           in: path
           required: true
+          type: string
         - name: neighbor_ip
           in: path
           required: true
+          type: string
         - name: attr
           in: body
           required: true
@@ -1939,9 +1941,11 @@ paths:
         - name: vrf_id
           in: path
           required: true
+          type: string
         - name: neighbor_ip
           in: path
-          required: true        
+          required: true
+          type: string
       responses:
         '201':
           description: OK     
@@ -1973,9 +1977,11 @@ paths:
         - name: vrf_id
           in: path
           required: true
+          type: string
         - name: neighbor_ip
           in: path
           required: true
+          type: string
       responses:
         '200':
           description: OK
@@ -2571,7 +2577,7 @@ definitions:
         default: 300
       rx_interval:
         type: integer
-        descrition: minimum in milliseconds interval this system is capable of receiving control packets
+        description: minimum in milliseconds interval this system is capable of receiving control packets
         default: 300
       multiplier:
         type: integer
