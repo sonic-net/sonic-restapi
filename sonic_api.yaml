@@ -163,8 +163,6 @@ paths:
 #----------------------------------------------
 # Config Reset Status API
 #----------------------------------------------
-# schema_violation | Schema violation: must NOT have additional properties (paths > /config/resetstatus > post > parameters > 0)
-# schema_violation | Schema violation: must have required property 'schema' (paths > /config/resetstatus > post > parameters > 0)
   '/config/resetstatus':
     get:
       operationId: ConfigResetStatusGet
@@ -174,13 +172,7 @@ paths:
         '200':
           description: OK
           schema:
-            type: object
-            required:
-              - reset_status
-            properties:
-              reset_status:
-                type: string
-                description: configuration reset status.
+            $ref: '#/definitions/ResetStatusEntry'
         '401':
           description: Invalid authentication credentials
           schema:
@@ -202,7 +194,7 @@ paths:
           in: body
           required: true
           schema:
-            type: boolean
+            $ref: '#/definitions/ResetStatusEntry'
           description: The value of configuration reset status. Only true or false accepted
       responses:
         '200':
@@ -222,8 +214,6 @@ paths:
 #----------------------------------------------
 # Operations
 #----------------------------------------------
-# schema_violation | Schema violation: must have required property 'schema' (paths > /operations/ping > post > parameters > 0)
-# schema_violation | Schema violation: must NOT have additional properties (paths > /operations/ping > post > parameters > 1)
   '/operations/ping':
     post:
       operationId: Ping
@@ -245,7 +235,7 @@ paths:
                 type: string
                 description: vnet_id containing the vnet guid as a string
               count:
-                type: string
+                type: integer
                 description: value for -c parameter of ping
       responses:
         '200':
@@ -2751,3 +2741,11 @@ definitions:
       threshold:
         description: after what threshold should a warning be generated (1-100)
         type: integer
+  ResetStatusEntry:
+    type: object
+    required:
+      - reset_status
+    properties:
+      reset_status:
+        type: boolean
+        description: configuration reset status.
