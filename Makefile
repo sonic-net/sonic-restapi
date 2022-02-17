@@ -27,7 +27,9 @@ $(GOPATH)/src/go-server-server/main.go:
 	cp -r swsscommon       $(GOPATH)/src/swsscommon
 
 libcswsscommon:
-	cd libcswsscommon && sudo make install
+	make -C libcswsscommon
+	sudo make -C libcswsscommon install
 
 clean:
 	rm -rf $(GOPATH)
+	make -C libcswsscommon clean
