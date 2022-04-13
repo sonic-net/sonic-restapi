@@ -418,39 +418,6 @@ func ConfigInterfaceVlansMembersAllGet(w http.ResponseWriter, r *http.Request) {
     }
 
     for _,v := range vlan_map_kv{
-        /*
-        vlan_name := VLAN_NAME_PREF + v["vlanid"]
-        vlan_pref_kv, _ := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB, vlan_name, "*"))
-        vlan_if_kv, _ := GetKVs(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB, vlan_name))
-
-        var vnet_guid string
-        if vlan_if_kv != nil {
-            vnet_id := vlan_if_kv["vnet_name"]
-            vmap, _ := GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vnet_id))
-            vnet_guid = vmap["guid"]
-        }
-
-        var vlan_ip string
-        if len(vlan_pref_kv) > 0 {
-            for k,_ := range vlan_pref_kv {
-                 ip_pref := k[(len(generateDBTableKey(db.separator,VLAN_INTF_TB, vlan_name)) + 1):]
-                 ip, _, _ := net.ParseCIDR(ip_pref)
-                 if IsValidIP(ip.String()) != true {
-                     continue
-                 }
-                 vlan_ip = ip_pref
-            }
-        }
-
-        vlanInt,_ := strconv.Atoi(v["vlanid"])
-        output := VlansModel{
-                      VlanID: vlanInt,
-                      IPPrefix: vlan_ip,
-                      Vnet_id: vnet_guid,
-                  }
-        Vlans = append(Vlans,output)
-        */
-        //vlan_id := v["vlanid"]
         vlanInt,_ := strconv.Atoi(v["vlanid"])
         vlan_name := VLAN_NAME_PREF + v["vlanid"]
         // Getting all the key value pairs for VLAN_MEMBER|vlan_name*
@@ -466,6 +433,8 @@ func ConfigInterfaceVlansMembersAllGet(w http.ResponseWriter, r *http.Request) {
             WriteRequestResponse(w, MembersReturn, http.StatusOK)
         return
         }
+
+        Members = nil
         for k,v := range vlan_members_kv{
             output := VlanMembersModel{
                 If_name: k[len(generateDBTableKey(db.separator,VLAN_MEMB_TB,vlan_name))+1:],

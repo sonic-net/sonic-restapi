@@ -482,18 +482,27 @@ class TestRestApiPositive:
 
         # get all vlans
         r = restapi_client.get_config_members_all()
+        assert r.status_code == 200
         j = json.loads(r.text)
-        #assert j == {}
-        '''
-        k = {"attr":[{"vlan_id":3000,"ip_prefix":"10.0.1.1/24","vnet_id":"vnet-guid-1"},{"vlan_id":3001,"vnet_id":"vnet-guid-1"}]}
-        for key,value in j.iteritems():
-            if type(value)!=list:
-                assert k[key] == j[key]
-                return
-            for item in k[key]:
-                if item not in value:
-                    assert False
-        '''
+        members_of_vlan3000 = [
+                {'if_name': 'Ethernet2', 'tagging_mode': 'untagged'},
+                {'if_name': 'Ethernet3', 'tagging_mode': 'untagged'},
+                {'if_name': 'Ethernet4', 'tagging_mode': 'untagged'}
+            ]
+        members_of_vlan3001 = [
+                {'if_name': 'Ethernet5', 'tagging_mode': 'untagged'},
+                {'if_name': 'Ethernet6', 'tagging_mode': 'untagged'},
+                {'if_name': 'Ethernet7', 'tagging_mode': 'untagged'}
+            ]
+
+        for item in j['attr']:
+            print(item)
+            if item['vlan_id'] == 3000:
+                for member in item['attr']:
+                    assert member in members_of_vlan3000
+            if item['vlan_id'] == 3001:
+                for member in item['attr']:
+                    assert member in members_of_vlan3001        
 
     # Vlan Member
     def test_vlan_member_tagged_untagged_interop(self, setup_restapi_client):
