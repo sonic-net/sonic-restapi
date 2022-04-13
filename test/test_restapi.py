@@ -470,6 +470,11 @@ class TestRestApiPositive:
         restapi_client.post_config_vlan(3000, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
         restapi_client.post_config_vlan(3001, {'vnet_id' : 'vnet-guid-1'})
 
+        r = restapi_client.get_config_members_all()
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert len(j["attr"]) == 0
+
         members = ["Ethernet2", "Ethernet3", "Ethernet4"]
         for member in members:
            r = restapi_client.post_config_vlan_member(3000, member, {'tagging_mode' : 'untagged'})

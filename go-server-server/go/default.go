@@ -402,9 +402,6 @@ func ConfigInterfaceVlansMembersAllGet(w http.ResponseWriter, r *http.Request) {
     var MembersReturn VlanMembersReturnModel
     var MembersAllReturn VlanMembersAllReturnModel
 
-    //var Vlans []VlansModel
-    //var VlansReturn VlansReturnModel
-
     //Getting a map for all the vlans in DB
     vlan_map_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_TB,  "*"))
     if err != nil {
@@ -417,6 +414,7 @@ func ConfigInterfaceVlansMembersAllGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    MembersAllReturn.Attr = make([]VlanMembersReturnModel, 0)
     for _,v := range vlan_map_kv{
         vlanInt,_ := strconv.Atoi(v["vlanid"])
         vlan_name := VLAN_NAME_PREF + v["vlanid"]
@@ -427,11 +425,7 @@ func ConfigInterfaceVlansMembersAllGet(w http.ResponseWriter, r *http.Request) {
         return
         }
         if len(vlan_members_kv) == 0 {
-        log.Printf("No members found for %v ", vlan_name)
-            MembersReturn.VlanID = vlanInt
-            MembersReturn.Attr = Members
-            WriteRequestResponse(w, MembersReturn, http.StatusOK)
-        return
+            continue
         }
 
         Members = nil
