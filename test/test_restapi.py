@@ -457,6 +457,44 @@ class TestRestApiPositive:
                 if item not in value:
                     assert False
 
+    # Vlan Get
+    def test_get_all_members(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        # create vxlan tunnel
+        restapi_client.post_config_tunnel_decap_tunnel_type('vxlan', {
+        'ip_addr': '6.6.6.6'
+        })
+        # create vnet_id/vrf
+        restapi_client.post_config_vrouter_vrf_id('vnet-guid-1', {'vnid': 1001})
+        #create vlan interfaces
+        restapi_client.post_config_vlan(3000, {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'})
+        restapi_client.post_config_vlan(3001, {'vnet_id' : 'vnet-guid-1'})
+
+        members = ["Ethernet2", "Ethernet3", "Ethernet4"]
+        for member in members:
+           r = restapi_client.post_config_vlan_member(3000, member, {'tagging_mode' : 'untagged'})
+           assert r.status_code == 204
+
+        members = ["Ethernet5", "Ethernet6", "Ethernet7"]
+        for member in members:
+           r = restapi_client.post_config_vlan_member(3001, member, {'tagging_mode' : 'untagged'})
+           assert r.status_code == 204
+
+        # get all vlans
+        r = restapi_client.get_config_members_all()
+        j = json.loads(r.text)
+        #assert j == {}
+        '''
+        k = {"attr":[{"vlan_id":3000,"ip_prefix":"10.0.1.1/24","vnet_id":"vnet-guid-1"},{"vlan_id":3001,"vnet_id":"vnet-guid-1"}]}
+        for key,value in j.iteritems():
+            if type(value)!=list:
+                assert k[key] == j[key]
+                return
+            for item in k[key]:
+                if item not in value:
+                    assert False
+        '''
+
     # Vlan Member
     def test_vlan_member_tagged_untagged_interop(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
