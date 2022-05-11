@@ -52,7 +52,7 @@ func (pt Table) Set(key string, values map[string]string, op string, prefix stri
     tuplePtr := (*C.field_value_tuple_t)(C.malloc(C.size_t(C.sizeof_field_value_tuple_t * count)))
     defer C.free(unsafe.Pointer(tuplePtr))
     // Get a Go slice to the C array - this doesn't allocate anything
-    tuples := (*[1 << 30]C.field_value_tuple_t)(unsafe.Pointer(tuplePtr))[:count:count]
+    tuples := (*[(1 << 28) - 1]C.field_value_tuple_t)(unsafe.Pointer(tuplePtr))[:count:count]
 
     idx := 0
     for k, v := range values {
