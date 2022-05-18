@@ -81,8 +81,12 @@ type VlanMembersModel struct {
 }
 
 type VlanMembersReturnModel struct {
-    VlanID    int              `json:"vlan_id"`
+    VlanID    int                 `json:"vlan_id"`
     Attr      []VlanMembersModel  `json:"attr"`
+}
+
+type VlanMembersAllReturnModel struct {
+    Attr      []VlanMembersReturnModel  `json:"attr"`
 }
 
 type VlanNeighborReturnModel struct {

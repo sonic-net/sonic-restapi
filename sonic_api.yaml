@@ -598,6 +598,45 @@ paths:
 #----------------------------------------------
 # VLAN interface member 
 #----------------------------------------------
+  '/config/interface/vlans/members/all':
+    get:
+      operationId: ConfigInterfaceVlansMembersAllGet
+      summary: Get information about all existing vlan members configured in the system
+      description: Returns attributes for vlans. If no vlans exist, it returns a '404' error.
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            properties:
+              attr:
+                type: array
+                items:
+                  $ref: '#/definitions/VlanMembersAllEntry'
+                  vlan_id:
+                    type: string 
+                  members:
+                    type: array
+        '400':
+          description: Malformed arguments for API call
+          schema:
+            $ref: '#/definitions/Error'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '404':
+          description: Vnet_id is not found
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
   '/config/interface/vlan/{vlan_id}/member/{if_name}':
     post:
       operationId: ConfigInterfaceVlanMemberPost
