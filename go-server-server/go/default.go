@@ -394,6 +394,56 @@ func ConfigInterfaceVlansAllGet(w http.ResponseWriter, r *http.Request) {
     WriteRequestResponse(w, VlansReturn, http.StatusOK)
 }
 
+func ConfigInterfaceVlansMembersAllGet(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
+
+    var Members = []VlanMembersModel{}
+    var MembersReturn VlanMembersReturnModel
+    var MembersAllReturn VlanMembersAllReturnModel
+
+    //Getting a map for all the vlans in DB
+    vlan_map_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_TB,  "*"))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if vlan_map_kv == nil || len(vlan_map_kv) == 0 {
+        WriteRequestError(w, http.StatusNotFound, "Object not found", []string{"Vlans"}, "")
+        return
+    }
+
+    MembersAllReturn.Attr = make([]VlanMembersReturnModel, 0)
+    for _,v := range vlan_map_kv{
+        vlanInt,_ := strconv.Atoi(v["vlanid"])
+        vlan_name := VLAN_NAME_PREF + v["vlanid"]
+        // Getting all the key value pairs for VLAN_MEMBER|vlan_name*
+        vlan_members_kv, err := GetKVsMulti(db.db_num, generateDBTableKey(db.separator, VLAN_MEMB_TB, vlan_name,"*"))
+        if err != nil {
+            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+        }
+        if len(vlan_members_kv) == 0 {
+            continue
+        }
+
+        Members = nil
+        for k,v := range vlan_members_kv{
+            output := VlanMembersModel{
+                If_name: k[len(generateDBTableKey(db.separator,VLAN_MEMB_TB,vlan_name))+1:],
+                Tagging: v["tagging_mode"],
+            }
+            Members = append(Members,output)
+        }
+        MembersReturn.VlanID = vlanInt
+        MembersReturn.Attr = Members
+        MembersAllReturn.Attr = append(MembersAllReturn.Attr, MembersReturn)
+    }    
+    WriteRequestResponse(w, MembersAllReturn, http.StatusOK)
+}
+
+
 func ConfigInterfaceVlanMemberGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     db := &conf_db_ops

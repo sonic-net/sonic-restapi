@@ -139,6 +139,9 @@ class RESTAPI_client:
     def get_config_interface_vlan_members(self, vlan_id):
         return self.get('v1/config/interface/vlan/{vlan_id}/members'.format(vlan_id=vlan_id))
 
+    def get_config_members_all(self):
+        return self.get('v1/config/interface/vlans/members/all')
+
     # Vlan Neighbor
     def post_config_vlan_neighbor(self, vlan_id, ip_addr):
         return self.post('v1/config/interface/vlan/{vlan_id}/neighbor/{ip_addr}'.format(vlan_id=vlan_id, ip_addr=ip_addr)) 

@@ -132,6 +132,13 @@ var routes = Routes{
     },
 
     Route{
+        "ConfigInterfaceVlansMembersAllGet",
+        "GET",
+        "/v1/config/interface/vlans/members/all",
+        ConfigInterfaceVlansMembersAllGet,
+    },
+
+    Route{
         "ConfigInterfaceVlanMemberDelete",
         "DELETE",
         "/v1/config/interface/vlan/{vlan_id}/member/{if_name}",
