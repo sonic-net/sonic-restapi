@@ -686,6 +686,7 @@ class TestRestApiPositive:
         assert sorted(j) == sorted(routes)
 
         # Vnid Optional arg
+        route['nexthop'] = '100.3.152.32,200.3.152.32'
         route['vnid'] = 5000
         route['cmd'] = 'add'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
