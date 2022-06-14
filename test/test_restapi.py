@@ -685,8 +685,10 @@ class TestRestApiPositive:
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes)
 
-        # Vnid Optional arg
+        # Change endpoints; add multiple endpoints
         route['nexthop'] = '100.3.152.32,200.3.152.32'
+
+        # Vnid Optional arg
         route['vnid'] = 5000
         route['cmd'] = 'add'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
@@ -725,7 +727,6 @@ class TestRestApiPositive:
 
         # Weight optional arg
         route['vnid'] = 5000
-        route['nexthop'] = '100.3.152.32,200.3.152.32'
         route['weight'] = '20,10'
         route['cmd'] = 'add'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
