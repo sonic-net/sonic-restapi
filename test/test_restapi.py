@@ -685,7 +685,7 @@ class TestRestApiPositive:
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes)
 
-        # Change endpoints; add multiple endpoints
+        # Modify endpoints; add multiple endpoints
         route['nexthop'] = '100.3.152.32,200.3.152.32'
 
         # Vnid Optional arg
