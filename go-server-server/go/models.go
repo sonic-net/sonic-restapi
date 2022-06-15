@@ -125,7 +125,7 @@ type TunnelDecapReturnModel struct {
 
 type VnetModel struct {
     Vnid        int     `json:"vnid"`
-    AdvPrefix   string  `json:"advertise_prefix, omitempty"`
+    AdvPrefix   string  `json:"advertise_prefix,omitempty"`
 }
 
 type VnetReturnModel struct {
