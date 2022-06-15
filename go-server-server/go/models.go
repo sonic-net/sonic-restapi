@@ -124,7 +124,8 @@ type TunnelDecapReturnModel struct {
 }
 
 type VnetModel struct {
-    Vnid int `json:"vnid"`
+    Vnid        int     `json:"vnid"`
+    AdvPrefix   string  `json:"advertise_prefix, omitempty"`
 }
 
 type VnetReturnModel struct {
@@ -323,7 +324,8 @@ func (m *TunnelDecapModel) UnmarshalJSON(data []byte) (err error) {
 
 func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
     required := struct {
-        Vnid *int `json:"vnid"`
+        Vnid        *int    `json:"vnid"`
+        AdvPrefix   *string `json:"advertise_prefix"`
     }{}
 
     err = json.Unmarshal(data, &required)
@@ -343,6 +345,13 @@ func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
     }
 
     m.Vnid = *required.Vnid
+    if required.AdvPrefix != nil {
+        if strings.Compare(*required.AdvPrefix, "true") == 0 || strings.Compare(*required.AdvPrefix, "false") == 0 {
+            m.AdvPrefix = *required.AdvPrefix
+        } else {
+            err = &InvalidFormatError{Field: "advertise_prefix", Message: "advertise_prefix must be either true or false"}
+        }
+    }
 
     return
 }

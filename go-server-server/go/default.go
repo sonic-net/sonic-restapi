@@ -989,20 +989,18 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
     defer pt.Delete()
     
     log.Printf("debug: vnet_id_str: "+vnet_id_str)
+    vnetParams := make(map[string]string)
+    vnetParams["vxlan_tunnel"] = "default_vxlan_tunnel"
+    vnetParams["vni"] = strconv.Itoa(attr.Vnid)
+    vnetParams["guid"] = vars["vnet_name"]
     if strings.Compare(vars["vnet_name"], "Vnet-default") == 0 {
-        pt.Set(vnet_id_str, map[string]string{
-            "vxlan_tunnel": "default_vxlan_tunnel",
-            "vni": strconv.Itoa(attr.Vnid),
-            "guid": vars["vnet_name"],
-            "scope": "default",
-        }, "SET", "")        
-    } else {
-        pt.Set(vnet_id_str, map[string]string{
-            "vxlan_tunnel": "default_vxlan_tunnel",
-            "vni": strconv.Itoa(attr.Vnid),
-            "guid": vars["vnet_name"],
-        }, "SET", "")           
+        vnetParams["scope"] = "default"
     }
+    if attr.AdvPrefix != "" {
+        vnetParams["advertise_prefix"] = attr.AdvPrefix
+    }
+    pt.Set(vnet_id_str, vnetParams, "SET", "")        
+
     w.WriteHeader(http.StatusNoContent)
 }
 
