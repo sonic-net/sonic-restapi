@@ -167,11 +167,11 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-							b'vxlan_tunnel': b'default_vxlan_tunnel',
-							b'vni': b'1001',
-							b'guid': b'vnet-guid-1',
-                            b'advertise_prefix': b'false'
-							}
+                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vni': b'1001',
+                    b'guid': b'vnet-guid-1',
+                    b'advertise_prefix': b'false'
+				}
         r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-2", {
             'vnid': 1002,
             'advertise_prefix': 'true'
@@ -180,11 +180,11 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '2')
         assert vrouter_table == {
-							b'vxlan_tunnel': b'default_vxlan_tunnel',
-							b'vni': b'1002',
-							b'guid': b'vnet-guid-2',
-                            b'advertise_prefix': b'true'
-							}
+                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vni': b'1002',
+                    b'guid': b'vnet-guid-2',
+                    b'advertise_prefix': b'true'
+                }
 
     def test_post_vrouter_default(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
