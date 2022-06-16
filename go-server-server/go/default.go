@@ -67,6 +67,51 @@ func ConfigResetStatusPost(w http.ResponseWriter, r *http.Request) {
     ConfigResetStatusGet(w, r)    
 }
 
+func ConfigBgpProfilePost(w http.ResponseWriter, r *http.Request) {
+    var attr BgpProfileModel
+    vars := mux.Vars(r)
+    db := &app_db_ops
+
+    ReadJSONBody(w, r, &attr)
+
+    pt := swsscommon.NewProducerStateTable(db.swss_db, BGP_PROFILE)
+    defer pt.Delete()
+
+    pt.Set(vars["profile_name"], map[string]string {
+                "community": attr.Community,
+        }, "SET", "")
+    w.WriteHeader(http.StatusNoContent)   
+}
+
+func ConfigBgpProfileGet(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    db := &app_db_ops
+
+    var bgp_profile_tb string
+
+    if *RunApiAsLocalTestDocker {
+        bgp_profile_tb = "_"+BGP_PROFILE
+    } else {
+        bgp_profile_tb = BGP_PROFILE
+    }
+
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, bgp_profile_tb, vars["profile_name"]))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if kv["community"] == "" {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"profile_name"}, "Invalid profile_name")
+        return
+    }
+
+    output := BgpProfileModel {
+            Community: kv["community"],
+        }
+    WriteRequestResponse(w, output, http.StatusOK)
+}
+
 func ConfigInterfaceVlanGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     db := &conf_db_ops
