@@ -72,6 +72,23 @@ class TestRestApiPositive:
         r = restapi_client.post_config_reset_status({'reset_status': 'boolean'})
         assert r.status_code == 400
 
+    # BGP Community
+    def test_bgp_comunity_post(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        r = restapi_client.post_bgp_community_string("bgp-profile", {'community': 'comm1'})
+        assert r.status_code == 204
+
+    def test_bgp_comunity_get(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        r = restapi_client.post_bgp_community_string("bgp-profile", {'community': 'comm1'})
+        assert r.status_code == 204
+        r = restapi_client.get_bgp_community_string("bgp-profile")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert j == {
+            'community': 'comm1'
+        }
+
     # Decap
     def test_post_config_tunnel_decap_tunnel_type(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
@@ -1139,6 +1156,12 @@ class TestRestApiPositive:
         
 class TestRestApiNegative():
     """Invalid input tests"""
+    # BGP Community
+    def test_bgp_comunity_get(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        r = restapi_client.get_bgp_community_string("bgp-profile")
+        assert r.status_code == 400
+
     # Decap:
     def test_delete_config_tunnel_decap_tunnel_type_not_vxlan(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client

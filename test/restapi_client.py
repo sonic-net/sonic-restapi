@@ -77,6 +77,13 @@ class RESTAPI_client:
     def post_config_reset_status(self, value):
         return self.post('v1/config/resetstatus', value)
 
+    # BGP Community String
+    def get_bgp_community_string(self, profile):
+        return self.get('v1/config/bgp/profile/{profile}'.format(profile=profile))
+
+    def post_bgp_community_string(self, profile, value):
+        return self.post('v1/config/bgp/profile/{profile}'.format(profile=profile), value)
+
     # VRF/VNET
     def post_config_vrouter_vrf_id(self, vrf_id, value):
         return self.post('v1/config/vrouter/{vrf_id}'.format(vrf_id=vrf_id), value)
