@@ -1252,6 +1252,15 @@ class TestRestApiNegative():
         j = json.loads(r.text)
         assert ['vnid'] == j['error']['fields']
 
+    def test_post_vrouter_with_advertise_prefix(self, setup_restapi_client):
+        _, _, configdb, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vxlan_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001,
+            'advertise_prefix': 'False'
+        })
+        assert r.status_code == 400
+
     # Vlan
     def test_post_vlan_which_exists(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
