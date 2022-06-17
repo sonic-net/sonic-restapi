@@ -19,7 +19,7 @@ type ConfigResetStatusModel struct {
 }
 
 type BgpProfileModel struct {
-    Community  string `json:"community"`
+    CommunityId  string `json:"community_id"`
 }
 
 type RouteModel struct {

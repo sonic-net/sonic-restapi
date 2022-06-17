@@ -75,18 +75,18 @@ class TestRestApiPositive:
     # BGP Community
     def test_bgp_comunity_post(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
-        r = restapi_client.post_bgp_community_string("bgp-profile", {'community': 'comm1'})
+        r = restapi_client.post_bgp_community_string("bgp-profile", {'community_id': 'comm1'})
         assert r.status_code == 204
 
     def test_bgp_comunity_get(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
-        r = restapi_client.post_bgp_community_string("bgp-profile", {'community': 'comm1'})
+        r = restapi_client.post_bgp_community_string("bgp-profile", {'community_id': 'comm1'})
         assert r.status_code == 204
         r = restapi_client.get_bgp_community_string("bgp-profile")
         assert r.status_code == 200
         j = json.loads(r.text)
         assert j == {
-            'community': 'comm1'
+            'community_id': 'comm1'
         }
 
     # Decap

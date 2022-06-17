@@ -78,7 +78,7 @@ func ConfigBgpProfilePost(w http.ResponseWriter, r *http.Request) {
     defer bgp_profile_t.Delete()
 
     bgp_profile_t.Set(vars["profile_name"], map[string]string {
-                "community": attr.Community,
+                        "community_id": attr.CommunityId,
         }, "SET", "")
     w.WriteHeader(http.StatusNoContent)   
 }
@@ -93,13 +93,13 @@ func ConfigBgpProfileGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    if kv["community"] == "" {
+    if kv["community_id"] == "" {
         WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"profile_name"}, "Invalid profile_name")
         return
     }
 
     output := BgpProfileModel {
-            Community: kv["community"],
+            CommunityId: kv["community_id"],
         }
     WriteRequestResponse(w, output, http.StatusOK)
 }
