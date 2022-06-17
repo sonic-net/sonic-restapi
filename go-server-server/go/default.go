@@ -904,6 +904,7 @@ func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
 
 func ConfigVrouterVrfIdGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &conf_db_ops
     vars := mux.Vars(r)
 
     _, kv, err := get_and_validate_vnet_id(w, vars["vnet_name"])
@@ -918,10 +919,19 @@ func ConfigVrouterVrfIdGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    output := VnetReturnModel{
+    vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
+    vnet_id_str := VNET_NAME_PREF + strconv.FormatUint(uint64(vnet_id), 10)
+    kv, err = GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vnet_id_str))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    output := VnetReturnModel {
         VnetName: vars["vnet_name"],
-        Attr: VnetModel{
+        Attr: VnetModel {
             Vnid: vnid,
+            AdvPrefix: kv["advertise_prefix"],
         },
     }
 
@@ -989,20 +999,18 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
     defer pt.Delete()
     
     log.Printf("debug: vnet_id_str: "+vnet_id_str)
+    vnetParams := make(map[string]string)
+    vnetParams["vxlan_tunnel"] = "default_vxlan_tunnel"
+    vnetParams["vni"] = strconv.Itoa(attr.Vnid)
+    vnetParams["guid"] = vars["vnet_name"]
     if strings.Compare(vars["vnet_name"], "Vnet-default") == 0 {
-        pt.Set(vnet_id_str, map[string]string{
-            "vxlan_tunnel": "default_vxlan_tunnel",
-            "vni": strconv.Itoa(attr.Vnid),
-            "guid": vars["vnet_name"],
-            "scope": "default",
-        }, "SET", "")        
-    } else {
-        pt.Set(vnet_id_str, map[string]string{
-            "vxlan_tunnel": "default_vxlan_tunnel",
-            "vni": strconv.Itoa(attr.Vnid),
-            "guid": vars["vnet_name"],
-        }, "SET", "")           
+        vnetParams["scope"] = "default"
     }
+    if attr.AdvPrefix != "" {
+        vnetParams["advertise_prefix"] = attr.AdvPrefix
+    }
+    pt.Set(vnet_id_str, vnetParams, "SET", "")        
+
     w.WriteHeader(http.StatusNoContent)
 }
 

@@ -156,6 +156,36 @@ class TestRestApiPositive:
         assert r.status_code == 409
         assert r.json()['error']['message'] == "Object already exists {\"vni\":\"1001\", \"vnet_name\":\"vnet-guid-1\"}"
 
+    def test_post_vrouter_with_advertise_prefix(self, setup_restapi_client):
+        _, _, configdb, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vxlan_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001,
+            'advertise_prefix': 'false'
+        })
+        assert r.status_code == 204
+
+        vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
+        assert vrouter_table == {
+                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vni': b'1001',
+                    b'guid': b'vnet-guid-1',
+                    b'advertise_prefix': b'false'
+				}
+        r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-2", {
+            'vnid': 1002,
+            'advertise_prefix': 'true'
+        })
+        assert r.status_code == 204
+
+        vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '2')
+        assert vrouter_table == {
+                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vni': b'1002',
+                    b'guid': b'vnet-guid-2',
+                    b'advertise_prefix': b'true'
+                }
+
     def test_post_vrouter_default(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
         restapi_client.post_generic_vxlan_tunnel()
@@ -1221,6 +1251,15 @@ class TestRestApiNegative():
 
         j = json.loads(r.text)
         assert ['vnid'] == j['error']['fields']
+
+    def test_post_vrouter_with_advertise_prefix(self, setup_restapi_client):
+        _, _, configdb, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vxlan_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001,
+            'advertise_prefix': 'False'
+        })
+        assert r.status_code == 400
 
     # Vlan
     def test_post_vlan_which_exists(self, setup_restapi_client):
