@@ -74,10 +74,10 @@ func ConfigBgpProfilePost(w http.ResponseWriter, r *http.Request) {
 
     ReadJSONBody(w, r, &attr)
 
-    pt := swsscommon.NewProducerStateTable(db.swss_db, BGP_PROFILE)
-    defer pt.Delete()
+    bgp_profile_t := swsscommon.NewTable(db.swss_db, BGP_PROFILE_TABLE)
+    defer bgp_profile_t.Delete()
 
-    pt.Set(vars["profile_name"], map[string]string {
+    bgp_profile_t.Set(vars["profile_name"], map[string]string {
                 "community": attr.Community,
         }, "SET", "")
     w.WriteHeader(http.StatusNoContent)   
@@ -87,15 +87,7 @@ func ConfigBgpProfileGet(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
     db := &app_db_ops
 
-    var bgp_profile_tb string
-
-    if *RunApiAsLocalTestDocker {
-        bgp_profile_tb = "_"+BGP_PROFILE
-    } else {
-        bgp_profile_tb = BGP_PROFILE
-    }
-
-    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, bgp_profile_tb, vars["profile_name"]))
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, BGP_PROFILE_TABLE, vars["profile_name"]))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
