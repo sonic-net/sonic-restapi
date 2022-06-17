@@ -249,6 +249,74 @@ paths:
           schema:
             $ref: '#/definitions/Error'
 #----------------------------------------------
+# BGP Community
+#----------------------------------------------
+  '/config/bgp/profile/{profile_name}':
+    get:
+      operationId: ConfigBgpProfileGet
+      summary: API for caller to get the Community ID for the given BGP Profile
+      description: Returns a JSON response with the Community ID
+      parameters:
+        - name: profile_name
+          in: path
+          required: true
+          type: string
+          description: BGP profile name
+      responses:
+        '200':
+          description: OK
+          schema:
+            type: object
+            properties:
+              community_id: 
+                type: string
+                description: BGP community ID
+            $ref: '#/definitions/BgpProfile'
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+    post:
+      summary: API for caller to set the Community ID for the given BGP Profile
+      operationId: ConfigBgpProfilePost
+      description: Sets the Community ID for the provided BGP profile in the APP DB
+      parameters:
+        - name: profile_name
+          in: path
+          required: true
+          type: string
+          description: BGP profile name
+        - name: community_id
+          in: path
+          required: true
+          type: string
+          description: Community ID for the BGP profile
+          schema:
+            $ref: '#/definitions/BgpProfile'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Invalid authentication credentials
+          schema:
+            $ref: '#/definitions/Error'
+        '500':
+          description: Internal service error
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: Maintanence mode
+          schema:
+            $ref: '#/definitions/Error'
+#----------------------------------------------
 # Virtual router object
 #----------------------------------------------
   '/config/vrouter/{vnet_id}':
