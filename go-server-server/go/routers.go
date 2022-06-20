@@ -320,6 +320,13 @@ var routes = Routes{
         ConfigBgpProfileGet,
     },
 
+    Route{
+        "ConfigBgpProfileDelete",
+        "DELETE",
+        "/v1/config/bgp/profile/{profile_name}",
+        ConfigBgpProfileDelete,
+    },
+
     // Required to run Unit tests
     Route{
         "InMemConfigRestart",
