@@ -54,6 +54,7 @@ const CFG_ROUTE_TUN_TB  string = "VNET_ROUTE_TUNNEL"
 const CFG_LOCAL_ROUTE_TB    string = "VNET_ROUTE"
 const CRM_TB            string = "CRM"
 const STATIC_ROUTE_TB   string = "STATIC_ROUTE"
+const BGP_PROFILE_TABLE       string = "BGP_PROFILE_TABLE"
 
 // DB Helper constants
 const VNET_NAME_PREF  string = "Vnet"

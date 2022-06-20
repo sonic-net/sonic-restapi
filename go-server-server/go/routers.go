@@ -306,6 +306,27 @@ var routes = Routes{
         StateInterfaceGet,
     },
 
+    Route{
+        "ConfigBgpProfilePost",
+        "POST",
+        "/v1/config/bgp/profile/{profile_name}",
+        ConfigBgpProfilePost,
+    },
+
+    Route{
+        "ConfigBgpProfileGet",
+        "GET",
+        "/v1/config/bgp/profile/{profile_name}",
+        ConfigBgpProfileGet,
+    },
+
+    Route{
+        "ConfigBgpProfileDelete",
+        "DELETE",
+        "/v1/config/bgp/profile/{profile_name}",
+        ConfigBgpProfileDelete,
+    },
+
     // Required to run Unit tests
     Route{
         "InMemConfigRestart",

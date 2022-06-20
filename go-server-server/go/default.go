@@ -67,6 +67,65 @@ func ConfigResetStatusPost(w http.ResponseWriter, r *http.Request) {
     ConfigResetStatusGet(w, r)    
 }
 
+func ConfigBgpProfilePost(w http.ResponseWriter, r *http.Request) {
+    var attr BgpProfileModel
+    vars := mux.Vars(r)
+    db := &app_db_ops
+
+    ReadJSONBody(w, r, &attr)
+
+    bgp_profile_t := swsscommon.NewTable(db.swss_db, BGP_PROFILE_TABLE)
+    defer bgp_profile_t.Delete()
+
+    bgp_profile_t.Set(vars["profile_name"], map[string]string {
+                        "community_id": attr.CommunityId,
+        }, "SET", "")
+    w.WriteHeader(http.StatusNoContent)   
+}
+
+func ConfigBgpProfileDelete(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    db := &app_db_ops
+
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, BGP_PROFILE_TABLE, vars["profile_name"]))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if kv["community_id"] == "" {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"profile_name"}, "Invalid profile_name")
+        return
+    }
+
+    bgp_profile_t := swsscommon.NewTable(db.swss_db, BGP_PROFILE_TABLE)
+    defer bgp_profile_t.Delete()
+
+    bgp_profile_t.Del(vars["profile_name"], "DEL", "")
+    w.WriteHeader(http.StatusNoContent)   
+}
+
+func ConfigBgpProfileGet(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    db := &app_db_ops
+
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, BGP_PROFILE_TABLE, vars["profile_name"]))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if kv["community_id"] == "" {
+        WriteRequestError(w, http.StatusBadRequest, "Malformed arguments for API call", []string{"profile_name"}, "Invalid profile_name")
+        return
+    }
+
+    output := BgpProfileModel {
+        CommunityId: kv["community_id"],
+    }
+    WriteRequestResponse(w, output, http.StatusOK)
+}
+
 func ConfigInterfaceVlanGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     db := &conf_db_ops

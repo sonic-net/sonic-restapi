@@ -18,6 +18,10 @@ type ConfigResetStatusModel struct {
     ResetStatus      string `json:"reset_status,omitempty"`
 }
 
+type BgpProfileModel struct {
+    CommunityId  string `json:"community_id"`
+}
+
 type RouteModel struct {
     Cmd         string `json:"cmd,omitempty"`
     IPPrefix    string `json:"ip_prefix"`
