@@ -121,8 +121,8 @@ func ConfigBgpProfileGet(w http.ResponseWriter, r *http.Request) {
     }
 
     output := BgpProfileModel {
-            CommunityId: kv["community_id"],
-        }
+        CommunityId: kv["community_id"],
+    }
     WriteRequestResponse(w, output, http.StatusOK)
 }
 
