@@ -89,6 +89,17 @@ class TestRestApiPositive:
             'community_id': 'comm1'
         }
 
+    def test_bgp_comunity_delete(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        r = restapi_client.post_bgp_community_string("bgp-profile", {'community_id': 'comm1'})
+        assert r.status_code == 204
+        r = restapi_client.get_bgp_community_string("bgp-profile")
+        assert r.status_code == 200
+        r = restapi_client.delete_bgp_community_string("bgp-profile")
+        assert r.status_code == 204
+        r = restapi_client.get_bgp_community_string("bgp-profile")
+        assert r.status_code == 400
+
     # Decap
     def test_post_config_tunnel_decap_tunnel_type(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
@@ -1160,6 +1171,11 @@ class TestRestApiNegative():
     def test_bgp_comunity_get(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         r = restapi_client.get_bgp_community_string("bgp-profile")
+        assert r.status_code == 400
+
+    def test_bgp_comunity_delete(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        r = restapi_client.delete_bgp_community_string("bgp-profile")
         assert r.status_code == 400
 
     # Decap:
