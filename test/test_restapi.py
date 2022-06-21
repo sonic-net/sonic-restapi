@@ -805,7 +805,7 @@ class TestRestApiPositive:
         assert route_table == {b'endpoint' : route['nexthop'],
                                        b'vni': str(route['vnid']), 
                                        b'mac_address' : route['mac_address'],
-                                       b'nexthop_monitor': route['endpoint_monitor']
+                                       b'nexthop_monitor': route['nexthop_monitor']
                                       }
         del route['cmd']
         routes = list()
