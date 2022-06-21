@@ -239,6 +239,16 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
             err = &InvalidFormatError{Field: "nexthop_monitor", Message: "Invalid IP address"}
             return
         }
+        if required.NextHop == nil {
+            err = &InvalidFormatError{Field: "nexthop_monitor", Message: "nexthop_monitor needs to be used along with nexthop"}
+            return
+        }
+        nexthops := strings.Split(m.NextHop, ",")
+        nexthop_mon := strings.Split(*required.NextHopMonitor, ",")
+        if len(nexthops) != len(nexthop_mon) {
+            err = &InvalidFormatError{Field: "nexthop_monitor", Message: "there must be equal number of nexthop(s) and nexthop_monitor(s)"}
+            return            
+        }
         m.NextHopMonitor = *required.NextHopMonitor
     }
 

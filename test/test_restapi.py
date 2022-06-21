@@ -1599,6 +1599,23 @@ class TestRestApiNegative():
         assert sorted(routes) == sorted(j['failed'])
         restapi_client.check_routes_dont_exist_in_tun_tb(1, routes)
 
+    def test_patch_update_routes_with_optional_args(self, setup_restapi_client):
+        db, _, _, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vlan_and_deps()
+        route = {
+                    'cmd':'add',
+                    'ip_prefix':'10.2.1.0/24',
+                    'nexthop':'192.168.2.1'
+                }
+        route['vnid'] = 5000
+        route['nexthop_monitor'] = '100.3.152.32,200.3.152.32'
+        route['cmd'] = 'add'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 400
+        del route['nexthop']
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 400
+
     # Operations
     # PingVRF
     def test_post_ping_invalid(self, setup_restapi_client):
