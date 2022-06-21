@@ -1104,6 +1104,7 @@ class TestRestApiPositive:
         routes.append({'cmd':'add',
                             'ip_prefix':'70.1.2.0/24',
                             'nexthop':'192.168.2.200,192.168.2.201,192.168.2.202',
+                            'nexthop_monitor':'192.168.3.200,192.168.3.201,192.168.3.202',
                             'weight':'10,20',
                             'profile':'profile1'})
 
@@ -1608,8 +1609,11 @@ class TestRestApiNegative():
                     'nexthop':'192.168.2.1'
                 }
         route['vnid'] = 5000
-        route['nexthop_monitor'] = '100.3.152.32,200.3.152.32'
+        route['nexthop_monitor'] = '700.3.152.327'
         route['cmd'] = 'add'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 400
+        route['nexthop_monitor'] = '100.3.152.32,200.3.152.32'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
         del route['nexthop']
