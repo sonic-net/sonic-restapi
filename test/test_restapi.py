@@ -794,7 +794,6 @@ class TestRestApiPositive:
         assert r.status_code == 200
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes)
-
         # Endpoint Monitor optional arg
         route['vnid'] = 5000
         route['nexthop_monitor'] = '100.3.152.32,200.3.152.32'
@@ -805,7 +804,7 @@ class TestRestApiPositive:
         assert route_table == {b'endpoint' : route['nexthop'],
                                        b'vni': str(route['vnid']), 
                                        b'mac_address' : route['mac_address'],
-                                       b'nexthop_monitor': route['nexthop_monitor']
+                                       b'endpoint_monitor': route['nexthop_monitor']
                                       }
         del route['cmd']
         routes = list()

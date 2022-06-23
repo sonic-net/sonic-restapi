@@ -1260,7 +1260,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             if cur_route != nil {
                 if r.IfName == "" {
                     if cur_route["endpoint"] != r.NextHop ||
-                        cur_route["nexthop_monitor"] != r.NextHopMonitor ||
+                        cur_route["endpoint_monitor"] != r.NextHopMonitor ||
                         cur_route["mac_address"] != r.MACAddress ||
                         cur_route["vni"] != strconv.Itoa(r.Vnid) ||
                         cur_route["weight"] != r.Weight ||
@@ -1297,7 +1297,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 }
             }
             if r.NextHopMonitor != "" {
-                route_map["nexthop_monitor"] = r.NextHopMonitor
+                route_map["endpoint_monitor"] = r.NextHopMonitor
             }
             if r.Weight != "" {
                 route_map["weight"] = r.Weight
@@ -1408,7 +1408,7 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 route_map["blackhole"] = "true"
             }
             if r.NextHopMonitor != "" {
-                route_map["nexthop_monitor"] = r.NextHopMonitor
+                route_map["endpoint_monitor"] = r.NextHopMonitor
             }
             if r.Weight != "" {
                 route_map["weight"] = r.Weight
@@ -1474,7 +1474,7 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
             routeModel.IfName = ifname
         }
 
-        if nexthop_monitor, ok := kvp["nexthop_monitor"]; ok {
+        if nexthop_monitor, ok := kvp["endpoint_monitor"]; ok {
             routeModel.NextHopMonitor = nexthop_monitor
         }
         
