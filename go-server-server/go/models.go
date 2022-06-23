@@ -23,17 +23,18 @@ type BgpProfileModel struct {
 }
 
 type RouteModel struct {
-    Cmd         string `json:"cmd,omitempty"`
-    IPPrefix    string `json:"ip_prefix"`
-    IfName      string `json:"ifname,omitempty"`
-    NextHopType string `json:"nexthop_type,omitempty"`
-    NextHop     string `json:"nexthop"`
-    MACAddress  string `json:"mac_address,omitempty"`
-    Vnid        int    `json:"vnid,omitempty"`
-    Weight      string `json:"weight,omitempty"`
-    Profile     string `json:"profile,omitempty"`
-    Error_code  int    `json:"error_code,omitempty"`
-    Error_msg   string `json:"error_msg,omitempty"`
+    Cmd            string `json:"cmd,omitempty"`
+    IPPrefix       string `json:"ip_prefix"`
+    IfName         string `json:"ifname,omitempty"`
+    NextHopType    string `json:"nexthop_type,omitempty"`
+    NextHop        string `json:"nexthop"`
+    NextHopMonitor string `json:"nexthop_monitor,omitempty"`
+    MACAddress     string `json:"mac_address,omitempty"`
+    Vnid           int    `json:"vnid,omitempty"`
+    Weight         string `json:"weight,omitempty"`
+    Profile        string `json:"profile,omitempty"`
+    Error_code     int    `json:"error_code,omitempty"`
+    Error_msg      string `json:"error_msg,omitempty"`
 }
 
 type RouteReturnModel struct {
@@ -182,16 +183,17 @@ func (e *InvalidFormatError) Error() string {
 
 func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     required := struct {
-        Cmd         *string `json:"cmd"`
-        IPPrefix    *string `json:"ip_prefix"`
-        IfName      *string `json:"ifname"`
-        NextHopType *string `json:"nexthop_type"`
-        NextHop     *string `json:"nexthop"`
-        MACAddress  *string `json:"mac_address"`
-        Vnid        int     `json:"vnid"`
-        Weight      *string `json:"weight"`
-        Profile     *string `json:"profile"`
-        Error       string  `json:"error"`
+        Cmd            *string `json:"cmd"`
+        IPPrefix       *string `json:"ip_prefix"`
+        IfName         *string `json:"ifname"`
+        NextHopType    *string `json:"nexthop_type"`
+        NextHop        *string `json:"nexthop"`
+        NextHopMonitor *string `json:"nexthop_monitor"`
+        MACAddress     *string `json:"mac_address"`
+        Vnid           int     `json:"vnid"`
+        Weight         *string `json:"weight"`
+        Profile        *string `json:"profile"`
+        Error          string  `json:"error"`
     }{}
 
     err = json.Unmarshal(data, &required)
@@ -230,6 +232,20 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
             return
         }
         m.NextHop = *required.NextHop
+    }
+
+    if required.NextHopMonitor != nil {
+        if !strings.Contains(*required.NextHopMonitor, ",") && !IsValidIPBoth(*required.NextHopMonitor) {
+            err = &InvalidFormatError{Field: "nexthop_monitor", Message: "Invalid IP address"}
+            return
+        }
+        nexthops := strings.Split(m.NextHop, ",")
+        nexthop_mon := strings.Split(*required.NextHopMonitor, ",")
+        if len(nexthops) != len(nexthop_mon) {
+            err = &InvalidFormatError{Field: "nexthop_monitor", Message: "there must be equal number of nexthop(s) and nexthop_monitor(s)"}
+            return            
+        }
+        m.NextHopMonitor = *required.NextHopMonitor
     }
 
     if required.IfName == nil && required.MACAddress != nil {

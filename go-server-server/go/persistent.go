@@ -309,6 +309,10 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
             routeModel.MACAddress = mac
         }
 
+        if nexthop_monitor, ok := kvp["endpoint_monitor"]; ok {
+            routeModel.NextHopMonitor = nexthop_monitor
+        }
+        
         if weight, ok := kvp["weight"]; ok {
             routeModel.Weight = weight
         }
@@ -332,6 +336,10 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
             routeModel.IfName = ifname
         }
 
+        if nexthop_monitor, ok := kvp["endpoint_monitor"]; ok {
+            routeModel.NextHopMonitor = nexthop_monitor
+        }
+        
         if weight, ok := kvp["weight"]; ok {
             routeModel.Weight = weight
         }
