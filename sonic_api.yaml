@@ -2647,9 +2647,13 @@ definitions:
       nexthop:
         type: string
         description: >-
-          ip address of nexthop. 'comma' seperated list for ecmp (equal cost multipath) routes; User can optionally specify emtpy '' strings for positional arguments.
+          ip address of nexthop. 'comma' separated list for ecmp (equal cost multipath) routes; User can optionally specify emtpy '' strings for positional arguments.
           When nexthop_type is 'ip', then nexthop is the CE IP address;
           When nexthop_type is 'vxlan_tunnel', the next hop is the PA address of the customer VM
+      nexthop_monitor:
+        type: string
+        description: >-
+        ip address of the nexthop monitor. 'comma' separated list, must have the same count as nexthop field.
       mac_address:
         type: string
         description: mac_address of the target VM
