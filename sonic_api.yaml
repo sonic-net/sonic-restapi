@@ -299,8 +299,6 @@ paths:
           required: true
           type: string
           description: Community ID for the BGP profile
-          schema:
-            $ref: '#/definitions/BgpProfile'
       responses:
         '200':
           description: OK
