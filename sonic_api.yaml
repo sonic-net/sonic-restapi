@@ -266,11 +266,6 @@ paths:
         '200':
           description: OK
           schema:
-            type: object
-            properties:
-              community_id: 
-                type: string
-                description: BGP community ID
             $ref: '#/definitions/BgpProfile'
         '401':
           description: Invalid authentication credentials
@@ -2744,6 +2739,12 @@ definitions:
       ip_addr:
         type: string
         description: IP address of directly attached device to the switch
+  BgpProfile:
+    type: object
+    properties:
+      community_id:
+        type: string
+        description: BGP community ID
   BfdEntry:
     type: object
     properties:
