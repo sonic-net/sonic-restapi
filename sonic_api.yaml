@@ -588,7 +588,7 @@ paths:
       description: Returns attributes for vlans of requested vnet_id. If the vnet_id does not exist, it returns a '404' error.
       parameters:
         - name: vnet_id
-          in: path
+          in: query
           type: string
           required: true
           description: vnet_id containing the vnet guid as a string
