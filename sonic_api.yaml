@@ -2654,6 +2654,9 @@ definitions:
         type: string
         description: >-
         ip address of the nexthop monitor. 'comma' separated list, must have the same count as nexthop field.
+      profile:
+        type: string
+        description: name of bgp profile for this route
       mac_address:
         type: string
         description: mac_address of the target VM
