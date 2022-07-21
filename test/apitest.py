@@ -900,17 +900,17 @@ class ra_client_positive_tests(rest_api_client):
         self.assertEqual(r.status_code, 204)
         routes = []
         for i in range (1,7):
-		    routes.append({'cmd':'add',
+            routes.append({'cmd':'add',
                             'ip_prefix':'10.5.'+str(i)+'.0/'+str(24),
                             'nexthop':'34.53.'+str(i)+'.0',
                             'vnid': 1 + i%5,
                             'mac_address':'00:08:aa:bb:cd:'+hex(15+i)[2:]})
-		    routes.append({'cmd':'add',
+            routes.append({'cmd':'add',
                             'ip_prefix':'10.5.'+str(i)+'.0/'+str(30),
                             'nexthop':'34.53.'+str(i)+'.0',
                             'vnid': 1 + i%5,
                             'mac_address':'00:08:aa:bb:cd:'+hex(15+i)[2:]})
-		    routes.append({'cmd':'add',
+            routes.append({'cmd':'add',
                             'ip_prefix':'10.5.'+str(i)+'.1/'+str(32),
                             'nexthop':'34.53.'+str(i)+'.0',
                             'vnid': 1 + i%5,
@@ -951,15 +951,15 @@ class ra_client_positive_tests(rest_api_client):
         self.assertEqual(r.status_code, 204)
         routes = []
         for i in range (1,7):
-		    routes.append({'cmd':'add',
+            routes.append({'cmd':'add',
                             'ip_prefix':'10.5.'+str(i)+'.0/'+str(24),
                             'nexthop':'34.53.'+str(i)+'.0',
                             'ifname': 'Vlan3005'})
-		    routes.append({'cmd':'add',
+            routes.append({'cmd':'add',
                             'ip_prefix':'10.5.'+str(i)+'.0/'+str(30),
                             'nexthop':'34.53.'+str(i)+'.0',
                             'ifname': 'Vlan3005'})
-		    routes.append({'cmd':'add',
+            routes.append({'cmd':'add',
                             'ip_prefix':'10.5.'+str(i)+'.1/'+str(32),
                             'nexthop':'34.53.'+str(i)+'.0',
                             'ifname': 'Vlan3005'})
