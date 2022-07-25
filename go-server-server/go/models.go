@@ -233,13 +233,12 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         }
         m.NextHop = *required.NextHop
     }
-
+    nexthops := strings.Split(m.NextHop, ",")
     if required.NextHopMonitor != nil {
         if !strings.Contains(*required.NextHopMonitor, ",") && !IsValidIPBoth(*required.NextHopMonitor) {
             err = &InvalidFormatError{Field: "nexthop_monitor", Message: "Invalid IP address"}
             return
         }
-        nexthops := strings.Split(m.NextHop, ",")
         nexthop_mon := strings.Split(*required.NextHopMonitor, ",")
         if len(nexthops) != len(nexthop_mon) {
             err = &InvalidFormatError{Field: "nexthop_monitor", Message: "there must be equal number of nexthop(s) and nexthop_monitor(s)"}
@@ -249,11 +248,19 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     }
 
     if required.IfName == nil && required.MACAddress != nil {
-        _, err = net.ParseMAC(*required.MACAddress)
+        mac_addresses := strings.Split(*required.MACAddress, ",")
+        if len(nexthops) != len(mac_addresses) {
+            err = &InvalidFormatError{Field: "mac_address", Message: "there must be equal number of nexthop(s) and mac_address(es)"}
+            return            
+        }
 
-        if err != nil {
-            err = &InvalidFormatError{Field: "mac_address", Message: "Invalid MAC address"}
-            return
+        for _, mac := range mac_address {
+            _, err = net.ParseMAC(mac)
+
+            if err != nil {
+                err = &InvalidFormatError{Field: "mac_address", Message: "Invalid MAC address"}
+                return
+            }   
         }
         m.MACAddress = *required.MACAddress
     }

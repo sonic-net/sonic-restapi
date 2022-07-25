@@ -778,7 +778,7 @@ class TestRestApiPositive:
 
         # Mac address Optional arg
         del route['vnid']
-        route['mac_address'] = '00:08:aa:bb:cd:ef'
+        route['mac_address'] = '00:08:aa:bb:cc:dd,00:08:aa:bb:cd:ef'
         route['cmd'] = 'add'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
@@ -794,6 +794,7 @@ class TestRestApiPositive:
         assert r.status_code == 200
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes)
+
         # Endpoint Monitor optional arg
         route['vnid'] = 5000
         route['nexthop_monitor'] = '100.3.152.32,200.3.152.32'
@@ -1609,10 +1610,18 @@ class TestRestApiNegative():
                 }
         route['vnid'] = 5000
         route['nexthop_monitor'] = '700.3.152.327'
-        route['cmd'] = 'add'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
         route['nexthop_monitor'] = '100.3.152.32,200.3.152.32'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 400
+        route['mac_address'] = '00:08:aa:bb:cc:dd'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 400
+        route['mac_address'] = '00:08:xx:bb:cc:dd,00:08:yy:bb:cd:ef'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 400
+        route['mac_address'] = '0008aabbccdd,0008aabbcdef'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
         del route['nexthop']

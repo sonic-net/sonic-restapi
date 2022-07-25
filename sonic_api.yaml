@@ -195,7 +195,7 @@ paths:
           required: true
           schema:
             $ref: '#/definitions/ResetStatusEntry'
-          description: The value of configuration reset status. Only true or false accepted
+          description: The value of configuration reset status. Only "true" or "false" string values accepted
       responses:
         '200':
           description: OK
@@ -2854,5 +2854,5 @@ definitions:
       - reset_status
     properties:
       reset_status:
-        type: boolean
+        type: string
         description: configuration reset status.
