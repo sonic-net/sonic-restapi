@@ -254,7 +254,7 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
             return            
         }
 
-        for _, mac := range mac_address {
+        for _, mac := range mac_addresses {
             _, err = net.ParseMAC(mac)
 
             if err != nil {
