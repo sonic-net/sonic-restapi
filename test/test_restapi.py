@@ -1615,13 +1615,14 @@ class TestRestApiNegative():
         route['nexthop_monitor'] = '100.3.152.32,200.3.152.32'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
-        route['mac_address'] = '00:08:aa:bb:cc:dd'
+        del route['nexthop_monitor']
+        route['mac_address'] = '00:08:xx:bb:cc:dd'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
-        route['mac_address'] = '00:08:xx:bb:cc:dd,00:08:yy:bb:cd:ef'
+        route['mac_address'] = '00:08:aa:bb:cc:dd,00:08:aa:bb:cd:ef'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
-        route['mac_address'] = '0008aabbccdd,0008aabbcdef'
+        route['mac_address'] = '0008aabbccdd'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
         del route['nexthop']
