@@ -1459,6 +1459,12 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+func ConfigVrfVrfIdRouteExpiryGet(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    vars := mux.Vars(r)
+    vrf_id_str := vars["vrf_id"]
+}
+
 func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     vars := mux.Vars(r)
