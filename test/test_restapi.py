@@ -1331,6 +1331,7 @@ class TestRestApiNegative():
 
         j = json.loads(r.text)
         assert RESRC_EXISTS == j['error']['sub-code']
+        assert j['error']['message'] == "Object already exists: {\"vlan_name\":\"2\", \"vnet_id\":\"vnet-guid-1\"}"
 
     def test_vlan_not_created_all_verbs(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
