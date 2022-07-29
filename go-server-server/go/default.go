@@ -280,8 +280,18 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
         return
     }
     if vlan_kv != nil {
+        vlan_if_kv, _ := GetKVs(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB, vlan_name))
+        if vlan_if_kv != nil {
+            if vnet_name, ok := vlan_if_kv["vnet_name"]; ok {
+                vnet_kv, _ := GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vnet_name))
+                WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+                    "Object already exists: {\"vlan_name\":\"" + vlan_name + "\", \"vnet_id\":\"" + 
+                    vnet_kv["guid"] +"\"}", []string{}, "")
+                return
+            }
+        }
         WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
-              "Object already exists: " + vlan_name, []string{}, "")
+            "Object already exists: " + vlan_name, []string{}, "")
         return
     }
 
