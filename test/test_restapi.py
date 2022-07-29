@@ -1332,6 +1332,20 @@ class TestRestApiNegative():
         j = json.loads(r.text)
         assert RESRC_EXISTS == j['error']['sub-code']
 
+    def test_post_conflicting_vlan(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vlan_and_deps()
+        r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-2", {
+            'vnid': 2001
+        })
+        assert r.status_code == 204       
+        r = restapi_client.post_config_vlan(2, {'vnet_id' : 'vnet-guid-2', 'ip_prefix' : '10.1.2.0/24'})
+        assert r.status_code == 409
+
+        j = json.loads(r.text)
+        assert RESRC_EXISTS == j['error']['sub-code']
+        assert j['error']['message'] == "Object already exists: {\"vlan_name\":\"Vlan2\", \"vnet_id\":\"vnet-guid-1\"}"
+
     def test_vlan_not_created_all_verbs(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         # Get
