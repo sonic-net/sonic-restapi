@@ -302,40 +302,37 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
                    "VRF/VNET must be created prior to adding it to the VLAN interface" , []string{}, "")
              return
         }
-    }
-    /*
-    if advertise_prefix is set for the Vnet then,
-    only all /18 and above for v4 and /64 only for v6
-    */
-    if attr.IPPrefix != "" {
-        vlan_intf_kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VLAN_INTF_TB, vlan_name))
-        if err != nil {
-            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-            return
-        }
-        kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vlan_intf_kv["vnet_name"]))
-        if err != nil {
-            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-            return
-        }
-        if adv_prefix, ok := kv["advertise_prefix"]; ok {
-            if adv_prefix == "true" {
-                ip, network, _ := net.ParseCIDR(attr.IPPrefix)
-                prefix_len, _ := network.Mask.Size()
-                if isV4orV6(ip.String()) == 4 {
-                    if prefix_len < 18 {
-                        WriteRequestError(w, http.StatusBadRequest, "Prefix length lesser than 18 not supported", []string{}, "")
-                        return                        
-                    }
-                } else {
-                    if prefix_len != 64 {
-                        WriteRequestError(w, http.StatusBadRequest, "Prefix length other than than 64 not supported", []string{}, "")
-                        return                        
+        /*
+        if advertise_prefix is set for the Vnet then,
+        only all /18 and above for v4 and /64 only for v6
+        */
+        if attr.IPPrefix != "" {
+            vnet_id_str = VNET_NAME_PREF + strconv.FormatUint(uint64(vnet_id), 10)
+            kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vnet_id_str))
+            if err != nil {
+                WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+                return
+            }
+            if adv_prefix, ok := kv["advertise_prefix"]; ok {
+                if adv_prefix == "true" {
+                    ip, network, _ := net.ParseCIDR(attr.IPPrefix)
+                    prefix_len, _ := network.Mask.Size()
+                    if isV4orV6(ip.String()) == 4 {
+                        if prefix_len < 18 {
+                            WriteRequestError(w, http.StatusBadRequest, "Prefix length lesser than 18 not supported", []string{}, "")
+                            return                        
+                        }
+                    } else {
+                        if prefix_len != 64 {
+                            WriteRequestError(w, http.StatusBadRequest, "Prefix length other than 64 not supported", []string{}, "")
+                            return                        
+                        }
                     }
                 }
             }
-        }    
+        }
     }
+
      /* Creation sequence:  1. Vlan, 2. Vlan Interface table, 3. Vlan Interface IP prefix table 4. Add local subnet route */
      /* Create 1 */
      vlan_pt := swsscommon.NewTable(db.swss_db, VLAN_TB)
