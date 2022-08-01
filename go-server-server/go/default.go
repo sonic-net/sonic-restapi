@@ -322,7 +322,7 @@ func ConfigInterfaceVlanPost(w http.ResponseWriter, r *http.Request) {
             if adv_prefix == "true" {
                 ip, network, _ := net.ParseCIDR(attr.IPPrefix)
                 prefix_len, _ := network.Mask.Size()
-                if isV4orV6(ip) == 4 {
+                if isV4orV6(ip.String()) == 4 {
                     if prefix_len < 18 {
                         WriteRequestError(w, http.StatusBadRequest, "Prefix length lesser than 18 not supported", []string{}, "")
                         return                        

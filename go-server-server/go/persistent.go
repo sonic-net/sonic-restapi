@@ -4,7 +4,6 @@ import (
     "fmt"
     "github.com/go-redis/redis/v7"
     "log"
-    "net"
     "strconv"
     "strings"
     "swsscommon"
@@ -492,12 +491,4 @@ func generateDBTableKey(separator string, vars ...string) (string) {
          }
     }
     return buf.String()
-}
-
-func isV4orV6(ipaddr string) (int) {
-    ip, _ := net.ParseIP(string)
-    if ip.To4() != nil {
-        return 4
-    }
-    return 6
 }
