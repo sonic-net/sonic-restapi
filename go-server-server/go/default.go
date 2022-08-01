@@ -1182,6 +1182,7 @@ func ConfigVrouterVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
 func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     db := &app_db_ops
+    confdb := &conf_db_ops
     vars := mux.Vars(r)
     var rt_tb_key string
 
@@ -1209,7 +1210,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     defer tunnel_pt.Delete()
     local_pt := swsscommon.NewProducerStateTable(db.swss_db, LOCAL_ROUTE_TB)
     defer local_pt.Delete()
-
+    log.Printf("**debug: vnet_id_str: "+vnet_id_str)
     for _, r := range attr {
 
         /*
@@ -1229,7 +1230,29 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             failed = append(failed, r)
             continue
         }
-
+        kv, err := GetKVs(confdb.db_num, generateDBTableKey(confdb.separator, VNET_TB, vnet_id_str))
+        if err != nil {
+            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+            return
+        }
+        if adv_prefix, ok := kv["advertise_prefix"]; ok {
+            if adv_prefix == "true" {
+                prefix_len, _ := network.Mask.Size()
+                if isV4orV6(ip.String()) == 4 {
+                    if prefix_len < 18 {
+                        r.Error_msg = "Prefix length lesser than 18 is not supported"
+                        failed = append(failed, r)
+                        continue                        
+                    }
+                } else {
+                    if prefix_len != 64 {
+                        r.Error_msg = "Prefix length other than 64 is not supported"
+                        failed = append(failed, r)
+                        continue                          
+                    }
+                }
+            }
+        }        
         if r.IfName == "" {
             pt = tunnel_pt
             rt_tb_name = ROUTE_TUN_TB
