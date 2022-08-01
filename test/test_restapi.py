@@ -1346,6 +1346,24 @@ class TestRestApiNegative():
         assert RESRC_EXISTS == j['error']['sub-code']
         assert j['error']['message'] == "Object already exists: {\"vlan_name\":\"Vlan2\", \"vnet_id\":\"vnet-guid-1\"}"
 
+    def test_post_vlan_with_unsupported_prefix(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vxlan_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001,
+            'advertise_prefix': 'true'
+        })
+        assert r.status_code == 204
+
+        r = restapi_client.post_config_vlan(2, {'vnet_id' : 'vnet-guid-1', 'ip_prefix' : '10.1.2.0/16'})
+        assert r.status_code == 400
+        j = json.loads(r.text)
+        assert j['error']['message'] == "Prefix length lesser than 18 not supported"
+        r = restapi_client.post_config_vlan(2, {'vnet_id' : 'vnet-guid-1', 'ip_prefix' : '2006:5820:4861::8888/32'})
+        assert r.status_code == 400
+        j = json.loads(r.text)
+        assert j['error']['message'] == "Prefix length other than 64 not supported"
+
     def test_vlan_not_created_all_verbs(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         # Get
