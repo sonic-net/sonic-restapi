@@ -1613,6 +1613,31 @@ class TestRestApiNegative():
         assert sorted(routes) == sorted(j['failed'])
         restapi_client.check_routes_dont_exist_in_tun_tb(1, routes)
 
+    def test_patch_update_routes_unsupported_ipprefix(sef, setup_restapi_client):
+        db, _, _, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vxlan_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-1", {
+            'vnid': 1001,
+            'advertise_prefix': 'true'
+        })
+        assert r.status_code == 204
+        route = {
+                    'cmd':'add',
+                    'ip_prefix':'10.2.0.0/16',
+                    'nexthop':'192.168.2.1'
+                }
+        route['vnid'] = 1001
+        route['cmd'] = 'add'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 207
+        j = json.loads(r.text)
+        assert j['failed'][0]['error_msg'] == "Prefix length lesser than 18 is not supported"
+        route['ip_prefix'] = '2006:5820::/32'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 207
+        j = json.loads(r.text)
+        assert j['failed'][0]['error_msg'] == "Prefix length other than 64 is not supported"        
+
     def test_patch_update_routes_with_optional_args(self, setup_restapi_client):
         db, _, _, restapi_client = setup_restapi_client
         restapi_client.post_generic_vlan_and_deps()
