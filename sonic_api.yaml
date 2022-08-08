@@ -266,11 +266,6 @@ paths:
         '200':
           description: OK
           schema:
-            type: object
-            properties:
-              community_id: 
-                type: string
-                description: BGP community ID
             $ref: '#/definitions/BgpProfile'
         '401':
           description: Invalid authentication credentials
@@ -294,11 +289,10 @@ paths:
           required: true
           type: string
           description: BGP profile name
-        - name: community_id
-          in: path
+        - name: bgpprofile
+          in: body
           required: true
-          type: string
-          description: Community ID for the BGP profile
+          description: The BGP profile
           schema:
             $ref: '#/definitions/BgpProfile'
       responses:
@@ -675,16 +669,7 @@ paths:
         '200':
           description: OK
           schema:
-            type: object
-            properties:
-              attr:
-                type: array
-                items:
-                  $ref: '#/definitions/VlanMembersAllEntry'
-                  vlan_id:
-                    type: string 
-                  members:
-                    type: array
+            $ref: '#/definitions/VlanMembersAllEntry'
         '400':
           description: Malformed arguments for API call
           schema:
@@ -869,18 +854,7 @@ paths:
         '200':
           description: OK
           schema:
-            type: object
-            required:
-               - vlan_id
-            properties:
-               vlan_id:
-                 type: integer
-                 format: int32
-                 description: 12 bit vlan_id
-               attr:
-                 type: array
-                 items:
-                  $ref: '#/definitions/VlanMembersEntry'
+            $ref: '#/definitions/VlanMembersWithIdEntry'
         '400':
           description: Malformed arguments for API call
           schema:
@@ -2647,9 +2621,15 @@ definitions:
       nexthop:
         type: string
         description: >-
-          ip address of nexthop. 'comma' seperated list for ecmp (equal cost multipath) routes; User can optionally specify emtpy '' strings for positional arguments.
+          ip address of nexthop. 'comma' separated list for ecmp (equal cost multipath) routes; User can optionally specify emtpy '' strings for positional arguments.
           When nexthop_type is 'ip', then nexthop is the CE IP address;
           When nexthop_type is 'vxlan_tunnel', the next hop is the PA address of the customer VM
+      nexthop_monitor:
+        type: string
+        description: ip address of the nexthop monitor. 'comma' separated list, must have the same count as nexthop field.
+      profile:
+        type: string
+        description: name of bgp profile for this route
       mac_address:
         type: string
         description: mac_address of the target VM
@@ -2740,6 +2720,24 @@ definitions:
       if_name:
         type: string
         description: Physical port name
+  VlanMembersWithIdEntry:
+    type: object
+    properties:
+      vlan_id:
+        type: integer
+        format: int32
+        description: 12 bit vlan_id
+      attr:
+        type: array
+        items: 
+          $ref: '#/definitions/VlanMembersEntry'
+  VlanMembersAllEntry:
+    type: object
+    properties:
+      attr:
+        type: array
+        items:
+          $ref: '#/definitions/VlanMembersWithIdEntry'
   VlanNeighborsEntry:
     type: object
     properties:
@@ -2854,5 +2852,13 @@ definitions:
       - reset_status
     properties:
       reset_status:
-        type: boolean
+        type: string
         description: configuration reset status.
+  BgpProfile:
+    type: object
+    required: 
+      - community_id
+    properties:
+      community_id:
+        type: string
+        description: Community ID for the BGP profile
