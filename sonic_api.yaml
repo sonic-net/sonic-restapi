@@ -289,7 +289,7 @@ paths:
           required: true
           type: string
           description: BGP profile name
-        - name: profile
+        - name: bgpprofile
           in: body
           required: true
           description: The BGP profile
@@ -2852,7 +2852,7 @@ definitions:
       - reset_status
     properties:
       reset_status:
-        type: boolean
+        type: string
         description: configuration reset status.
   BgpProfile:
     type: object
