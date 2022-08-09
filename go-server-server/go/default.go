@@ -967,6 +967,7 @@ func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
 
     pt.Del(vnet_id_str, "DEL", "")
     CacheDeleteVnetGuidId(vars["vnet_name"])
+    CacheDeletePrefixAdv(vnet_id_str)
 
     w.WriteHeader(http.StatusNoContent)
 }

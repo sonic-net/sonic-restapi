@@ -472,6 +472,11 @@ func CacheSetPrefixAdv(vnet_id_str string, adv_prefix string) {
     return
 }
 
+func CacheDeletePrefixAdv(vnet_id_str string) {
+    delete(vnetAdvPrefixMap, vnet_id_str)
+    return
+}
+
 func CacheGenAndSetVnetGuidId(GUID string, VNI uint32) (val uint32) {
     vnetGuidMap[GUID] = nextGuidId
     vniVnetMap[VNI] = GUID
