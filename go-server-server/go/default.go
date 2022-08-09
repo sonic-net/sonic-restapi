@@ -1077,6 +1077,7 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
     }
     if attr.AdvPrefix != "" {
         vnetParams["advertise_prefix"] = attr.AdvPrefix
+        CacheSetPrefixAdv(vnet_id_str, attr.AdvPrefix)
     }
     pt.Set(vnet_id_str, vnetParams, "SET", "")        
 
@@ -1182,7 +1183,6 @@ func ConfigVrouterVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
 func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     db := &app_db_ops
-    confdb := &conf_db_ops
     vars := mux.Vars(r)
     var rt_tb_key string
 
@@ -1210,7 +1210,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     defer tunnel_pt.Delete()
     local_pt := swsscommon.NewProducerStateTable(db.swss_db, LOCAL_ROUTE_TB)
     defer local_pt.Delete()
-    log.Printf("**debug: vnet_id_str: "+vnet_id_str)
+
     for _, r := range attr {
 
         /*
@@ -1230,12 +1230,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             failed = append(failed, r)
             continue
         }
-        kv, err := GetKVs(confdb.db_num, generateDBTableKey(confdb.separator, VNET_TB, vnet_id_str))
-        if err != nil {
-            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-            return
-        }
-        if adv_prefix, ok := kv["advertise_prefix"]; ok {
+        if adv_prefix, ok := CacheGetPrefixAdv(vnet_id_str); ok {
             if adv_prefix == "true" {
                 prefix_len, _ := network.Mask.Size()
                 if isV4orV6(ip.String()) == 4 {

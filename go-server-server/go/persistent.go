@@ -29,6 +29,7 @@ var vniVnetMap map[uint32]string
 var vnetGuidIdUsed []bool
 var nextGuidId uint32
 var localTunnelLpbkIps []string
+var vnetAdvPrefixMap map[string]string
 
 const REDIS_SOCK string = "/var/run/redis/redis.sock"
 
@@ -110,6 +111,7 @@ func InitialiseVariables() {
     genVnetGuidMap()
 
     genVxlanTunnelInfo()
+    vnetAdvPrefixMap = make(map[string]string)
 }
 
 func genVnetGuidMap() {
@@ -444,6 +446,29 @@ func CacheGetVnetGuidId(GUID string) (val uint32) {
 
 func CacheGetVniId(VNI uint32) (val string) {
     val = vniVnetMap[VNI]
+    return
+}
+
+func CacheGetPrefixAdv(vnet_id_str string) (adv_prefix string, found bool) {
+    adv_prefix = ""
+    found = false
+    if adv_prefix, found = vnetAdvPrefixMap[vnet_id_str]; found {
+        return
+    } else {
+        db := &conf_db_ops
+        kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VNET_TB, vnet_id_str))
+        if err != nil {
+            return
+        }
+        if adv_prefix, found := kv["advertise_prefix"]; found {
+            vnetAdvPrefixMap[vnet_id_str] = adv_prefix
+        }
+    }
+    return
+}
+
+func CacheSetPrefixAdv(vnet_id_str string, adv_prefix string) {
+    vnetAdvPrefixMap[vnet_id_str] = adv_prefix
     return
 }
 
