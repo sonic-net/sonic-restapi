@@ -130,6 +130,14 @@ func IsValidIPBoth(ipstr string) bool {
     return ip != nil
 }
 
+func isV4orV6(ipaddr string) (int) {
+    ip := net.ParseIP(ipaddr)
+    if ip.To4() != nil {
+        return 4
+    }
+    return 6
+}
+
 func ParseIPBothPrefix(ipprefix string) (ipstr string, length int, err error) {
     ip, net, err := net.ParseCIDR(ipprefix)
     if err != nil {

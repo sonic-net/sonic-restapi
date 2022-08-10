@@ -967,6 +967,7 @@ func ConfigVrouterVrfIdDelete(w http.ResponseWriter, r *http.Request) {
 
     pt.Del(vnet_id_str, "DEL", "")
     CacheDeleteVnetGuidId(vars["vnet_name"])
+    CacheDeletePrefixAdv(vnet_id_str)
 
     w.WriteHeader(http.StatusNoContent)
 }
@@ -1077,6 +1078,7 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
     }
     if attr.AdvPrefix != "" {
         vnetParams["advertise_prefix"] = attr.AdvPrefix
+        CacheSetPrefixAdv(vnet_id_str, attr.AdvPrefix)
     }
     pt.Set(vnet_id_str, vnetParams, "SET", "")        
 
@@ -1229,7 +1231,24 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             failed = append(failed, r)
             continue
         }
-
+        if adv_prefix, ok := CacheGetPrefixAdv(vnet_id_str); ok {
+            if adv_prefix == "true" {
+                prefix_len, _ := network.Mask.Size()
+                if isV4orV6(ip.String()) == 4 {
+                    if prefix_len < 18 {
+                        r.Error_msg = "Prefix length lesser than 18 is not supported"
+                        failed = append(failed, r)
+                        continue                        
+                    }
+                } else {
+                    if prefix_len != 64 {
+                        r.Error_msg = "Prefix length other than 64 is not supported"
+                        failed = append(failed, r)
+                        continue                          
+                    }
+                }
+            }
+        }        
         if r.IfName == "" {
             pt = tunnel_pt
             rt_tb_name = ROUTE_TUN_TB
