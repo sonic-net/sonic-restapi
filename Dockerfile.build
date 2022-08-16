@@ -3,6 +3,8 @@ FROM debian:buster
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+
 RUN apt-get update \
  && apt-get install -y \
       wget \
@@ -15,7 +17,8 @@ RUN apt-get update \
       flex \
       g++ \
       git \
-      libboost-all-dev \
+      libboost-serialization1.71-dev \
+      libzmq5-dev \
       libevent-dev \
       libssl-dev \
       libtool \

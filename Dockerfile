@@ -3,6 +3,8 @@ FROM debian:buster
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+
 RUN apt-get update \
  && apt-get install -y \
       vim \
@@ -11,7 +13,8 @@ RUN apt-get update \
       curl \
       bridge-utils \
       net-tools \
-      libboost-dev
+      libboost-serialization1.71-dev \
+      libzmq5-dev
 
 COPY debs /debs
 RUN dpkg -i /debs/libhiredis0.14_0.14.0-3~bpo9+1_amd64.deb \
