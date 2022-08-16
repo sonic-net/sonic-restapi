@@ -3,6 +3,8 @@ FROM debian:buster
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+
 RUN apt-get update \
  && apt-get install -y \
       vim \
@@ -11,19 +13,11 @@ RUN apt-get update \
       curl \
       bridge-utils \
       net-tools \
-      libboost-dev
+      libboost-serialization1.71-dev \
+      libzmq5-dev
 
 COPY debs /debs
-RUN dpkg -i /debs/libhiredis0.14_0.14.0-3~bpo9+1_amd64.deb \
- && dpkg -i /debs/libhiredis-dev_0.14.0-3~bpo9+1_amd64.deb \
- && dpkg -i /debs/libnl-3-200_3.5.0-1_amd64.deb \
- && dpkg -i /debs/libnl-3-dev_3.5.0-1_amd64.deb \
- && dpkg -i /debs/libnl-genl-3-200_3.5.0-1_amd64.deb \
- && dpkg -i /debs/libnl-route-3-200_3.5.0-1_amd64.deb \
- && dpkg -i /debs/libnl-nf-3-200_3.5.0-1_amd64.deb \
- && dpkg -i /debs/libswsscommon_1.0.0_amd64.deb \
- && dpkg -i /debs/libswsscommon-dev_1.0.0_amd64.deb \
- && dpkg -i /debs/sonic-rest-api_1.0.1_amd64.deb
+RUN dpkg -i /debs/*.deb
 RUN rm -fr /debs
 
 COPY supervisor/supervisor.conf /etc/supervisor/conf.d/
