@@ -392,7 +392,7 @@ func (m *StaticRouteExpiryTimeModel) UnmarshalJSON(data []byte) (err error) {
     }
 
     if required.Time < 0 || required.Time > 1800 {
-        err = &InvalidFormatError{Field: "time", Message: "time must be: 0 < time <= 1800"}
+        err = &InvalidFormatError{Field: "time", Message: "time must be greater than 0 and lesser than or equal to 1800"}
         return
     }
 

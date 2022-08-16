@@ -192,6 +192,13 @@ class RESTAPI_client:
             params['ip_prefix'] = ip_prefix
         return self.get('v1/config/vrf/{vrf_id}/routes'.format(vrf_id=vrf_id), params=params)
 
+    # Static Route Expiry Timer
+    def get_static_rt_expiry_timer(self):
+        return self.get('v1/config/vrf/static_route/route_expiry')
+
+    def post_static_rt_expiry_timer(self, value):
+        return self.post('v1/config/vrf/static_route/route_expiry', value)
+
     # In memory DB restart
     def post_config_restart_in_mem_db(self):
         return self.post('v1/config/restartdb')

@@ -1172,6 +1172,23 @@ class TestRestApiPositive:
         local_route_table = db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
         assert local_route_table == {}
 
+    # Static Route Expiry
+    def test_static_route_expiry_post(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        r = restapi_client.post_static_rt_expiry_timer({'time': 30})
+        assert r.status_code == 204
+
+    def test_static_route_expiry_get(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        r = restapi_client.post_static_rt_expiry_timer({'time': 30})
+        assert r.status_code == 204
+        r = restapi_client.get_static_rt_expiry_timer()
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert j == {
+            'time': 30
+        }
+
     # Operations
     # PingVRF
     def test_post_ping(self, setup_restapi_client):
@@ -1657,6 +1674,21 @@ class TestRestApiNegative():
         del route['nexthop']
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
+
+    # Static Route Expiry
+    def test_static_route_expiry_post(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        r = restapi_client.post_static_rt_expiry_timer({'time': 3000})
+        assert r.status_code == 400
+        j = json.loads(r.text)
+        assert j['error']['details'] == "time must be greater than 0 and lesser than or equal to 1800"
+
+    def test_static_route_expiry_get(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        r = restapi_client.get_static_rt_expiry_timer()
+        assert r.status_code == 400
+        j = json.loads(r.text)
+        assert j['error']['message'] == "Object does not exist!"        
 
     # Operations
     # PingVRF

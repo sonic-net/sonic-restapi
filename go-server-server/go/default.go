@@ -1464,7 +1464,11 @@ func ConfigVrfStaticRouteExpiryPost(w http.ResponseWriter, r *http.Request) {
     db := &app_db_ops
 
     var attr StaticRouteExpiryTimeModel
-    ReadJSONBody(w, r, &attr)
+    err := ReadJSONBody(w, r, &attr)
+    if err != nil {
+        // The error is already handled in this case
+        return
+    }
 
     static_rt_t := swsscommon.NewTable(db.swss_db, STATIC_ROUTE_TB)
     defer static_rt_t.Delete()
