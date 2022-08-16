@@ -1459,10 +1459,41 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-func ConfigVrfVrfIdRouteExpiryGet(w http.ResponseWriter, r *http.Request) {
+func ConfigVrfStaticRouteExpiryPost(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     vars := mux.Vars(r)
-    vrf_id_str := vars["vrf_id"]
+    db := &app_db_ops
+
+    ReadJSONBody(w, r, &attr)
+
+    static_rt_t := swsscommon.NewTable(db.swss_db, STATIC_ROUTE_TB)
+    defer static_rt_t.Delete()
+
+    static_rt_t.Set("EXPIRY_TIME", map[string]string {
+                        "time": attr.Time,
+        }, "SET", "")
+    w.WriteHeader(http.StatusNoContent)    
+}
+
+func ConfigVrfStaticRouteExpiryGet(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    db := &app_db_ops
+
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, STATIC_ROUTE_TB, "EXPIRY_TIME"))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if len(kv) == 0 {
+        WriteRequestError(w, http.StatusBadRequest, "Object does not exist!")
+        return
+    }
+
+    output := StaticRouteExpiryTimeModel {
+        Time: kv["time"],
+    }
+    WriteRequestResponse(w, output, http.StatusOK)
 }
 
 func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {

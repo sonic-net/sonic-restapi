@@ -22,6 +22,10 @@ type BgpProfileModel struct {
     CommunityId  string `json:"community_id"`
 }
 
+type StaticRouteExpiryTimeModel struct {
+    Time int `json:"time"`
+}
+
 type RouteModel struct {
     Cmd            string `json:"cmd,omitempty"`
     IPPrefix       string `json:"ip_prefix"`
@@ -373,6 +377,31 @@ func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
         }
     }
 
+    return
+}
+
+func (m *StaticRouteExpiryTimeModel) UnmarshalJSON(data []byte) (err error) {
+    required := struct {
+        Time int `json:"time"`
+    }{}
+
+    err = json.Unmarshal(data, &required)
+
+    if err != nil {
+        return
+    }
+
+    if required.Time == nil {
+        err = &MissingValueError{"time"}
+        return
+    }
+
+    if required.Time < 0 || required.Time > 1800 {
+        err = &InvalidFormatError{Field: "time", Message: "time must be: 0 < time <= 1800"}
+        return
+    }
+
+    m.Time = required.Time
     return
 }
 
