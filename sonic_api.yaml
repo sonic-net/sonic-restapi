@@ -2920,4 +2920,4 @@ definitions:
     properties:
       time:
         type: int
-        description: expiration time in seconds for non-persistent static routes
+        description: Expiration time in seconds for non-persistent static routes. Accepted value ranges from 1 to 1800
