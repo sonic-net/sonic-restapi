@@ -1482,7 +1482,7 @@ func ConfigVrfStaticRouteExpiryPost(w http.ResponseWriter, r *http.Request) {
 func ConfigVrfStaticRouteExpiryGet(w http.ResponseWriter, r *http.Request) {
     db := &app_db_ops
 
-    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, STATIC_ROUTE_EXP_TB, ""))
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, STATIC_ROUTE_EXP_TB))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
