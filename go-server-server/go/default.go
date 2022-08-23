@@ -1470,10 +1470,10 @@ func ConfigVrfStaticRouteExpiryPost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    static_rt_t := swsscommon.NewTable(db.swss_db, STATIC_ROUTE_TB)
+    static_rt_t := swsscommon.NewTable(db.swss_db, STATIC_ROUTE_EXP_TB)
     defer static_rt_t.Delete()
 
-    static_rt_t.Set("EXPIRY_TIME", map[string]string {
+    static_rt_t.Set("", map[string]string {
                         "time": strconv.Itoa(attr.Time),
         }, "SET", "")
     w.WriteHeader(http.StatusNoContent)    
@@ -1482,7 +1482,7 @@ func ConfigVrfStaticRouteExpiryPost(w http.ResponseWriter, r *http.Request) {
 func ConfigVrfStaticRouteExpiryGet(w http.ResponseWriter, r *http.Request) {
     db := &app_db_ops
 
-    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, STATIC_ROUTE_TB, "EXPIRY_TIME"))
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, STATIC_ROUTE_EXP_TB, ""))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return

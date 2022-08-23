@@ -43,19 +43,20 @@ const APPL_CACHE_DB int = 8
 const SWSS_TIMEOUT uint = 0
 
 // DB Table names
-const VXLAN_TUNNEL_TB   string = "VXLAN_TUNNEL"
-const VNET_TB           string = "VNET"
-const VLAN_TB           string = "VLAN"
-const VLAN_INTF_TB      string = "VLAN_INTERFACE"
-const VLAN_MEMB_TB      string = "VLAN_MEMBER"
-const VLAN_NEIGH_TB     string = "NEIGH"
-const ROUTE_TUN_TB      string = "VNET_ROUTE_TUNNEL_TABLE"
-const LOCAL_ROUTE_TB    string = "VNET_ROUTE_TABLE"
-const CFG_ROUTE_TUN_TB  string = "VNET_ROUTE_TUNNEL"
+const VXLAN_TUNNEL_TB       string = "VXLAN_TUNNEL"
+const VNET_TB               string = "VNET"
+const VLAN_TB               string = "VLAN"
+const VLAN_INTF_TB          string = "VLAN_INTERFACE"
+const VLAN_MEMB_TB          string = "VLAN_MEMBER"
+const VLAN_NEIGH_TB         string = "NEIGH"
+const ROUTE_TUN_TB          string = "VNET_ROUTE_TUNNEL_TABLE"
+const LOCAL_ROUTE_TB        string = "VNET_ROUTE_TABLE"
+const CFG_ROUTE_TUN_TB      string = "VNET_ROUTE_TUNNEL"
 const CFG_LOCAL_ROUTE_TB    string = "VNET_ROUTE"
-const CRM_TB            string = "CRM"
-const STATIC_ROUTE_TB   string = "STATIC_ROUTE"
-const BGP_PROFILE_TABLE       string = "BGP_PROFILE_TABLE"
+const CRM_TB                string = "CRM"
+const STATIC_ROUTE_TB       string = "STATIC_ROUTE"
+const STATIC_ROUTE_EXP_TB   string = "STATIC_ROUTE_EXPIRY_TIME"
+const BGP_PROFILE_TABLE     string = "BGP_PROFILE_TABLE"
 
 // DB Helper constants
 const VNET_NAME_PREF  string = "Vnet"
