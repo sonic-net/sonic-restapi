@@ -1769,6 +1769,24 @@ class TestRestApiNegative():
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
 
+    def test_patch_update_static_routes(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vlan_and_deps()
+        route = {
+                    'cmd':'add',
+                    'ip_prefix':'10.2.1.0/24',
+                    'nexthop':'192.168.2.1'
+                }
+        route['persistent'] = 'bool'
+        route['cmd'] = 'add'
+        r = restapi_client.patch_config_vrf_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 500
+        r = restapi_client.patch_config_vrf_vrf_id_routes("default", [route])
+        assert r.status_code == 400        
+        j = json.loads(r.text)
+        assert j['error']['fields'] == ['persistent']
+        assert j['error']['details'] == "must be either true or false"
+
     # Static Route Expiry
     def test_static_route_expiry_post(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
