@@ -1076,7 +1076,7 @@ class TestRestApiPositive:
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes_cleaned)
         
-    def test_vrf_routes_all_verbs(self, setup_restapi_client):
+    def test_vrf_non_persistent_routes_all_verbs(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         routes = []
         routes.append({'cmd':'add',
@@ -1142,6 +1142,99 @@ class TestRestApiPositive:
                             'ip_prefix':'40.1.2.0/24',
                             'nexthop':'192.168.2.200,192.168.2.201',
                             'ifname':'Ethernet0,Ethernet4'})
+
+        r = restapi_client.patch_config_vrf_vrf_id_routes("default", routes)
+        assert r.status_code == 204
+
+        for route in routes:
+            route['nexthop'] = '192.168.2.200,192.168.2.201,10.1.1.1'
+            route['ifname'] = 'Ethernet0,Ethernet4,Vlan1000'
+
+        r = restapi_client.patch_config_vrf_vrf_id_routes("default", routes)
+        assert r.status_code == 204
+
+        for route in routes:
+            del route['cmd']
+
+        r = restapi_client.get_config_vrf_vrf_id_routes("default")
+        assert r.status_code == 200
+
+        j = json.loads(r.text)
+        assert sorted(j) == sorted(routes)
+
+    def test_vrf_persistent_routes_all_verbs(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        routes = []
+        routes.append({'cmd':'add',
+                            'ip_prefix':'20.1.2.0/24',
+                            'nexthop':'192.168.2.200',
+                            'persistent': 'true'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'30.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201',
+                            'persistent': 'true'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'40.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201,192.168.2.202',
+                            'ifname':'Ethernet0,Ethernet4,Ethernet8',
+                            'persistent': 'true'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'50.1.2.0/24',
+                            'ifname':'Ethernet0,Ethernet4',
+                            'persistent': 'true'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'60.1.2.0/24',
+                            'ifname':'Ethernet8',
+                            'persistent': 'true'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'70.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201,192.168.2.202',
+                            'nexthop_monitor':'192.168.3.200,192.168.3.201,192.168.3.202',
+                            'weight':'10,20',
+                            'profile':'profile1',
+                            'persistent': 'true'})
+
+
+        # Patch add
+        r = restapi_client.patch_config_vrf_vrf_id_routes("default", routes)
+        assert r.status_code == 204
+
+        for route in routes:
+             del route['cmd']
+             if 'nexthop' not in route:
+                 route['nexthop'] = ''
+
+        r = restapi_client.get_config_vrf_vrf_id_routes("default")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert sorted(j) == sorted(routes)
+
+        # Patch del
+        for route in routes:
+            route['cmd'] = 'delete'
+            if route['nexthop'] == '':
+                del route['nexthop']
+
+        r = restapi_client.patch_config_vrf_vrf_id_routes("default", routes)
+        assert r.status_code == 204
+
+        r = restapi_client.get_config_vrf_vrf_id_routes("default")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        routes = []
+        assert sorted(j) == sorted(routes)
+
+        # Test modify
+        routes.append({'cmd':'add',
+                            'ip_prefix':'40.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201',
+                            'ifname':'Ethernet0,Ethernet4',
+                            'persistent': 'true'})
 
         r = restapi_client.patch_config_vrf_vrf_id_routes("default", routes)
         assert r.status_code == 204
