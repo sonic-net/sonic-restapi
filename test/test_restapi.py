@@ -1618,7 +1618,8 @@ class TestRestApiNegative():
                             'ip_prefix':'10.2.'+str(i)+'.0/24',
                             'nexthop':'192.168.2.'+str(i),
                             'vnid': 1 + i%5,
-                            'mac_address':'00:08:aa:bb:cd:'+hex(15+i)[2:]})
+                            'mac_address':'00:08:aa:bb:cd:'+hex(15+i)[2:],
+                            'persistent': 'false'})
 
         # Patch
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", routes)
