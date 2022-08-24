@@ -1350,7 +1350,9 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
 
 func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-    db := &conf_db_ops
+    var db *db_ops
+    conf_db := &conf_db_ops
+    app_db := &app_db_ops
     vars := mux.Vars(r)
     var rt_tb_key string
     vrf_id_str := vars["vrf_id"]
@@ -1369,10 +1371,12 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    pt := swsscommon.NewTable(db.swss_db, STATIC_ROUTE_TB)
-    defer pt.Delete()
+    var pt swsscommon.Table
+    conf_pt := swsscommon.NewTable(conf_db.swss_db, STATIC_ROUTE_TB)
+    defer conf_pt.Delete()
+    app_pt := swsscommon.NewTable(app_db.swss_db, STATIC_ROUTE_TB)
+    defer app_pt.Delete()
 
-    var rt_tb_name string
     var failed []RouteModel
 
     for _, r := range attr {
@@ -1395,8 +1399,15 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             continue
         }
 
-        rt_tb_name = STATIC_ROUTE_TB
-        rt_tb_key = generateDBTableKey(db.separator, rt_tb_name, vrf_id_str, r.IPPrefix)
+        if r.Persistent == "true" {
+            db = conf_db
+            pt = conf_pt
+        } else {
+            db = app_db
+            pt = app_pt
+        }
+
+        rt_tb_key = generateDBTableKey(db.separator, STATIC_ROUTE_TB, vrf_id_str, r.IPPrefix)
 
         cur_route, err := GetKVs(db.db_num, rt_tb_key)
         if err != nil {
@@ -1444,6 +1455,9 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             }
             if r.Profile != "" {
                 route_map["profile"] = r.Profile
+            }
+            if r.Persistent == "false" {
+                route_map["refresh"] = "true"
             }
             pt.Set(generateDBTableKey(db.separator,vrf_id_str, r.IPPrefix), route_map, "SET", "")
         }

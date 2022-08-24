@@ -37,6 +37,7 @@ type RouteModel struct {
     Vnid           int    `json:"vnid,omitempty"`
     Weight         string `json:"weight,omitempty"`
     Profile        string `json:"profile,omitempty"`
+    Persistent     string `json:"persistent,omitempty"`
     Error_code     int    `json:"error_code,omitempty"`
     Error_msg      string `json:"error_msg,omitempty"`
 }
@@ -197,6 +198,7 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         Vnid           int     `json:"vnid"`
         Weight         *string `json:"weight"`
         Profile        *string `json:"profile"`
+        Persistent     *string `json:persistent`
         Error          string  `json:"error"`
     }{}
 
@@ -260,6 +262,17 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
             return
         }
         m.MACAddress = *required.MACAddress
+    }
+
+    if required.Persistent == nil {
+        m.Persistent = "false"
+    } else {
+        if strings.Contains(*required.Persistent, "true") || strings.Contains(*required.Persistent, "false") {
+            m.Persistent = *required.Persistent
+        } else {
+            err = &InvalidFormatError{Field: "persistent", Message: "must be either true or false"}
+            return             
+        }
     }
 
     m.Cmd = *required.Cmd
