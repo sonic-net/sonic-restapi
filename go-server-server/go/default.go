@@ -1535,7 +1535,9 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
     // Check non-persistent static routes first
     db := &app_db_ops
     var pattern string
+    var persistent bool
 
+    persistent = false
     pattern = generateDBTableKey(db.separator, STATIC_ROUTE_TB, vrf_id_str, ipprefix)
     kv, err := GetKVsMulti(db.db_num, pattern)
     if err != nil {
@@ -1551,7 +1553,8 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
         if err != nil {
             WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
             return
-        }        
+        }      
+        persistent = true  
     }
 
     routes := []RouteModel{}
@@ -1577,6 +1580,9 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
 
         if profile, ok := kvp["profile"]; ok {
             routeModel.Profile = profile
+        }
+        if persistent == true {
+            routeModel.Persistent = "true"
         }
         routes = append(routes, routeModel)
     }
