@@ -1532,20 +1532,29 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    db := &conf_db_ops
+    // Check non-persistent static routes first
+    db := &app_db_ops
     var pattern string
 
-    rt_tb_name := STATIC_ROUTE_TB
-
-    pattern = generateDBTableKey(db.separator, rt_tb_name, vrf_id_str, ipprefix)
-    routes := []RouteModel{}
-
+    pattern = generateDBTableKey(db.separator, STATIC_ROUTE_TB, vrf_id_str, ipprefix)
     kv, err := GetKVsMulti(db.db_num, pattern)
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
+    if len(kv) == 0 {
+        // check persistent static routes if no non-persistent static routes were found
+        db = &conf_db_ops
+        pattern = generateDBTableKey(db.separator, STATIC_ROUTE_TB, vrf_id_str, ipprefix)
+        kv, err = GetKVsMulti(db.db_num, pattern)
+        if err != nil {
+            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+            return
+        }        
+    }
+
+    routes := []RouteModel{}
     for k, kvp := range kv {
         ipprefix := strings.Split(k, db.separator)[2]
 
