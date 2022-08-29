@@ -1668,16 +1668,16 @@ paths:
 #----------------------------------------------
 # Static Route Expiry
 #----------------------------------------------
-  '/config/vrf/static_route/route_expiry':
+  '/config/vrf/route_expiry':
     get:
-      operationId: ConfigVrfStaticRouteExpiryGet
-      summary: API for caller to get the custom static route expiry time
-      description: Returns a JSON response with the expiration time for all non-persistent static routes
+      operationId: ConfigVrfRouteExpiryGet
+      summary: API for caller to get the custom route expiry time
+      description: Returns a JSON response with the expiration time for all non-persistent routes
       responses:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/StaticRouteExpiryTime'
+            $ref: '#/definitions/RouteExpiryTime'
         '401':
           description: Invalid authentication credentials
           schema:
@@ -1691,19 +1691,19 @@ paths:
           schema:
             $ref: '#/definitions/Error'
     post:
-      summary: API for caller to set the custom static route expiry time
-      operationId: ConfigVrfStaticRouteExpiryPost
-      description: Sets the custom expiration time for all non-persistent static routes. SONiC will stop advertising 
-      non-persistent static routes after the specified time unless the routes have been refreshed. Under normal
-      circumstances non-persistent static routes will be advertised at most 2x the specified time unless refreshed. 
+      summary: API for caller to set the custom route expiry time
+      operationId: ConfigVrfRouteExpiryPost
+      description: Sets the custom expiration time for all non-persistent routes. SONiC will stop advertising 
+      non-persistent routes after the specified time unless the routes have been refreshed. Under normal
+      circumstances non-persistent routes will be advertised at most 2x the specified time unless refreshed. 
       In case of warm-boot, non-persistent routes will be advertised for 2x the specified time + additional warmboot time
       parameters:
         - name: strtexptime
           in: body
           required: true
-          description: Static Route Expiry Time
+          description: Route Expiry Time
           schema:
-            $ref: '#/definitions/StaticRouteExpiryTime'
+            $ref: '#/definitions/RouteExpiryTime'
       responses:
         '200':
           description: OK
@@ -2916,11 +2916,11 @@ definitions:
       community_id:
         type: string
         description: Community ID for the BGP profile
-  StaticRouteExpiryTime:
+  RouteExpiryTime:
     type: object
     required: 
       - time
     properties:
       time:
         type: int
-        description: Expiration time in seconds for non-persistent static routes. Accepted value ranges from 1 to 1800
+        description: Expiration time in seconds for non-persistent static routes. Accepted value ranges from 1 to 172800
