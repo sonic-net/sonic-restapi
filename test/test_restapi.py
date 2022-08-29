@@ -1266,16 +1266,16 @@ class TestRestApiPositive:
         assert local_route_table == {}
 
     # Static Route Expiry
-    def test_static_route_expiry_post(self, setup_restapi_client):
+    def test_route_expiry_post(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
-        r = restapi_client.post_static_rt_expiry_timer({'time': 30})
+        r = restapi_client.post_rt_expiry_timer({'time': 30})
         assert r.status_code == 204
 
-    def test_static_route_expiry_get(self, setup_restapi_client):
+    def test_route_expiry_get(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
-        r = restapi_client.post_static_rt_expiry_timer({'time': 30})
+        r = restapi_client.post_rt_expiry_timer({'time': 30})
         assert r.status_code == 204
-        r = restapi_client.get_static_rt_expiry_timer()
+        r = restapi_client.get_rt_expiry_timer()
         assert r.status_code == 200
         j = json.loads(r.text)
         assert j == {
@@ -1788,16 +1788,16 @@ class TestRestApiNegative():
         assert j['error']['details'] == "must be either true or false"
 
     # Static Route Expiry
-    def test_static_route_expiry_post(self, setup_restapi_client):
+    def test_route_expiry_post(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
-        r = restapi_client.post_static_rt_expiry_timer({'time': 3000})
+        r = restapi_client.post_rt_expiry_timer({'time': 185000})
         assert r.status_code == 400
         j = json.loads(r.text)
-        assert j['error']['details'] == "time must be greater than 0 and lesser than or equal to 1800"
+        assert j['error']['details'] == "time must be greater than 0 and lesser than or equal to 172800"
 
-    def test_static_route_expiry_get(self, setup_restapi_client):
+    def test_route_expiry_get(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
-        r = restapi_client.get_static_rt_expiry_timer()
+        r = restapi_client.get_rt_expiry_timer()
         assert r.status_code == 400
         j = json.loads(r.text)
         assert j['error']['message'] == "Object does not exist!"        

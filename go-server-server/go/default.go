@@ -1473,11 +1473,11 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     }
 }
 
-func ConfigVrfStaticRouteExpiryPost(w http.ResponseWriter, r *http.Request) {
+func ConfigVrfRouteExpiryPost(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
     db := &app_db_ops
 
-    var attr StaticRouteExpiryTimeModel
+    var attr RouteExpiryTimeModel
     err := ReadJSONBody(w, r, &attr)
     if err != nil {
         // The error is already handled in this case
@@ -1493,7 +1493,7 @@ func ConfigVrfStaticRouteExpiryPost(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNoContent)    
 }
 
-func ConfigVrfStaticRouteExpiryGet(w http.ResponseWriter, r *http.Request) {
+func ConfigVrfRouteExpiryGet(w http.ResponseWriter, r *http.Request) {
     db := &app_db_ops
 
     kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, STATIC_ROUTE_EXP_TB))
@@ -1508,7 +1508,7 @@ func ConfigVrfStaticRouteExpiryGet(w http.ResponseWriter, r *http.Request) {
     }
 
     time, _ := strconv.Atoi(kv["time"])
-    output := StaticRouteExpiryTimeModel {
+    output := RouteExpiryTimeModel {
         Time: time,
     }
     WriteRequestResponse(w, output, http.StatusOK)
