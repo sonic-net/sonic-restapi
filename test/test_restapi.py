@@ -12,12 +12,14 @@ VLAN_MEMB_TB      = "VLAN_MEMBER"
 VLAN_NEIGH_TB     = "NEIGH"
 ROUTE_TUN_TB      = "_VNET_ROUTE_TUNNEL_TABLE"
 LOCAL_ROUTE_TB    = "_VNET_ROUTE_TABLE"
+STATIC_ROUTE      = "STATIC_ROUTE"
 CFG_ROUTE_TUN_TB  = "VNET_ROUTE_TUNNEL"
 CFG_LOCAL_ROUTE_TB = "VNET_ROUTE"
 
 # DB Helper constants
 VNET_NAME_PREF    = "Vnet"
 VLAN_NAME_PREF    = "Vlan"
+DEFAULT_VRF       = "default"
 
 RESRC_EXISTS = 0
 DEP_MISSING = 1
@@ -1107,6 +1109,13 @@ class TestRestApiPositive:
                             'weight':'10,20',
                             'profile':'profile1'})
 
+        routes.append({'cmd':'add',
+                            'ip_prefix':'fd30:fc14:8a92:b4e3::/64',
+                            'nexthop':'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404',
+                            'nexthop_monitor':'cac4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,a803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404',
+                            'weight':'10,20',
+                            'profile':'profile2'})
+
 
         # Patch add
         r = restapi_client.patch_config_vrf_vrf_id_routes("default", routes)
@@ -1161,6 +1170,44 @@ class TestRestApiPositive:
 
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes)
+
+    def test_vrf_non_persistent_refresh_status(self, setup_restapi_client):
+        db, _, _, restapi_client = setup_restapi_client
+        routes = []
+        routes.append({'cmd':'add',
+                            'ip_prefix':'70.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201,192.168.2.202',
+                            'nexthop_monitor':'192.168.3.200,192.168.3.201,192.168.3.202',
+                            'weight':'10,20',
+                            'profile':'profile1'})
+        routes.append({'cmd':'add',
+                            'ip_prefix':'fd30:fc14:8a92:b4e3::/64',
+                            'nexthop':'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404',
+                            'nexthop_monitor':'cac4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,a803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404',
+                            'weight':'10,20',
+                            'profile':'profile2'})
+
+        # Patch add
+        r = restapi_client.patch_config_vrf_vrf_id_routes("default", routes)
+        assert r.status_code == 204
+
+        static_rt_v4 = db.hgetall(STATIC_ROUTE + ':' + DEFAULT_VRF +':70.1.2.0/24')
+        assert static_rt_v4[b'refresh'] == b'true'
+        static_rt_v6 = db.hgetall(STATIC_ROUTE + ':' + DEFAULT_VRF +':fd30:fc14:8a92:b4e3::/64')
+        assert static_rt_v6[b'refresh'] == b'true'
+
+        # Simulate timer expiry
+        db.hset(STATIC_ROUTE + ':' + DEFAULT_VRF +':70.1.2.0/24', 'refresh', 'false')
+        db.hset(STATIC_ROUTE + ':' + DEFAULT_VRF +':fd30:fc14:8a92:b4e3::/64', 'refresh', 'false')
+
+        # Refresh route
+        r = restapi_client.patch_config_vrf_vrf_id_routes("default", routes)
+        assert r.status_code == 204
+
+        static_rt_v4 = db.hgetall(STATIC_ROUTE + ':' + DEFAULT_VRF +':70.1.2.0/24')
+        assert static_rt_v4[b'refresh'] == b'true'
+        static_rt_v6 = db.hgetall(STATIC_ROUTE + ':' + DEFAULT_VRF +':fd30:fc14:8a92:b4e3::/64')
+        assert static_rt_v6[b'refresh'] == b'true'
 
     def test_vrf_persistent_routes_all_verbs(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client

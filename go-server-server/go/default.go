@@ -1432,7 +1432,9 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                     pt.Del(generateDBTableKey(db.separator,vrf_id_str, r.IPPrefix), "DEL", "")
                 } else {
                     /* Identical route */
-                    continue
+                    if r.Persistent == "true" {
+                        continue
+                    }
                 }
             }
             route_map := make(map[string]string)
