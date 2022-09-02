@@ -167,7 +167,7 @@ func ParseIPPrefix(ipprefix string) (ipstr string, length int, err error) {
     return
 }
 
-func ExtractIPAddressFromKey(key string, dbseperator string) (ipprefix string, err error) {
+func ExtractIPPrefixFromKey(key string, dbseperator string) (ipprefix string, err error) {
     ctr := 0
 	var idx int
 	for i, c := range key {

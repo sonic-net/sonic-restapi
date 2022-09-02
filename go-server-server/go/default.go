@@ -1561,7 +1561,7 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
 
     routes := []RouteModel{}
     for k, kvp := range kv {
-        ipprefix, _ := ExtractIPAddressFromKey(k, db.separator)
+        ipprefix, _ := ExtractIPPrefixFromKey(k, db.separator)
         routeModel := RouteModel{
             IPPrefix:    ipprefix,
             NextHop:     kvp["nexthop"],
