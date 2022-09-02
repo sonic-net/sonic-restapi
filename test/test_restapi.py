@@ -1095,7 +1095,7 @@ class TestRestApiPositive:
                             'ifname':'Ethernet0,Ethernet4,Ethernet8'})
 
         routes.append({'cmd':'add',
-                            'ip_prefix':'50.1.2.0/24',
+                            'ip_prefix':'fd30:fc14:8a92:b4d3::/64',
                             'ifname':'Ethernet0,Ethernet4'})
 
         routes.append({'cmd':'add',
@@ -1229,7 +1229,7 @@ class TestRestApiPositive:
                             'persistent': 'true'})
 
         routes.append({'cmd':'add',
-                            'ip_prefix':'50.1.2.0/24',
+                            'ip_prefix':'fd30:fc14:8a92:b4e4::/64',
                             'ifname':'Ethernet0,Ethernet4',
                             'persistent': 'true'})
 
@@ -1263,9 +1263,7 @@ class TestRestApiPositive:
         assert r.status_code == 200
         j = json.loads(r.text)
         print(j)
-        #assert sorted(j) == sorted(routes)
-        for r in routes:
-            assert r in j
+        assert sorted(j) == sorted(routes)
 
         # Patch del
         for route in routes:
@@ -1280,9 +1278,7 @@ class TestRestApiPositive:
         assert r.status_code == 200
         j = json.loads(r.text)
         routes = []
-        #assert sorted(j) == sorted(routes)
-        for r in routes:
-            assert r in j
+        assert sorted(j) == sorted(routes)
 
         # Test modify
         routes.append({'cmd':'add',
@@ -1308,9 +1304,7 @@ class TestRestApiPositive:
         assert r.status_code == 200
 
         j = json.loads(r.text)
-        #assert sorted(j) == sorted(routes)
-        for r in routes:
-            assert r in j
+        assert sorted(j) == sorted(routes)
 
     def test_local_subnet_route_addition(self, setup_restapi_client):
         db, _, _, restapi_client = setup_restapi_client
