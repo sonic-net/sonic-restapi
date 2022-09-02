@@ -167,6 +167,23 @@ func ParseIPPrefix(ipprefix string) (ipstr string, length int, err error) {
     return
 }
 
+func ExtractIPAddressFromKey(key string, dbseperator string) (ipprefix string, err error) {
+    ctr := 0
+	var idx int
+	for i, c := range key {
+		if strings.Compare(string(c), dbseperator) == 0 {
+			ctr += 1
+		}
+		if ctr == 2 {
+			idx = i
+			break
+		}
+	}
+	ipprefix = key[idx+1 : len(key)]
+    _, _, err = net.ParseCIDR(ipprefix)
+    return
+}
+
 func ValidateVnid(w http.ResponseWriter, vnidStr string) (vnid int, err error) {
     vnid, err = strconv.Atoi(vnidStr)
     if err != nil {

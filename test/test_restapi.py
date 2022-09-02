@@ -1234,9 +1234,11 @@ class TestRestApiPositive:
                             'persistent': 'true'})
 
         routes.append({'cmd':'add',
-                            'ip_prefix':'60.1.2.0/24',
-                            'ifname':'Ethernet8',
-                            'persistent': 'true'})
+                            'ip_prefix':'fd30:fc14:8a92:b4e3::/64',
+                            'nexthop':'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404',
+                            'nexthop_monitor':'cac4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,a803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404',
+                            'weight':'10,20',
+                            'profile':'profile2'})
 
         routes.append({'cmd':'add',
                             'ip_prefix':'70.1.2.0/24',
