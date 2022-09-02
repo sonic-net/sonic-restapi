@@ -1238,7 +1238,8 @@ class TestRestApiPositive:
                             'nexthop':'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404',
                             'nexthop_monitor':'cac4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,a803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404',
                             'weight':'10,20',
-                            'profile':'profile2'})
+                            'profile':'profile2',
+                            'persistent': 'true'})
 
         routes.append({'cmd':'add',
                             'ip_prefix':'70.1.2.0/24',
@@ -1261,7 +1262,10 @@ class TestRestApiPositive:
         r = restapi_client.get_config_vrf_vrf_id_routes("default")
         assert r.status_code == 200
         j = json.loads(r.text)
-        assert sorted(j) == sorted(routes)
+        print(j)
+        #assert sorted(j) == sorted(routes)
+        for r in routes:
+            assert r in j
 
         # Patch del
         for route in routes:
@@ -1276,7 +1280,9 @@ class TestRestApiPositive:
         assert r.status_code == 200
         j = json.loads(r.text)
         routes = []
-        assert sorted(j) == sorted(routes)
+        #assert sorted(j) == sorted(routes)
+        for r in routes:
+            assert r in j
 
         # Test modify
         routes.append({'cmd':'add',
@@ -1302,7 +1308,9 @@ class TestRestApiPositive:
         assert r.status_code == 200
 
         j = json.loads(r.text)
-        assert sorted(j) == sorted(routes)
+        #assert sorted(j) == sorted(routes)
+        for r in routes:
+            assert r in j
 
     def test_local_subnet_route_addition(self, setup_restapi_client):
         db, _, _, restapi_client = setup_restapi_client
