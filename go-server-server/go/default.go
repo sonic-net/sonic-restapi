@@ -1534,34 +1534,19 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Check non-persistent static routes first
-    db := &app_db_ops
+    app_db := &app_db_ops
     var pattern string
-    var persistent bool
 
-    persistent = false
-    pattern = generateDBTableKey(db.separator, STATIC_ROUTE_TB, vrf_id_str, ipprefix)
-    kv, err := GetKVsMulti(db.db_num, pattern)
+    pattern = generateDBTableKey(app_db.separator, STATIC_ROUTE_TB, vrf_id_str, ipprefix)
+    kv1, err := GetKVsMulti(app_db.db_num, pattern)
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
-    if len(kv) == 0 {
-        // check persistent static routes if no non-persistent static routes were found
-        db = &conf_db_ops
-        pattern = generateDBTableKey(db.separator, STATIC_ROUTE_TB, vrf_id_str, ipprefix)
-        kv, err = GetKVsMulti(db.db_num, pattern)
-        if err != nil {
-            WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
-            return
-        }      
-        persistent = true  
-    }
-
     routes := []RouteModel{}
-    for k, kvp := range kv {
-        ipprefix, _ := ExtractIPPrefixFromKey(k, db.separator)
+    for k, kvp := range kv1 {
+        ipprefix, _ := ExtractIPPrefixFromKey(k, app_db.separator)
         routeModel := RouteModel{
             IPPrefix:    ipprefix,
             NextHop:     kvp["nexthop"],
@@ -1582,9 +1567,40 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
         if profile, ok := kvp["profile"]; ok {
             routeModel.Profile = profile
         }
-        if persistent == true {
-            routeModel.Persistent = "true"
+        routes = append(routes, routeModel)
+    }
+
+    conf_db := &conf_db_ops
+    pattern = generateDBTableKey(conf_db.separator, STATIC_ROUTE_TB, vrf_id_str, ipprefix)
+    kv2, err := GetKVsMulti(conf_db.db_num, pattern)
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+      
+    for k, kvp := range kv2 {
+        ipprefix, _ := ExtractIPPrefixFromKey(k, conf_db.separator)
+        routeModel := RouteModel{
+            IPPrefix:    ipprefix,
+            NextHop:     kvp["nexthop"],
         }
+
+        if ifname, ok := kvp["ifname"]; ok {
+            routeModel.IfName = ifname
+        }
+
+        if nexthop_monitor, ok := kvp["endpoint_monitor"]; ok {
+            routeModel.NextHopMonitor = nexthop_monitor
+        }
+        
+        if weight, ok := kvp["weight"]; ok {
+            routeModel.Weight = weight
+        }
+
+        if profile, ok := kvp["profile"]; ok {
+            routeModel.Profile = profile
+        }
+        routeModel.Persistent = "true"
         routes = append(routes, routeModel)
     }
 

@@ -1077,6 +1077,61 @@ class TestRestApiPositive:
         assert r.status_code == 200
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes_cleaned)
+
+    def test_vrf_static_routes_patch(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        routes = []
+        routes.append({'cmd':'add',
+                            'ip_prefix':'20.1.2.0/24',
+                            'nexthop':'192.168.2.200',
+                            'persistent': 'true'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'30.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'40.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201,192.168.2.202',
+                            'ifname':'Ethernet0,Ethernet4,Ethernet8'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'fd30:fc14:8a92:b4d3::/64',
+                            'ifname':'Ethernet0,Ethernet4',
+                            'persistent': 'true'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'60.1.2.0/24',
+                            'ifname':'Ethernet8'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'70.1.2.0/24',
+                            'nexthop':'192.168.2.200,192.168.2.201,192.168.2.202',
+                            'nexthop_monitor':'192.168.3.200,192.168.3.201,192.168.3.202',
+                            'weight':'10,20',
+                            'profile':'profile1'})
+
+        routes.append({'cmd':'add',
+                            'ip_prefix':'fd30:fc14:8a92:b4e3::/64',
+                            'nexthop':'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404',
+                            'nexthop_monitor':'cac4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,a803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404',
+                            'weight':'10,20',
+                            'profile':'profile2'})
+
+
+        # Patch add
+        r = restapi_client.patch_config_vrf_vrf_id_routes("default", routes)
+        assert r.status_code == 204
+
+        for route in routes:
+             del route['cmd']
+             if 'nexthop' not in route:
+                 route['nexthop'] = ''
+
+        r = restapi_client.get_config_vrf_vrf_id_routes("default")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert sorted(j) == sorted(routes)     
         
     def test_vrf_non_persistent_routes_all_verbs(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
