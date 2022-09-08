@@ -291,7 +291,7 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
     }        
 
     for k, kvp := range kv1 {
-        ipprefix := strings.Split(k, db.separator)[2]
+        ipprefix, _ := ExtractIPPrefixFromKey(k, db.separator)
 
         routeModel := RouteModel{
             IPPrefix:    ipprefix,
@@ -328,7 +328,7 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
     }
 
     for k, kvp := range kv2 {
-        ipprefix := strings.Split(k, db.separator)[2]
+        ipprefix, _ := ExtractIPPrefixFromKey(k, db.separator)
 
         routeModel := RouteModel{
             IPPrefix:    ipprefix,

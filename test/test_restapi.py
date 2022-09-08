@@ -862,6 +862,145 @@ class TestRestApiPositive:
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes)     
 
+    def test_patch_update_v6_routes_with_optional_args(self, setup_restapi_client):
+        db, _, _, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vlan_and_deps()
+        # No optional args
+        route = {
+                    'cmd':'add',
+                    'ip_prefix':'fd30:fc14:8a92:b4e3::/64',
+                    'nexthop':'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90'
+                }
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
+        assert route_table == {b'endpoint' : route['nexthop']}
+        del route['cmd']
+        routes = list()
+        routes.append(route)
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
+        r = restapi_client.get_config_vrouter_vrf_id_routes("vnet-guid-1")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        print(j)
+        assert sorted(j) == sorted(routes)
+
+        # Modify endpoints; add multiple endpoints
+        route['nexthop'] = 'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
+        route['cmd'] = 'add'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
+        assert route_table == {b'endpoint' : route['nexthop']}
+
+        # Delete route
+        route['cmd'] = 'delete'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
+        assert route_table == {}
+
+        # Vnid Optional arg
+        route['vnid'] = 5000
+        route['cmd'] = 'add'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
+        assert route_table == {b'endpoint' : route['nexthop'],
+                                       b'vni' : str(route['vnid'])
+                                      }
+        del route['cmd']
+        routes = list()
+        routes.append(route)
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
+        r = restapi_client.get_config_vrouter_vrf_id_routes("vnet-guid-1")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert sorted(j) == sorted(routes)       
+
+        # Mac address Optional arg
+        del route['vnid']
+        route['mac_address'] = '00:08:aa:bb:cd:ef'
+        route['cmd'] = 'add'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
+        assert route_table == {b'endpoint' : route['nexthop'],
+                                       b'mac_address' : route['mac_address']
+                                      }
+        del route['cmd']
+        routes = list()
+        routes.append(route)
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
+        r = restapi_client.get_config_vrouter_vrf_id_routes("vnet-guid-1")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert sorted(j) == sorted(routes)
+        # Endpoint Monitor optional arg
+        route['vnid'] = 5000
+        route['nexthop_monitor'] = 'ccd4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,a803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
+        route['cmd'] = 'add'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
+        assert route_table == {b'endpoint' : route['nexthop'],
+                                       b'vni': str(route['vnid']), 
+                                       b'mac_address' : route['mac_address'],
+                                       b'endpoint_monitor': route['nexthop_monitor']
+                                      }
+        del route['cmd']
+        routes = list()
+        routes.append(route)
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
+        r = restapi_client.get_config_vrouter_vrf_id_routes("vnet-guid-1")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert sorted(j) == sorted(routes)
+        del route['nexthop_monitor']
+
+        # Weight optional arg
+        route['vnid'] = 5000
+        route['weight'] = '20,10'
+        route['cmd'] = 'add'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
+        assert route_table == {b'endpoint' : route['nexthop'],
+                                       b'vni': str(route['vnid']), 
+                                       b'mac_address' : route['mac_address'],
+                                       b'weight': route['weight']
+                                      }
+        del route['cmd']
+        routes = list()
+        routes.append(route)
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
+        r = restapi_client.get_config_vrouter_vrf_id_routes("vnet-guid-1")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert sorted(j) == sorted(routes)
+        del route['weight']
+
+        # Profile optional arg
+        route['vnid'] = 5000
+        route['nexthop'] = 'bbc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53c6:d1e5:6db5:82cc:c35a:c1d8:4404'
+        route['profile'] = 'profile1'
+        route['cmd'] = 'add'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
+        assert route_table == {b'endpoint' : route['nexthop'],
+                                       b'vni': str(route['vnid']), 
+                                       b'mac_address' : route['mac_address'],
+                                       b'profile': route['profile']
+                                      }
+        del route['cmd']
+        routes = list()
+        routes.append(route)
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
+        r = restapi_client.get_config_vrouter_vrf_id_routes("vnet-guid-1")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert sorted(j) == sorted(routes)  
 
     def test_patch_routes_drop_bm_routes_tunnel(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
