@@ -279,6 +279,20 @@ var routes = Routes{
     },
 
     Route{
+        "ConfigVrfRouteExpiryGet",
+        "GET",
+        "/v1/config/vrf/route_expiry",
+        ConfigVrfRouteExpiryGet,
+    },
+
+    Route{
+        "ConfigVrfRouteExpiryPost",
+        "POST",
+        "/v1/config/vrf/route_expiry",
+        ConfigVrfRouteExpiryPost,
+    },
+
+    Route{
         "ConfigVrfVrfIdRoutesGet",
         "GET",
         "/v1/config/vrf/{vrf_id}/routes",
