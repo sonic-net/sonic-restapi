@@ -22,6 +22,10 @@ type BgpProfileModel struct {
     CommunityId  string `json:"community_id"`
 }
 
+type RouteExpiryTimeModel struct {
+    Time int `json:"time"`
+}
+
 type RouteModel struct {
     Cmd            string `json:"cmd,omitempty"`
     IPPrefix       string `json:"ip_prefix"`
@@ -33,6 +37,7 @@ type RouteModel struct {
     Vnid           int    `json:"vnid,omitempty"`
     Weight         string `json:"weight,omitempty"`
     Profile        string `json:"profile,omitempty"`
+    Persistent     string `json:"persistent,omitempty"`
     Error_code     int    `json:"error_code,omitempty"`
     Error_msg      string `json:"error_msg,omitempty"`
 }
@@ -193,6 +198,7 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         Vnid           int     `json:"vnid"`
         Weight         *string `json:"weight"`
         Profile        *string `json:"profile"`
+        Persistent     *string `json:persistent`
         Error          string  `json:"error"`
     }{}
 
@@ -256,6 +262,17 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
             return
         }
         m.MACAddress = *required.MACAddress
+    }
+
+    if required.Persistent == nil {
+        m.Persistent = "false"
+    } else {
+        if strings.Contains(*required.Persistent, "true") || strings.Contains(*required.Persistent, "false") {
+            m.Persistent = *required.Persistent
+        } else {
+            err = &InvalidFormatError{Field: "persistent", Message: "must be either true or false"}
+            return             
+        }
     }
 
     m.Cmd = *required.Cmd
@@ -373,6 +390,26 @@ func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
         }
     }
 
+    return
+}
+
+func (m *RouteExpiryTimeModel) UnmarshalJSON(data []byte) (err error) {
+    required := struct {
+        Time int `json:"time"`
+    }{}
+
+    err = json.Unmarshal(data, &required)
+
+    if err != nil {
+        return
+    }
+
+    if required.Time < 0 || required.Time > 172800 {
+        err = &InvalidFormatError{Field: "time", Message: "time must be greater than 0 and lesser than or equal to 172800"}
+        return
+    }
+
+    m.Time = required.Time
     return
 }
 

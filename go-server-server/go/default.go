@@ -1350,7 +1350,9 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
 
 func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-    db := &conf_db_ops
+    var db *db_ops
+    conf_db := &conf_db_ops
+    app_db := &app_db_ops
     vars := mux.Vars(r)
     var rt_tb_key string
     vrf_id_str := vars["vrf_id"]
@@ -1369,10 +1371,12 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    pt := swsscommon.NewTable(db.swss_db, STATIC_ROUTE_TB)
-    defer pt.Delete()
+    var pt swsscommon.Table
+    conf_pt := swsscommon.NewTable(conf_db.swss_db, STATIC_ROUTE_TB)
+    defer conf_pt.Delete()
+    app_pt := swsscommon.NewTable(app_db.swss_db, STATIC_ROUTE_TB)
+    defer app_pt.Delete()
 
-    var rt_tb_name string
     var failed []RouteModel
 
     for _, r := range attr {
@@ -1395,8 +1399,15 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             continue
         }
 
-        rt_tb_name = STATIC_ROUTE_TB
-        rt_tb_key = generateDBTableKey(db.separator, rt_tb_name, vrf_id_str, r.IPPrefix)
+        if r.Persistent == "true" {
+            db = conf_db
+            pt = conf_pt
+        } else {
+            db = app_db
+            pt = app_pt
+        }
+
+        rt_tb_key = generateDBTableKey(db.separator, STATIC_ROUTE_TB, vrf_id_str, r.IPPrefix)
 
         cur_route, err := GetKVs(db.db_num, rt_tb_key)
         if err != nil {
@@ -1421,7 +1432,9 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                     pt.Del(generateDBTableKey(db.separator,vrf_id_str, r.IPPrefix), "DEL", "")
                 } else {
                     /* Identical route */
-                    continue
+                    if r.Persistent == "true" {
+                        continue
+                    }
                 }
             }
             route_map := make(map[string]string)
@@ -1445,6 +1458,9 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
             if r.Profile != "" {
                 route_map["profile"] = r.Profile
             }
+            if r.Persistent == "false" {
+                route_map["refresh"] = "true"
+            }
             pt.Set(generateDBTableKey(db.separator,vrf_id_str, r.IPPrefix), route_map, "SET", "")
         }
     }
@@ -1457,6 +1473,47 @@ func ConfigVrfVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
     } else {
         w.WriteHeader(http.StatusNoContent)
     }
+}
+
+func ConfigVrfRouteExpiryPost(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+    db := &app_db_ops
+
+    var attr RouteExpiryTimeModel
+    err := ReadJSONBody(w, r, &attr)
+    if err != nil {
+        // The error is already handled in this case
+        return
+    }
+
+    static_rt_t := swsscommon.NewTable(db.swss_db, STATIC_ROUTE_EXP_TB)
+    defer static_rt_t.Delete()
+
+    static_rt_t.Set("", map[string]string {
+                        "time": strconv.Itoa(attr.Time),
+        }, "SET", "")
+    w.WriteHeader(http.StatusNoContent)    
+}
+
+func ConfigVrfRouteExpiryGet(w http.ResponseWriter, r *http.Request) {
+    db := &app_db_ops
+
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, STATIC_ROUTE_EXP_TB))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if len(kv) == 0 {
+        WriteRequestError(w, http.StatusBadRequest, "Object does not exist!", []string{}, "")
+        return
+    }
+
+    time, _ := strconv.Atoi(kv["time"])
+    output := RouteExpiryTimeModel {
+        Time: time,
+    }
+    WriteRequestResponse(w, output, http.StatusOK)
 }
 
 func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
@@ -1477,23 +1534,19 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    db := &conf_db_ops
+    app_db := &app_db_ops
     var pattern string
 
-    rt_tb_name := STATIC_ROUTE_TB
-
-    pattern = generateDBTableKey(db.separator, rt_tb_name, vrf_id_str, ipprefix)
-    routes := []RouteModel{}
-
-    kv, err := GetKVsMulti(db.db_num, pattern)
+    pattern = generateDBTableKey(app_db.separator, STATIC_ROUTE_TB, vrf_id_str, ipprefix)
+    kv1, err := GetKVsMulti(app_db.db_num, pattern)
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
-    for k, kvp := range kv {
-        ipprefix := strings.Split(k, db.separator)[2]
-
+    routes := []RouteModel{}
+    for k, kvp := range kv1 {
+        ipprefix, _ := ExtractIPPrefixFromKey(k, app_db.separator)
         routeModel := RouteModel{
             IPPrefix:    ipprefix,
             NextHop:     kvp["nexthop"],
@@ -1514,6 +1567,40 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
         if profile, ok := kvp["profile"]; ok {
             routeModel.Profile = profile
         }
+        routes = append(routes, routeModel)
+    }
+
+    conf_db := &conf_db_ops
+    pattern = generateDBTableKey(conf_db.separator, STATIC_ROUTE_TB, vrf_id_str, ipprefix)
+    kv2, err := GetKVsMulti(conf_db.db_num, pattern)
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+      
+    for k, kvp := range kv2 {
+        ipprefix, _ := ExtractIPPrefixFromKey(k, conf_db.separator)
+        routeModel := RouteModel{
+            IPPrefix:    ipprefix,
+            NextHop:     kvp["nexthop"],
+        }
+
+        if ifname, ok := kvp["ifname"]; ok {
+            routeModel.IfName = ifname
+        }
+
+        if nexthop_monitor, ok := kvp["endpoint_monitor"]; ok {
+            routeModel.NextHopMonitor = nexthop_monitor
+        }
+        
+        if weight, ok := kvp["weight"]; ok {
+            routeModel.Weight = weight
+        }
+
+        if profile, ok := kvp["profile"]; ok {
+            routeModel.Profile = profile
+        }
+        routeModel.Persistent = "true"
         routes = append(routes, routeModel)
     }
 
