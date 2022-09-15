@@ -2123,9 +2123,15 @@ class TestRestApiNegative():
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
         j = json.loads(r.text)
-        print(j)
         assert j['error']['fields'] == ['cmd']
         assert j['error']['details'] == "Must be add/delete/append/delete"
+
+        route['cmd'] = 'append'
+        route['nexthop'] = '192.168.2.1'
+        route['nexthop_monitor'] = '192.168.2.7'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        del route['nexthop_monitor']
 
         route['cmd'] = 'append'
         route['nexthop'] = '192.168.2.2'

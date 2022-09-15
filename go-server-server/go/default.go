@@ -1298,26 +1298,23 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                                 /* Delete and re-add the route as it is not identical */
                                 pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
                             } else {
-                                var curr_endpoints []string
-                                var curr_endpoint_monitors []string
-                                if cur_route["endpoint"] != "" {
-                                    curr_endpoints = strings.Split(cur_route["endpoint"], ",")
-                                }
-                                if cur_route["endpoint_monitor"] != ""{
-                                    curr_endpoint_monitors = strings.Split(cur_route["endpoint_monitor"], ",")
-                                }
-                                new_nexthops := strings.Split(r.NextHop, ",")
-                                new_nexthop_monitors := strings.Split(r.NextHopMonitor, ",")
+                                curr_endpoints := ExtractIPsFromString(cur_route["endpoint"])
+                                curr_endpoint_monitors := ExtractIPsFromString(cur_route["endpoint_monitor"])
+                                new_nexthops := ExtractIPsFromString(r.NextHop)
+                                new_nexthop_monitors := ExtractIPsFromString(r.NextHopMonitor)
+                                success := false;
                                 if r.Cmd == "append" {
                                     /* Append to existing entry */
                                     for _, n_nxthop := range new_nexthops {
                                         if !IsPresentInSlice(curr_endpoints, n_nxthop) {
                                             curr_endpoints = append(curr_endpoints, n_nxthop)
+                                            success = true
                                         }
                                     }
                                     for _, n_nxthop_mtr := range new_nexthop_monitors {
                                         if !IsPresentInSlice(curr_endpoint_monitors, n_nxthop_mtr) {
                                             curr_endpoint_monitors = append(curr_endpoint_monitors, n_nxthop_mtr)
+                                            success = true
                                         }
                                     }
                                 } else {
@@ -1327,14 +1324,18 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                                         if ok, curr_endpoints = RemoveFromSlice(curr_endpoints, n_nxthop); !ok {
                                             r.Error_msg = n_nxthop+" not present to remove"
                                             failed = append(failed, r)
-                                            continue
+                                            break
+                                        } else {
+                                            success = true
                                         }
                                     }
                                     for _, n_nxthop_mtr := range new_nexthop_monitors {
                                         if ok, curr_endpoint_monitors = RemoveFromSlice(curr_endpoint_monitors, n_nxthop_mtr); !ok {
                                             r.Error_msg = n_nxthop_mtr+" not present to remove"
                                             failed = append(failed, r)
-                                            continue
+                                            break
+                                        } else {
+                                            success = true
                                         }
                                     }                                    
                                 }                             
@@ -1343,14 +1344,16 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                                     failed = append(failed, r)
                                     continue
                                 }
-                                if len(curr_endpoints) == 0 {
-                                    pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
-                                } else {
-                                    cur_route["endpoint"] = strings.Join(curr_endpoints, ",")
-                                    if len(curr_endpoint_monitors) > 0 {
-                                        cur_route["endpoint_monitor"] = strings.Join(curr_endpoint_monitors, ",")
-                                    }                       
-                                    pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), cur_route, "SET", "")
+                                if success == true {
+                                    if len(curr_endpoints) == 0 {
+                                        pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
+                                    } else {
+                                        cur_route["endpoint"] = strings.Join(curr_endpoints, ",")
+                                        if len(curr_endpoint_monitors) > 0 {
+                                            cur_route["endpoint_monitor"] = strings.Join(curr_endpoint_monitors, ",")
+                                        }                       
+                                        pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), cur_route, "SET", "")
+                                    }
                                 }
                                 continue
                             }
