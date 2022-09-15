@@ -1050,7 +1050,6 @@ class TestRestApiPositive:
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes)  
 
-
         # Update Nexthops and Nexthop monitors
         route['cmd'] = "append"
         route['nexthop'] = 'b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
@@ -1058,7 +1057,7 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        route['nexthop'] = 'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
+        route['nexthop'] = 'bbc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53c6:d1e5:6db5:82cc:c35a:c1d8:4404,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
         assert route_table == {b'endpoint' : route['nexthop'],
                                 b'endpoint_monitor': route['nexthop_monitor'],
                                 b'vni': str(route['vnid']), 
@@ -1075,12 +1074,12 @@ class TestRestApiPositive:
         assert sorted(j) == sorted(routes)
 
         route['cmd'] = "remove"
-        route['nexthop'] = 'b803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
+        route['nexthop'] = 'b803:53c6:d1e5:6db5:82cc:c35a:c1d8:4404'
         route['nexthop_monitor'] = 'b803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        route['nexthop'] = 'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
+        route['nexthop'] = 'bbc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
         route['nexthop_monitor'] = 'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
         assert route_table == {b'endpoint' : route['nexthop'],
                                 b'endpoint_monitor': route['nexthop_monitor'],
