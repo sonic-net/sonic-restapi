@@ -862,9 +862,7 @@ class TestRestApiPositive:
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes)
 
-        del route['vnid']
-        del route['mac_address']
-        del route['profile']
+
         # Update Nexthops and Nexthop monitors
         route['cmd'] = "append"
         route['nexthop'] = '200.3.152.33'
@@ -874,7 +872,10 @@ class TestRestApiPositive:
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         route['nexthop'] = '100.3.152.32,200.3.152.32,200.3.152.33'
         assert route_table == {b'endpoint' : route['nexthop'],
-                                b'endpoint_monitor': route['nexthop_monitor']
+                                b'endpoint_monitor': route['nexthop_monitor'],
+                                b'vni': str(route['vnid']), 
+                                b'mac_address' : route['mac_address'],
+                                b'profile': route['profile']                                
                                 }
         del route['cmd']
         routes = list()
@@ -894,7 +895,10 @@ class TestRestApiPositive:
         route['nexthop'] = '100.3.152.32,200.3.152.33'
         route['nexthop_monitor'] = '100.3.152.32,200.3.152.33'
         assert route_table == {b'endpoint' : route['nexthop'],
-                                b'endpoint_monitor': route['nexthop_monitor']
+                                b'endpoint_monitor': route['nexthop_monitor'],
+                                b'vni': str(route['vnid']), 
+                                b'mac_address' : route['mac_address'],
+                                b'profile': route['profile']
                                 }
         del route['cmd']
         routes = list()
@@ -1058,7 +1062,10 @@ class TestRestApiPositive:
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         route['nexthop'] = 'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53a8:d1e5:6db5:82cc:c35a:c1d8:4404,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
         assert route_table == {b'endpoint' : route['nexthop'],
-                                b'endpoint_monitor': route['nexthop_monitor']
+                                b'endpoint_monitor': route['nexthop_monitor'],
+                                b'vni': str(route['vnid']), 
+                                b'mac_address' : route['mac_address'],
+                                b'profile': route['profile']
                                 }
         del route['cmd']
         routes = list()
@@ -1078,7 +1085,10 @@ class TestRestApiPositive:
         route['nexthop'] = 'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
         route['nexthop_monitor'] = 'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
         assert route_table == {b'endpoint' : route['nexthop'],
-                                b'endpoint_monitor': route['nexthop_monitor']
+                                b'endpoint_monitor': route['nexthop_monitor'],
+                                b'vni': str(route['vnid']), 
+                                b'mac_address' : route['mac_address'],
+                                b'profile': route['profile']
                                 }
         del route['cmd']
         routes = list()
