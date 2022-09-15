@@ -1050,9 +1050,7 @@ class TestRestApiPositive:
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes)  
 
-        del route['vnid']
-        del route['mac_address']
-        del route['profile']
+
         # Update Nexthops and Nexthop monitors
         route['cmd'] = "append"
         route['nexthop'] = 'b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
