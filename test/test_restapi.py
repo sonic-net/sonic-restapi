@@ -2108,6 +2108,47 @@ class TestRestApiNegative():
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
 
+        # Append and remove
+        route = {
+                    'cmd':'add',
+                    'ip_prefix':'10.2.1.0/24',
+                    'nexthop':'192.168.2.1',
+                    'nexthop_monitor':'192.168.2.7'
+                }
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+
+        route['cmd'] = 'update'
+        route['nexthop'] = '192.168.2.2'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 400
+        j = json.loads(r.text)
+        print(j)
+        assert j['error']['fields'] == ['cmd']
+        assert j['error']['details'] == "Must be add/delete/append/delete"
+
+        route['cmd'] = 'append'
+        route['nexthop'] = '192.168.2.2'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 207
+        j = json.loads(r.text)
+        assert j['failed'][0]['error_msg'] == "there must be equal number of nexthop(s) and nexthop_monitor(s)"
+
+        route['cmd'] = 'remove'
+        route['nexthop'] = '192.168.2.20'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 207
+        j = json.loads(r.text)
+        assert j['failed'][0]['error_msg'] == "192.168.2.20 not present to remove"        
+
+        route['cmd'] = 'remove'
+        route['nexthop_monitor'] = '192.168.2.20'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 207
+        j = json.loads(r.text)
+        assert j['failed'][0]['error_msg'] == "192.168.2.20 not present to remove"   
+
+
     def test_patch_update_static_routes(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         restapi_client.post_generic_vlan_and_deps()

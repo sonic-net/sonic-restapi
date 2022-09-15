@@ -222,7 +222,7 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     } 
 
     if *required.Cmd != "add" && *required.Cmd != "delete" && *required.Cmd != "append" && *required.Cmd != "remove" {
-        err = &InvalidFormatError{Field: "cmd", Message: "Must be add/delete/update"}
+        err = &InvalidFormatError{Field: "cmd", Message: "Must be add/delete/append/delete"}
         return
     }
 
