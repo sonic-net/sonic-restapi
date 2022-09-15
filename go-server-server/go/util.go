@@ -120,6 +120,29 @@ func ReadJSONBody(w http.ResponseWriter, r *http.Request, attr interface{}) erro
     return nil
 }
 
+func IsPresentInSlice(slice_t []string, item string) bool {
+    for _, str_t := range slice_t {
+        if str_t == item {
+            return true
+        }
+    }
+    return false
+}
+
+func RemoveFromSlice(slice_t []string, item string) (bool, []string) {
+    index := -1
+    for idx, str_t := range slice_t {
+        if str_t == item {
+            index = idx
+            break
+        }
+    }
+    if index == -1 {
+        return false, nil
+    }
+    return true, append(slice_t[:index], slice_t[index+1:]...)
+}
+
 func IsValidIP(ipstr string) bool {
     ip := net.ParseIP(ipstr)
     return (ip != nil) && (ip.To4() != nil)

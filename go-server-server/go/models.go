@@ -221,8 +221,8 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         }
     } 
 
-    if *required.Cmd != "add" && *required.Cmd != "delete" {
-        err = &InvalidFormatError{Field: "cmd", Message: "Must be add/delete"}
+    if *required.Cmd != "add" && *required.Cmd != "delete" && *required.Cmd != "append" && *required.Cmd != "remove" {
+        err = &InvalidFormatError{Field: "cmd", Message: "Must be add/delete/update"}
         return
     }
 
@@ -247,7 +247,7 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         }
         nexthops := strings.Split(m.NextHop, ",")
         nexthop_mon := strings.Split(*required.NextHopMonitor, ",")
-        if len(nexthops) != len(nexthop_mon) {
+        if *required.Cmd == "add" && len(nexthops) != len(nexthop_mon) {
             err = &InvalidFormatError{Field: "nexthop_monitor", Message: "there must be equal number of nexthop(s) and nexthop_monitor(s)"}
             return            
         }
