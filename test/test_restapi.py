@@ -909,6 +909,34 @@ class TestRestApiPositive:
         j = json.loads(r.text)
         assert sorted(j) == sorted(routes)
 
+        # Delete route and append to it
+        route['cmd'] = 'delete'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
+        assert route_table == {}
+
+        route['cmd'] = "append"
+        route['nexthop'] = '200.3.152.33'
+        route['nexthop_monitor'] = '100.3.152.32'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
+        assert route_table == {b'endpoint' : route['nexthop'],
+                                b'endpoint_monitor': route['nexthop_monitor'],
+                                b'vni': str(route['vnid']), 
+                                b'mac_address' : route['mac_address'],
+                                b'profile': route['profile']                                
+                                }
+        del route['cmd']
+        routes = list()
+        routes.append(route)
+        routes.append({'nexthop': '', 'ip_prefix': '10.1.1.0/24', 'ifname': 'Vlan2'})
+        r = restapi_client.get_config_vrouter_vrf_id_routes("vnet-guid-1")
+        assert r.status_code == 200
+        j = json.loads(r.text)
+        assert sorted(j) == sorted(routes)
+
 
     def test_patch_update_v6_routes_with_optional_args(self, setup_restapi_client):
         db, _, _, restapi_client = setup_restapi_client
@@ -2152,7 +2180,18 @@ class TestRestApiNegative():
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 207
         j = json.loads(r.text)
-        assert j['failed'][0]['error_msg'] == "192.168.2.20 not present to remove"   
+        assert j['failed'][0]['error_msg'] == "192.168.2.20 not present to remove" 
+
+        # Delete route and remove it
+        route['cmd'] = 'delete'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 204
+        route['cmd'] = 'remove'
+        route['nexthop_monitor'] = '192.168.2.20'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 207
+        j = json.loads(r.text)
+        assert j['failed'][0]['error_msg'] == "Cannot remove from non-existing route. Please add the route first!" 
 
 
     def test_patch_update_static_routes(self, setup_restapi_client):

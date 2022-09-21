@@ -1371,31 +1371,39 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                     }
                 }
             }
-            route_map := make(map[string]string)
-            if r.IfName == "" {
-                route_map["endpoint"] = r.NextHop
-                if(r.MACAddress != "") {
-                        route_map["mac_address"] = r.MACAddress
+            /* Add new entry or append for the first time */
+            if r.Cmd == "add" || r.Cmd == "append" {
+                route_map := make(map[string]string)
+                if r.IfName == "" {
+                    route_map["endpoint"] = r.NextHop
+                    if(r.MACAddress != "") {
+                            route_map["mac_address"] = r.MACAddress
+                    }
+                    if(r.Vnid != 0) {
+                            route_map["vni"] = strconv.Itoa(r.Vnid)
+                    }
+                } else {
+                    route_map["ifname"] = r.IfName
+                    if r.NextHop != "" {
+                        route_map["nexthop"] = r.NextHop
+                    }
                 }
-                if(r.Vnid != 0) {
-                        route_map["vni"] = strconv.Itoa(r.Vnid)
+                if r.NextHopMonitor != "" {
+                    route_map["endpoint_monitor"] = r.NextHopMonitor
                 }
+                if r.Weight != "" {
+                    route_map["weight"] = r.Weight
+                }
+                if r.Profile != "" {
+                    route_map["profile"] = r.Profile
+                }
+                pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
             } else {
-                route_map["ifname"] = r.IfName
-                if r.NextHop != "" {
-                    route_map["nexthop"] = r.NextHop
-                }
+                /* Remove from non existing entry */
+                r.Error_msg = "Cannot remove from non-existing route. Please add the route first!"
+                failed = append(failed, r)
+                continue                
             }
-            if r.NextHopMonitor != "" {
-                route_map["endpoint_monitor"] = r.NextHopMonitor
-            }
-            if r.Weight != "" {
-                route_map["weight"] = r.Weight
-            }
-            if r.Profile != "" {
-                route_map["profile"] = r.Profile
-            }
-            pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
 		}
 	}
 
