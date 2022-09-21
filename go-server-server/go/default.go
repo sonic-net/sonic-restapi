@@ -1290,6 +1290,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 if r.IfName == "" {
                     if cur_route["endpoint"] != r.NextHop ||
                         cur_route["endpoint_monitor"] != r.NextHopMonitor ||
+                        cur_route["primary"] != r.Primary ||
                         cur_route["mac_address"] != r.MACAddress ||
                         cur_route["vni"] != strconv.Itoa(r.Vnid) ||
                         cur_route["weight"] != r.Weight ||
@@ -1390,6 +1391,23 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 }
                 if r.NextHopMonitor != "" {
                     route_map["endpoint_monitor"] = r.NextHopMonitor
+                }
+                if r.Primary != "" {
+                    success := true
+                    nexthops := ExtractIPsFromString(r.NextHop)
+                    primaries := ExtractIPsFromString(r.Primary)
+                    for _, primary := range primaries {
+                        if !IsPresentInSlice(nexthops, primary) {
+                            r.Error_msg = primary+" not present in nexthop list"
+                            failed = append(failed, r)
+                            success = false
+                            break                            
+                        }
+                    }
+                    if success == false {
+                        continue
+                    }
+                    route_map["primary"] = r.Primary                    
                 }
                 if r.Weight != "" {
                     route_map["weight"] = r.Weight

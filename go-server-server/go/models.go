@@ -33,6 +33,7 @@ type RouteModel struct {
     NextHopType    string `json:"nexthop_type,omitempty"`
     NextHop        string `json:"nexthop"`
     NextHopMonitor string `json:"nexthop_monitor,omitempty"`
+    Primary        string `json:"primary,omitempty"`
     MACAddress     string `json:"mac_address,omitempty"`
     Vnid           int    `json:"vnid,omitempty"`
     Weight         string `json:"weight,omitempty"`
@@ -194,6 +195,7 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         NextHopType    *string `json:"nexthop_type"`
         NextHop        *string `json:"nexthop"`
         NextHopMonitor *string `json:"nexthop_monitor"`
+        Primary        *string `json:"primary"`
         MACAddress     *string `json:"mac_address"`
         Vnid           int     `json:"vnid"`
         Weight         *string `json:"weight"`
@@ -252,6 +254,14 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
             return            
         }
         m.NextHopMonitor = *required.NextHopMonitor
+    }
+
+    if required.Primary != nil {
+        if !strings.Contains(*required.Primary, ",") && !IsValidIPBoth(*required.Primary) {
+            err = &InvalidFormatError{Field: "primary", Message: "Invalid IP address"}
+            return
+        }
+        m.Primary = *required.Primary
     }
 
     if required.IfName == nil && required.MACAddress != nil {
