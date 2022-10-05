@@ -1290,12 +1290,74 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 if r.IfName == "" {
                     if cur_route["endpoint"] != r.NextHop ||
                         cur_route["endpoint_monitor"] != r.NextHopMonitor ||
+                        cur_route["primary"] != r.Primary ||
                         cur_route["mac_address"] != r.MACAddress ||
                         cur_route["vni"] != strconv.Itoa(r.Vnid) ||
                         cur_route["weight"] != r.Weight ||
                         cur_route["profile"] != r.Profile {
-                            /* Delete and re-add the route as it is not identical */
-                            pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
+                            if r.Cmd == "add" {
+                                /* Delete and re-add the route as it is not identical */
+                                pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
+                            } else {
+                                curr_endpoints := ExtractIPsFromString(cur_route["endpoint"])
+                                curr_endpoint_monitors := ExtractIPsFromString(cur_route["endpoint_monitor"])
+                                new_nexthops := ExtractIPsFromString(r.NextHop)
+                                new_nexthop_monitors := ExtractIPsFromString(r.NextHopMonitor)
+                                success := false;
+                                if r.Cmd == "append" {
+                                    /* Append to existing entry */
+                                    for _, n_nxthop := range new_nexthops {
+                                        if !IsPresentInSlice(curr_endpoints, n_nxthop) {
+                                            curr_endpoints = append(curr_endpoints, n_nxthop)
+                                            success = true
+                                        }
+                                    }
+                                    for _, n_nxthop_mtr := range new_nexthop_monitors {
+                                        if !IsPresentInSlice(curr_endpoint_monitors, n_nxthop_mtr) {
+                                            curr_endpoint_monitors = append(curr_endpoint_monitors, n_nxthop_mtr)
+                                            success = true
+                                        }
+                                    }
+                                } else {
+                                    /* Remove from existing entry */
+                                    var ok bool;
+                                    for _, n_nxthop := range new_nexthops {
+                                        if ok, curr_endpoints = RemoveFromSlice(curr_endpoints, n_nxthop); !ok {
+                                            r.Error_msg = n_nxthop+" not present to remove"
+                                            failed = append(failed, r)
+                                            break
+                                        } else {
+                                            success = true
+                                        }
+                                    }
+                                    for _, n_nxthop_mtr := range new_nexthop_monitors {
+                                        if ok, curr_endpoint_monitors = RemoveFromSlice(curr_endpoint_monitors, n_nxthop_mtr); !ok {
+                                            r.Error_msg = n_nxthop_mtr+" not present to remove"
+                                            failed = append(failed, r)
+                                            break
+                                        } else {
+                                            success = true
+                                        }
+                                    }                                    
+                                }                             
+                                if len(curr_endpoint_monitors) > 0 && (len(curr_endpoint_monitors) != len(curr_endpoints)) {
+                                    r.Error_msg = "there must be equal number of nexthop(s) and nexthop_monitor(s)"
+                                    failed = append(failed, r)
+                                    continue
+                                }
+                                if success == true {
+                                    if len(curr_endpoints) == 0 {
+                                        pt.Del(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), "DEL", "")
+                                    } else {
+                                        cur_route["endpoint"] = strings.Join(curr_endpoints, ",")
+                                        if len(curr_endpoint_monitors) > 0 {
+                                            cur_route["endpoint_monitor"] = strings.Join(curr_endpoint_monitors, ",")
+                                        }                       
+                                        pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), cur_route, "SET", "")
+                                    }
+                                }
+                                continue
+                            }
                     } else {
                             /* Identical route */
                             continue
@@ -1310,31 +1372,56 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                     }
                 }
             }
-            route_map := make(map[string]string)
-            if r.IfName == "" {
-                route_map["endpoint"] = r.NextHop
-                if(r.MACAddress != "") {
-                        route_map["mac_address"] = r.MACAddress
+            /* Add new entry or append for the first time */
+            if r.Cmd == "add" || r.Cmd == "append" {
+                route_map := make(map[string]string)
+                if r.IfName == "" {
+                    route_map["endpoint"] = r.NextHop
+                    if(r.MACAddress != "") {
+                            route_map["mac_address"] = r.MACAddress
+                    }
+                    if(r.Vnid != 0) {
+                            route_map["vni"] = strconv.Itoa(r.Vnid)
+                    }
+                } else {
+                    route_map["ifname"] = r.IfName
+                    if r.NextHop != "" {
+                        route_map["nexthop"] = r.NextHop
+                    }
                 }
-                if(r.Vnid != 0) {
-                        route_map["vni"] = strconv.Itoa(r.Vnid)
+                if r.NextHopMonitor != "" {
+                    route_map["endpoint_monitor"] = r.NextHopMonitor
                 }
+                if r.Primary != "" {
+                    success := true
+                    nexthops := ExtractIPsFromString(r.NextHop)
+                    primaries := ExtractIPsFromString(r.Primary)
+                    for _, primary := range primaries {
+                        if !IsPresentInSlice(nexthops, primary) {
+                            r.Error_msg = primary+" not present in nexthop list"
+                            failed = append(failed, r)
+                            success = false
+                            break                            
+                        }
+                    }
+                    if success == false {
+                        continue
+                    }
+                    route_map["primary"] = r.Primary                    
+                }
+                if r.Weight != "" {
+                    route_map["weight"] = r.Weight
+                }
+                if r.Profile != "" {
+                    route_map["profile"] = r.Profile
+                }
+                pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
             } else {
-                route_map["ifname"] = r.IfName
-                if r.NextHop != "" {
-                    route_map["nexthop"] = r.NextHop
-                }
+                /* Remove from non existing entry */
+                r.Error_msg = "Cannot remove from non-existing route. Please add the route first!"
+                failed = append(failed, r)
+                continue                
             }
-            if r.NextHopMonitor != "" {
-                route_map["endpoint_monitor"] = r.NextHopMonitor
-            }
-            if r.Weight != "" {
-                route_map["weight"] = r.Weight
-            }
-            if r.Profile != "" {
-                route_map["profile"] = r.Profile
-            }
-            pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
 		}
 	}
 
