@@ -328,6 +328,14 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
             routeModel.Profile = profile
         }
 
+        if adv_prefix, ok := kvp["adv_prefix"]; ok {
+            routeModel.AdvPrefix = adv_prefix
+        }
+
+        if monitoring, ok := kvp["monitoring"]; ok {
+            routeModel.Monitoring = monitoring
+        }
+
         routes = append(routes, routeModel)
     }
 
