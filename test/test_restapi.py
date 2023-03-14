@@ -1011,7 +1011,7 @@ class TestRestApiPositive:
         assert sorted(j) == sorted(routes)
 
         # Adv Prefix optional arg
-        route['adv_prefix'] = '10.1.0.0/16'
+        route['adv_prefix'] = '10.1.0.0/26'
         route['cmd'] = 'add'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
@@ -2207,7 +2207,7 @@ class TestRestApiNegative():
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 207
         j = json.loads(r.text)
-        assert j['failed'][0]['error_msg'] == "Prefix length other than 64 is not supported"        
+        assert j['failed'][0]['error_msg'] == "Prefix length lesser than 64 is not supported"        
 
     def test_patch_update_routes_with_optional_args(self, setup_restapi_client):
         db, _, _, restapi_client = setup_restapi_client
@@ -2241,6 +2241,22 @@ class TestRestApiNegative():
         route['adv_prefix'] = '10.1.0.0'
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 400
+        route['primary'] = '192.168.2.1'
+        route['adv_prefix'] = '10.1.0.0/16'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 207
+        j = json.loads(r.text)
+        assert j['failed'][0]['error_msg'] == "Adv Prefix length lesser than 18 is not supported"
+        route['adv_prefix'] = '10.1.1.0/16'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 207
+        j = json.loads(r.text)
+        assert j['failed'][0]['error_msg'] == "Incorrect Advertisement Prefix"
+        route['adv_prefix'] = '2006:5820::/32'
+        r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
+        assert r.status_code == 207
+        j = json.loads(r.text)
+        assert j['failed'][0]['error_msg'] == "Adv Prefix length lesser than 64 is not supported"        
 
         # Append and remove
         route = {

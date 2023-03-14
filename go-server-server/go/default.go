@@ -1244,8 +1244,8 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                         continue                        
                     }
                 } else {
-                    if prefix_len != 64 {
-                        r.Error_msg = "Prefix length other than 64 is not supported"
+                    if prefix_len < 64 {
+                        r.Error_msg = "Prefix length lesser than 64 is not supported"
                         failed = append(failed, r)
                         continue                          
                     }
@@ -1420,6 +1420,33 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                     route_map["profile"] = r.Profile
                 }
                 if r.AdvPrefix != "" {
+                    adv_ip, adv_network, err := net.ParseCIDR(r.AdvPrefix)
+                    if err != nil {
+                        r.Error_msg = "Incorrect Advertisement Prefix"
+                        failed = append(failed, r)
+                        continue
+                    }
+
+                    if adv_ip.String() != strings.Split(adv_network.String(), "/")[0] {
+                        r.Error_msg = "Incorrect Advertisement Prefix"
+                        failed = append(failed, r)
+                        continue
+                    }
+
+		    prefix_len, _ := adv_network.Mask.Size()
+                    if isV4orV6(adv_ip.String()) == 4 {
+                        if prefix_len < 18 {
+                            r.Error_msg = "Adv Prefix length lesser than 18 is not supported"
+                            failed = append(failed, r)
+                            continue
+                        }
+                    } else {
+                        if prefix_len < 64 {
+                            r.Error_msg = "Adv Prefix length lesser than 64 is not supported"
+                            failed = append(failed, r)
+                            continue
+                        }
+                    }
                     route_map["adv_prefix"] = r.AdvPrefix
                 }
                 if r.Monitoring != "" {
