@@ -40,7 +40,7 @@ RUN rm -fr /debs
 # && make \
 # && make install
 
-RUN export VERSION=1.14 \
+RUN export VERSION=1.15 \
  && cd /tmp \
  && wget https://storage.googleapis.com/golang/go$VERSION.linux-amd64.tar.gz \
  && tar -C /usr/local -xzf go$VERSION.linux-amd64.tar.gz \
