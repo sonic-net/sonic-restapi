@@ -19,7 +19,7 @@ $(GOPATH)/bin/go-server-server: libcswsscommon $(GOPATH)/src/go-server-server/ma
 	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) build -race -v
 
 $(GOPATH)/bin/go-server-server.test: libcswsscommon $(GOPATH)/src/go-server-server/main.go
-	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) test -race -c -covermode=count -coverpkg "go-server-server/go" -v -o $(GOPATH)/bin/go-server-server.test
+	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) test -race -c -covermode=atomic -coverpkg "go-server-server/go" -v -o $(GOPATH)/bin/go-server-server.test
 
 $(GOPATH)/src/go-server-server/main.go:
 	mkdir -p               $(GOPATH)/src
