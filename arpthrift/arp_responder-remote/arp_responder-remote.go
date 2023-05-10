@@ -147,21 +147,21 @@ func main() {
     }
     argvalue0 := flag.Arg(1)
     value0 := argvalue0
-    tmp1, err18 := (strconv.Atoi(flag.Arg(2)))
+    tmp1, err18 := (strconv.ParseInt(flag.Arg(2), 10, 16))
     if err18 != nil {
       Usage()
       return
     }
     argvalue1 := int16(tmp1)
     value1 := arp.VlanTagT(argvalue1)
-    tmp2, err19 := (strconv.Atoi(flag.Arg(3)))
+    tmp2, err19 := (strconv.ParseInt(flag.Arg(3), 10, 16))
     if err19 != nil {
       Usage()
       return
     }
     argvalue2 := int16(tmp2)
     value2 := arp.VlanTagT(argvalue2)
-    tmp3, err20 := (strconv.Atoi(flag.Arg(4)))
+    tmp3, err20 := (strconv.ParseInt(flag.Arg(4), 10, 32))
     if err20 != nil {
       Usage()
       return
@@ -178,14 +178,14 @@ func main() {
     }
     argvalue0 := flag.Arg(1)
     value0 := argvalue0
-    tmp1, err22 := (strconv.Atoi(flag.Arg(2)))
+    tmp1, err22 := (strconv.ParseInt(flag.Arg(2), 10, 16))
     if err22 != nil {
       Usage()
       return
     }
     argvalue1 := int16(tmp1)
     value1 := arp.VlanTagT(argvalue1)
-    tmp2, err23 := (strconv.Atoi(flag.Arg(3)))
+    tmp2, err23 := (strconv.ParseInt(flag.Arg(3), 10, 16))
     if err23 != nil {
       Usage()
       return
