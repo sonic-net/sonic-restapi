@@ -25,6 +25,9 @@ RESRC_EXISTS = 0
 DEP_MISSING = 1
 DELETE_DEP = 2
 
+sorted_org = sorted
+def sorted(l):
+    return sorted_org([str(e) for e in l])
 
 class TestRestApiPositive:
     """Normal behaviour tests"""
