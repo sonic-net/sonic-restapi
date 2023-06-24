@@ -17,7 +17,7 @@ RUN apt-get update \
       libzmq5-dev
 
 COPY debs /debs
-RUN dpkg -i /debs/*.deb
+RUN dpkg -i /debs/*.deb || apt-get --fix-broken -y install
 RUN rm -fr /debs
 
 COPY supervisor/supervisor.conf /etc/supervisor/conf.d/
