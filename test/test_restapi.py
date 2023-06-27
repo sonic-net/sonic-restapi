@@ -505,14 +505,14 @@ class TestRestApiPositive:
                 assert k[key] == j[key]
             else:
                 #print("is type list",value)
-                assert sorted(value) == sorted(k.values()[0]) 
+                assert sorted(value) == sorted(k['attr'])
         for key,value in j2.items():
             if type(value)!=list:
                 #print("not type list",value)
                 assert k2[key] == j2[key]
             else:
                 #print("is type list",value)
-                assert sorted(value) == sorted(k2.values()[0])
+                assert sorted(value) == sorted(k2['attr'])
 
     # Vlan Get
     def test_get_all_vlans(self, setup_restapi_client):
