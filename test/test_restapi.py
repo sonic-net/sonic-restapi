@@ -468,14 +468,14 @@ class TestRestApiPositive:
                 assert k_vnet1[key] == j_vnet1[key]
             else:
                 #print("is type list",value)
-                assert sorted(value) == sorted(list(k_vnet1.values())[0])
+                assert sorted(value) == sorted(k_vnet1['attr'])
         for key,value in j_vnet2.items():
             if type(value)!=list:
                 #print("not type list",value)
                 assert k_vnet2[key] == j_vnet2[key]
             else:
                 #print("is type list",value)
-                assert sorted(value) == sorted(k_vnet2.values()[0])
+                assert sorted(value) == sorted(k_vnet2['attr'])
 
     def test_get_vlans_per_vnetid_4digitvlans(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
@@ -808,7 +808,7 @@ class TestRestApiPositive:
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         assert route_table == {b'endpoint' : route['nexthop'].encode(),
-                                       b'mac_address' : route['mac_address']
+                                       b'mac_address' : route['mac_address'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -1098,7 +1098,7 @@ class TestRestApiPositive:
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         assert route_table == {b'endpoint' : route['nexthop'].encode(),
-                                       b'mac_address' : route['mac_address']
+                                       b'mac_address' : route['mac_address'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -1722,7 +1722,7 @@ class TestRestApiPositive:
         db, _, _, restapi_client = setup_restapi_client
         restapi_client.post_generic_vlan_and_deps()
         local_route_table = db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
-        assert local_route_table == {b'ifname' : VLAN_NAME_PREF + '2'}
+        assert local_route_table == {b'ifname' : VLAN_NAME_PREF.encode() + b'2'}
         r = restapi_client.delete_config_vlan(2)
         assert r.status_code == 204
         local_route_table = db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
