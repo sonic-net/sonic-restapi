@@ -163,10 +163,10 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-							b'vxlan_tunnel': b'default_vxlan_tunnel',
-							b'vni': b'1001',
-							b'guid': b'vnet-guid-1'
-							}
+                                                        b'vxlan_tunnel': b'default_vxlan_tunnel',
+                                                        b'vni': b'1001',
+                                                        b'guid': b'vnet-guid-1'
+                                                        }
 
     def test_post_vrouter_duplicate(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
@@ -178,10 +178,10 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-							b'vxlan_tunnel': b'default_vxlan_tunnel',
-							b'vni': b'1001',
-							b'guid': b'vnet-guid-1'
-							}
+                                                        b'vxlan_tunnel': b'default_vxlan_tunnel',
+                                                        b'vni': b'1001',
+                                                        b'guid': b'vnet-guid-1'
+                                                        }
 
         r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-2", {
             'vnid': 1001
@@ -204,7 +204,7 @@ class TestRestApiPositive:
                     b'vni': b'1001',
                     b'guid': b'vnet-guid-1',
                     b'advertise_prefix': b'false'
-				}
+                                }
         r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-2", {
             'vnid': 1002,
             'advertise_prefix': 'true'
@@ -248,11 +248,11 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-							b'vxlan_tunnel': b'default_vxlan_tunnel',
-							b'vni': b'2001',
-							b'guid': b'Vnet-default',
+                                                        b'vxlan_tunnel': b'default_vxlan_tunnel',
+                                                        b'vni': b'2001',
+                                                        b'guid': b'Vnet-default',
                             b'scope': b'default'
-							}
+                                                        }
 
     def test_get_vrouter(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
@@ -296,7 +296,7 @@ class TestRestApiPositive:
              vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i))
              assert vrouter_table == {
                      b'vxlan_tunnel': b'default_vxlan_tunnel',
-                     b'vni': b'100'+str(i),
+                     b'vni': b'100'+str(i).encode(),
                      b'guid': b'vnet-guid-'+str(i)
                      }
 
@@ -309,8 +309,8 @@ class TestRestApiPositive:
              vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i))
              assert vrouter_table == {
                      b'vxlan_tunnel': b'default_vxlan_tunnel',
-                     b'vni': b'100'+str(i+3),
-                     b'guid': b'vnet-guid-'+str(i+3)
+                     b'vni': b'100'+str(i+3).encode(),
+                     b'guid': b'vnet-guid-'+str(i+3).encode()
                      }
 
              r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-"+str(i+6), {'vnid': 1006+i})
@@ -319,8 +319,8 @@ class TestRestApiPositive:
              vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i+3))
              assert vrouter_table == {
                      b'vxlan_tunnel': b'default_vxlan_tunnel',
-                     b'vni': b'100'+str(i+6),
-                     b'guid': b'vnet-guid-'+str(i+6)
+                     b'vni': b'100'+str(i+6).encode(),
+                     b'guid': b'vnet-guid-'+str(i+6).encode()
                      }
              
 
@@ -340,7 +340,7 @@ class TestRestApiPositive:
             'attr': {}
         }
         vlan_table = configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
-        assert vlan_table == {'host_ifname': 'MonVlan2', b'vlanid': b'2'}
+        assert vlan_table == {b'host_ifname': b'MonVlan2', b'vlanid': b'2'}
         vlan_intf_table = configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
         assert vlan_intf_table == {}
 
@@ -366,9 +366,9 @@ class TestRestApiPositive:
             'attr': {'vnet_id':'vnet-guid-1'}
         }
         vlan_table = configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
-        assert vlan_table == {'host_ifname': 'MonVlan2', b'vlanid': b'2'}
+        assert vlan_table == {b'host_ifname': b'MonVlan2', b'vlanid': b'2'}
         vlan_intf_table = configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
-        assert vlan_intf_table == {b'proxy_arp': b'enabled', b'vnet_name': VNET_NAME_PREF + '1'}
+        assert vlan_intf_table == {b'proxy_arp': b'enabled', b'vnet_name': VNET_NAME_PREF.encode() + b'1'}
 
         # delete
         r = restapi_client.delete_config_vlan(2)
@@ -394,7 +394,7 @@ class TestRestApiPositive:
             'attr': {'ip_prefix':'10.0.1.1/24'}
         }
         vlan_table = configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
-        assert vlan_table == {'host_ifname': 'MonVlan2', b'vlanid': b'2'}
+        assert vlan_table == {b'host_ifname': b'MonVlan2', b'vlanid': b'2'}
         vlan_intf_table = configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
         assert vlan_intf_table == {b'':b''}
         vlan_intf_table = configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
@@ -424,11 +424,11 @@ class TestRestApiPositive:
             'attr': {'vnet_id' : 'vnet-guid-1', 'ip_prefix':'10.0.1.1/24'}
         }
         vlan_table = configdb.hgetall(VLAN_TB + '|' + VLAN_NAME_PREF + '2')
-        assert vlan_table == {'host_ifname': 'MonVlan2', b'vlanid': b'2'}
+        assert vlan_table == {b'host_ifname': b'MonVlan2', b'vlanid': b'2'}
         vlan_intf_table = configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2|10.0.1.1/24')
         assert vlan_intf_table == {b'':b''}
         vlan_intf_table = configdb.hgetall(VLAN_INTF_TB + '|' + VLAN_NAME_PREF + '2')
-        assert vlan_intf_table == {b'proxy_arp': b'enabled', b'vnet_name': VNET_NAME_PREF+'1'}
+        assert vlan_intf_table == {b'proxy_arp': b'enabled', b'vnet_name': VNET_NAME_PREF.encode()+b'1'}
 
         # delete
         r = restapi_client.delete_config_vlan(2)
@@ -462,14 +462,14 @@ class TestRestApiPositive:
         j_vnet2 = json.loads(r_vnet2.text)
         k_vnet1 = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":3,"ip_prefix":"10.0.4.1/24"},{"vlan_id":4,"ip_prefix":"10.0.3.1/24"}]}
         k_vnet2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":5,"ip_prefix":"10.2.4.1/24"},{"vlan_id":6,"ip_prefix":"10.2.3.1/24"}]}
-        for key,value in j_vnet1.iteritems():
+        for key,value in j_vnet1.itmes():
             if type(value)!=list:
                 #print("not type list",value)
                 assert k_vnet1[key] == j_vnet1[key]
             else:
                 #print("is type list",value)
                 assert sorted(value) == sorted(k_vnet1.values()[0])
-        for key,value in j_vnet2.iteritems():
+        for key,value in j_vnet2.itmes():
             if type(value)!=list:
                 #print("not type list",value)
                 assert k_vnet2[key] == j_vnet2[key]
@@ -499,14 +499,14 @@ class TestRestApiPositive:
         j2 = json.loads(r2.text)
         k = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":1111,"ip_prefix":"10.0.1.1/24"},{"vlan_id":2222,"ip_prefix":"10.0.2.1/24"}]}
         k2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":3000},{"vlan_id":4000,"ip_prefix":"10.2.2.1/24"}]}
-        for key,value in j.iteritems():
+        for key,value in j.itmes():
             if type(value)!=list:
                 #print("not type list",value)
                 assert k[key] == j[key]
             else:
                 #print("is type list",value)
                 assert sorted(value) == sorted(k.values()[0]) 
-        for key,value in j2.iteritems():
+        for key,value in j2.itmes():
             if type(value)!=list:
                 #print("not type list",value)
                 assert k2[key] == j2[key]
@@ -531,7 +531,7 @@ class TestRestApiPositive:
         r = restapi_client.get_config_vlans_all()
         j = json.loads(r.text)
         k = {"attr":[{"vlan_id":3000,"ip_prefix":"10.0.1.1/24","vnet_id":"vnet-guid-1"},{"vlan_id":3001,"vnet_id":"vnet-guid-1"}]}
-        for key,value in j.iteritems():
+        for key,value in j.itmes():
             if type(value)!=list:
                 assert k[key] == j[key]
                 return
@@ -757,7 +757,7 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop']}
+        assert route_table == {b'endpoint' : route['nexthop'].encode()}
         del route['cmd']
         routes = list()
         routes.append(route)
@@ -773,7 +773,7 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop']}
+        assert route_table == {b'endpoint' : route['nexthop'].encode()}
 
         # Delete route
         route['cmd'] = 'delete'
@@ -788,8 +788,8 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'vni' : str(route['vnid'])
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'vni' : str(route['vnid'].encode())
                                       }
         del route['cmd']
         routes = list()
@@ -807,7 +807,7 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
                                        b'mac_address' : route['mac_address']
                                       }
         del route['cmd']
@@ -825,10 +825,10 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'vni': str(route['vnid']), 
-                                       b'mac_address' : route['mac_address'],
-                                       b'endpoint_monitor': route['nexthop_monitor']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'vni': str(route['vnid']).encode(),
+                                       b'mac_address' : route['mac_address'].encode(),
+                                       b'endpoint_monitor': route['nexthop_monitor'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -847,10 +847,10 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'vni': str(route['vnid']), 
-                                       b'mac_address' : route['mac_address'],
-                                       b'weight': route['weight']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'vni': str(route['vnid']).encode(),
+                                       b'mac_address' : route['mac_address'].encode(),
+                                       b'weight': route['weight'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -870,10 +870,10 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'vni': str(route['vnid']), 
-                                       b'mac_address' : route['mac_address'],
-                                       b'profile': route['profile']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'vni': str(route['vnid']).encode(),
+                                       b'mac_address' : route['mac_address'].encode(),
+                                       b'profile': route['profile'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -890,11 +890,11 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'vni': str(route['vnid']), 
-                                       b'mac_address' : route['mac_address'],
-                                       b'profile': route['profile'],
-                                       b'primary': route['primary']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'vni': str(route['vnid']).encode(),
+                                       b'mac_address' : route['mac_address'].encode(),
+                                       b'profile': route['profile'].encode(),
+                                       b'primary': route['primary'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -913,12 +913,12 @@ class TestRestApiPositive:
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         route['nexthop'] = '100.3.152.32,200.3.152.32,200.3.152.33'
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                b'endpoint_monitor': route['nexthop_monitor'],
-                                b'vni': str(route['vnid']), 
-                                b'mac_address' : route['mac_address'],
-                                b'profile': route['profile'],
-                                b'primary': route['primary']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                b'endpoint_monitor': route['nexthop_monitor'].encode(),
+                                b'vni': str(route['vnid']).encode(),
+                                b'mac_address' : route['mac_address'].encode(),
+                                b'profile': route['profile'].encode(),
+                                b'primary': route['primary'].encode()
                                 }
         del route['cmd']
         routes = list()
@@ -937,12 +937,12 @@ class TestRestApiPositive:
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         route['nexthop'] = '100.3.152.32,200.3.152.33'
         route['nexthop_monitor'] = '100.3.152.32,200.3.152.33'
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                b'endpoint_monitor': route['nexthop_monitor'],
-                                b'vni': str(route['vnid']), 
-                                b'mac_address' : route['mac_address'],
-                                b'profile': route['profile'],
-                                b'primary': route['primary']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                b'endpoint_monitor': route['nexthop_monitor'].encode(),
+                                b'vni': str(route['vnid']).encode(),
+                                b'mac_address' : route['mac_address'].encode(),
+                                b'profile': route['profile'].encode(),
+                                b'primary': route['primary'].encode()
                                 }
         del route['cmd']
         routes = list()
@@ -967,11 +967,11 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                b'endpoint_monitor': route['nexthop_monitor'],
-                                b'vni': str(route['vnid']), 
-                                b'mac_address' : route['mac_address'],
-                                b'profile': route['profile']                                
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                b'endpoint_monitor': route['nexthop_monitor'].encode(),
+                                b'vni': str(route['vnid']).encode(),
+                                b'mac_address' : route['mac_address'].encode(),
+                                b'profile': route['profile'].encode()
                                 }
         del route['cmd']
         routes = list()
@@ -999,10 +999,10 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'endpoint_monitor': route['nexthop_monitor'],
-                                       b'primary': route['primary'],
-                                       b'monitoring': route['monitoring']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'endpoint_monitor': route['nexthop_monitor'].encode(),
+                                       b'primary': route['primary'].encode(),
+                                       b'monitoring': route['monitoring'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -1019,11 +1019,11 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'endpoint_monitor': route['nexthop_monitor'],
-                                       b'primary': route['primary'],
-                                       b'monitoring': route['monitoring'],
-                                       b'adv_prefix': route['adv_prefix']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'endpoint_monitor': route['nexthop_monitor'].encode(),
+                                       b'primary': route['primary'].encode(),
+                                       b'monitoring': route['monitoring'].encode(),
+                                       b'adv_prefix': route['adv_prefix'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -1046,7 +1046,7 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop']}
+        assert route_table == {b'endpoint' : route['nexthop'].encode()}
         del route['cmd']
         routes = list()
         routes.append(route)
@@ -1063,7 +1063,7 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop']}
+        assert route_table == {b'endpoint' : route['nexthop'].encode()}
 
         # Delete route
         route['cmd'] = 'delete'
@@ -1078,8 +1078,8 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'vni' : str(route['vnid'])
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'vni' : str(route['vnid'].encode())
                                       }
         del route['cmd']
         routes = list()
@@ -1097,7 +1097,7 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
                                        b'mac_address' : route['mac_address']
                                       }
         del route['cmd']
@@ -1115,10 +1115,10 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'vni': str(route['vnid']), 
-                                       b'mac_address' : route['mac_address'],
-                                       b'endpoint_monitor': route['nexthop_monitor']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'vni': str(route['vnid']).encode(),
+                                       b'mac_address' : route['mac_address'].encode(),
+                                       b'endpoint_monitor': route['nexthop_monitor'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -1137,10 +1137,10 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'vni': str(route['vnid']), 
-                                       b'mac_address' : route['mac_address'],
-                                       b'weight': route['weight']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'vni': str(route['vnid']).encode(),
+                                       b'mac_address' : route['mac_address'].encode(),
+                                       b'weight': route['weight'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -1160,10 +1160,10 @@ class TestRestApiPositive:
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                       b'vni': str(route['vnid']), 
-                                       b'mac_address' : route['mac_address'],
-                                       b'profile': route['profile']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                       b'vni': str(route['vnid']).encode(),
+                                       b'mac_address' : route['mac_address'].encode(),
+                                       b'profile': route['profile'].encode()
                                       }
         del route['cmd']
         routes = list()
@@ -1182,11 +1182,11 @@ class TestRestApiPositive:
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         route['nexthop'] = 'bbc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b803:53c6:d1e5:6db5:82cc:c35a:c1d8:4404,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                b'endpoint_monitor': route['nexthop_monitor'],
-                                b'vni': str(route['vnid']), 
-                                b'mac_address' : route['mac_address'],
-                                b'profile': route['profile']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                b'endpoint_monitor': route['nexthop_monitor'].encode(),
+                                b'vni': str(route['vnid']).encode(),
+                                b'mac_address' : route['mac_address'].encode(),
+                                b'profile': route['profile'].encode()
                                 }
         del route['cmd']
         routes = list()
@@ -1205,11 +1205,11 @@ class TestRestApiPositive:
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         route['nexthop'] = 'bbc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
         route['nexthop_monitor'] = 'ccc4:e3f9:3afd:9299:f009:34b6:2fe6:fb90,b703:53a8:d1e5:6db5:82cc:c35a:c1d8:4404'
-        assert route_table == {b'endpoint' : route['nexthop'],
-                                b'endpoint_monitor': route['nexthop_monitor'],
-                                b'vni': str(route['vnid']), 
-                                b'mac_address' : route['mac_address'],
-                                b'profile': route['profile']
+        assert route_table == {b'endpoint' : route['nexthop'].encode(),
+                                b'endpoint_monitor': route['nexthop_monitor'].encode(),
+                                b'vni': str(route['vnid']).encode(),
+                                b'mac_address' : route['mac_address'].encode(),
+                                b'profile': route['profile'].encode()
                                 }
         del route['cmd']
         routes = list()
@@ -1330,7 +1330,7 @@ class TestRestApiPositive:
              routes.append({'cmd':'add', 
                             'ip_prefix':'10.2.'+str(i)+'.0/24', 
                             'nexthop':'192.168.2.'+str(i), 
-                            'vnid': 1 + i%5, 
+                            'vnid': 1 + i%5,
                             'mac_address':'00:08:aa:bb:cd:'+hex(15+i)[2:]})
        
         # Patch add
