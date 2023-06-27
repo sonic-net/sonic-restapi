@@ -468,7 +468,7 @@ class TestRestApiPositive:
                 assert k_vnet1[key] == j_vnet1[key]
             else:
                 #print("is type list",value)
-                assert sorted(value) == sorted(k_vnet1.values()[0])
+                assert sorted(value) == sorted(list(k_vnet1.values())[0])
         for key,value in j_vnet2.items():
             if type(value)!=list:
                 #print("not type list",value)
@@ -789,7 +789,7 @@ class TestRestApiPositive:
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         assert route_table == {b'endpoint' : route['nexthop'].encode(),
-                                       b'vni' : str(route['vnid'].encode())
+                                       b'vni' : str(route['vnid']).encode()
                                       }
         del route['cmd']
         routes = list()
@@ -1079,7 +1079,7 @@ class TestRestApiPositive:
         assert r.status_code == 204
         route_table = db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(1)+':'+route['ip_prefix'])
         assert route_table == {b'endpoint' : route['nexthop'].encode(),
-                                       b'vni' : str(route['vnid'].encode())
+                                       b'vni' : str(route['vnid']).encode()
                                       }
         del route['cmd']
         routes = list()
