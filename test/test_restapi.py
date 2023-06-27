@@ -2,7 +2,6 @@
 
 import logging
 import json
-from collections import OrderedDict
 
 # DB Names
 VXLAN_TUNNEL_TB   = "VXLAN_TUNNEL"
@@ -28,7 +27,7 @@ DELETE_DEP = 2
 
 sorted_org = sorted
 def sorted(l):
-    return sorted_org(l, key = lambda x : str(OrderedDict(x.items())) if isinstance(x, dict) else x)
+    return sorted_org(l, key = lambda x : str(sorted_org(x.items())) if isinstance(x, dict) else x)
 
 class TestRestApiPositive:
     """Normal behaviour tests"""
