@@ -2,6 +2,7 @@
 
 import logging
 import json
+from collections import OrderedDict
 
 # DB Names
 VXLAN_TUNNEL_TB   = "VXLAN_TUNNEL"
@@ -27,7 +28,7 @@ DELETE_DEP = 2
 
 sorted_org = sorted
 def sorted(l):
-    return sorted_org([str(e) for e in l])
+    return sorted_org(l, key = lambda x : str(OrderedDict(x.items())) if isinstance(x, dict) else x)
 
 class TestRestApiPositive:
     """Normal behaviour tests"""
@@ -163,10 +164,10 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-                                                        b'vxlan_tunnel': b'default_vxlan_tunnel',
-                                                        b'vni': b'1001',
-                                                        b'guid': b'vnet-guid-1'
-                                                        }
+                                  b'vxlan_tunnel': b'default_vxlan_tunnel',
+                                  b'vni': b'1001',
+                                  b'guid': b'vnet-guid-1'
+                                }
 
     def test_post_vrouter_duplicate(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
@@ -178,10 +179,10 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-                                                        b'vxlan_tunnel': b'default_vxlan_tunnel',
-                                                        b'vni': b'1001',
-                                                        b'guid': b'vnet-guid-1'
-                                                        }
+                                  b'vxlan_tunnel': b'default_vxlan_tunnel',
+                                  b'vni': b'1001',
+                                  b'guid': b'vnet-guid-1'
+                                }
 
         r = restapi_client.post_config_vrouter_vrf_id("vnet-guid-2", {
             'vnid': 1001
@@ -248,10 +249,10 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-                                                        b'vxlan_tunnel': b'default_vxlan_tunnel',
-                                                        b'vni': b'2001',
-                                                        b'guid': b'Vnet-default',
-                            b'scope': b'default'
+                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vni': b'2001',
+                    b'guid': b'Vnet-default',
+                    b'scope': b'default'
                                                         }
 
     def test_get_vrouter(self, setup_restapi_client):
@@ -297,7 +298,7 @@ class TestRestApiPositive:
              assert vrouter_table == {
                      b'vxlan_tunnel': b'default_vxlan_tunnel',
                      b'vni': b'100'+str(i).encode(),
-                     b'guid': b'vnet-guid-'+str(i)
+                     b'guid': b'vnet-guid-'+str(i).encode()
                      }
 
         for i in range (1,4):
@@ -462,14 +463,14 @@ class TestRestApiPositive:
         j_vnet2 = json.loads(r_vnet2.text)
         k_vnet1 = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":3,"ip_prefix":"10.0.4.1/24"},{"vlan_id":4,"ip_prefix":"10.0.3.1/24"}]}
         k_vnet2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":5,"ip_prefix":"10.2.4.1/24"},{"vlan_id":6,"ip_prefix":"10.2.3.1/24"}]}
-        for key,value in j_vnet1.itmes():
+        for key,value in j_vnet1.items():
             if type(value)!=list:
                 #print("not type list",value)
                 assert k_vnet1[key] == j_vnet1[key]
             else:
                 #print("is type list",value)
                 assert sorted(value) == sorted(k_vnet1.values()[0])
-        for key,value in j_vnet2.itmes():
+        for key,value in j_vnet2.items():
             if type(value)!=list:
                 #print("not type list",value)
                 assert k_vnet2[key] == j_vnet2[key]
@@ -499,14 +500,14 @@ class TestRestApiPositive:
         j2 = json.loads(r2.text)
         k = {"vnet_id":"vnet-guid-1","attr":[{"vlan_id":1111,"ip_prefix":"10.0.1.1/24"},{"vlan_id":2222,"ip_prefix":"10.0.2.1/24"}]}
         k2 = {"vnet_id":"vnet-guid-2","attr":[{"vlan_id":3000},{"vlan_id":4000,"ip_prefix":"10.2.2.1/24"}]}
-        for key,value in j.itmes():
+        for key,value in j.items():
             if type(value)!=list:
                 #print("not type list",value)
                 assert k[key] == j[key]
             else:
                 #print("is type list",value)
                 assert sorted(value) == sorted(k.values()[0]) 
-        for key,value in j2.itmes():
+        for key,value in j2.items():
             if type(value)!=list:
                 #print("not type list",value)
                 assert k2[key] == j2[key]
@@ -531,7 +532,7 @@ class TestRestApiPositive:
         r = restapi_client.get_config_vlans_all()
         j = json.loads(r.text)
         k = {"attr":[{"vlan_id":3000,"ip_prefix":"10.0.1.1/24","vnet_id":"vnet-guid-1"},{"vlan_id":3001,"vnet_id":"vnet-guid-1"}]}
-        for key,value in j.itmes():
+        for key,value in j.items():
             if type(value)!=list:
                 assert k[key] == j[key]
                 return
