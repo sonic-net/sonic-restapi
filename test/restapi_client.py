@@ -250,9 +250,9 @@ class RESTAPI_client:
        for route in routes_arr:
            route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(vnet_num_mapped)+':'+route['ip_prefix'])
            assert route_table == {
-                            b'endpoint' : route['nexthop'],
-                            b'mac_address' : route['mac_address'],
-                            b'vni' : str(route['vnid'])
+                            b'endpoint' : route['nexthop'].encode(),
+                            b'mac_address' : route['mac_address'].encode(),
+                            b'vni' : str(route['vnid']).encode()
                           }
 
     def check_routes_dont_exist_in_tun_tb(self, vnet_num_mapped, routes_arr):
@@ -264,8 +264,8 @@ class RESTAPI_client:
        for route in routes_arr:
            route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(vnet_num_mapped)+':'+route['ip_prefix'])
            assert route_table == {
-                            b'nexthop' : route['nexthop'],
-                            b'ifname' : route['ifname']
+                            b'nexthop' : route['nexthop'].encode(),
+                            b'ifname' : route['ifname'].encode()
                           }
 
     def check_routes_dont_exist_in_loc_route_tb(self, vnet_num_mapped, routes_arr):

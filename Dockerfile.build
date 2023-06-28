@@ -27,7 +27,7 @@ RUN apt-get update \
       pkg-config
 
 COPY debs /debs
-RUN dpkg -i /debs/*.deb
+RUN dpkg -i /debs/*.deb || apt-get --fix-broken -y install
 RUN rm -fr /debs
 
 #RUN export VERSION=0.9.3 \

@@ -248,9 +248,9 @@ class rest_api_client(unittest.TestCase):
        for route in routes_arr:
            route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(vnet_num_mapped)+':'+route['ip_prefix'])
            self.assertEqual(route_table, {
-                            b'endpoint' : route['nexthop'],
-                            b'mac_address' : route['mac_address'],
-                            b'vni' : str(route['vnid'])
+                            b'endpoint' : route['nexthop'].encode(),
+                            b'mac_address' : route['mac_address'].encode(),
+                            b'vni' : str(route['vnid']).encode()
                           })
 
     def check_routes_dont_exist_in_tun_tb(self, vnet_num_mapped, routes_arr):
@@ -262,8 +262,8 @@ class rest_api_client(unittest.TestCase):
        for route in routes_arr:
            route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(vnet_num_mapped)+':'+route['ip_prefix'])
            self.assertEqual(route_table, {
-                            b'nexthop' : route['nexthop'],
-                            b'ifname' : route['ifname']
+                            b'nexthop' : route['nexthop'].encode(),
+                            b'ifname' : route['ifname'].encode()
                           })
 
     def check_routes_dont_exist_in_loc_route_tb(self, vnet_num_mapped, routes_arr):
@@ -1186,7 +1186,7 @@ class ra_client_positive_tests(rest_api_client):
     def test_local_subnet_route_addition(self):
         self.post_generic_vlan_and_deps()
         local_route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
-        self.assertEqual(local_route_table, {b'ifname' : VLAN_NAME_PREF + '2'})
+        self.assertEqual(local_route_table, {b'ifname' : VLAN_NAME_PREF.encode() + b'2'})
         r = self.delete_config_vlan(2)
         self.assertEqual(r.status_code, 204)
         local_route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(1)+':10.1.1.0/24')
