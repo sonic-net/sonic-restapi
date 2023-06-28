@@ -21,11 +21,6 @@ jobs:
     - checkout: self
       clean: true
 
-    # TODO: upgrade to python3
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '2.7'
-
     - script: |
         set -ex
         ./build.sh
@@ -40,8 +35,7 @@ jobs:
 
     - script: |
         set -ex
-        pip install requests
-        pip install redis
+        pip install -r test/requirements.txt
         pip install -U pytest
         cd test
         pytest -vv
