@@ -901,22 +901,31 @@ func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, "default_vxlan_tunnel"))
+    tunnel_name := "default_vxlan_tunnel"
+    // Check if IP address is V4.
+    if IsValidIP(attr.IPAddr) {
+        tunnel_name = "default_vxlan_tunnel_v4"
+    }
+
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, tunnel_name))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
+    //Check if tunnel already exist and the address family is same
     if kv != nil {
-        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
-               "Object already exists: Default Vxlan VTEP", []string{}, "")
-        return
+        if isV4orV6(kv["src_ip"]) == isV4orV6(attr.IPAddr) {
+            WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+                   "Object already exists: Default Vxlan VTEP", []string{}, "")
+            return
+        }
     }
 
     pt := swsscommon.NewTable(db.swss_db, VXLAN_TUNNEL_TB)
     defer pt.Delete()
 
-    pt.Set("default_vxlan_tunnel", map[string]string{
+    pt.Set(tunnel_name, map[string]string{
         "src_ip": attr.IPAddr,
     }, "SET", "")
 
@@ -1025,16 +1034,34 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, "default_vxlan_tunnel"))
+    tunnel_name := "default_vxlan_tunnel_v4"
+    kv_4, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, tunnel_name))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
-    if kv == nil {
+    tunnel_name = "default_vxlan_tunnel"
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, tunnel_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if kv == nil and kv_4 == nil {
         WriteRequestErrorWithSubCode(w, http.StatusConflict, DEP_MISSING,
               "Default VxLAN VTEP must be created prior to creating VRF", []string{"tunnel"}, "")
         return
+    }
+
+    var v6_tunnel, v4_tunnel bool
+    if kv_4 != nil {
+        tunnel_name = "default_vxlan_tunnel_v4"
+	v4_tunnel = true
+    }
+    if kv != nil {
+        tunnel_name = "default_vxlan_tunnel"
+	v6_tunnel = true
     }
 
     vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
@@ -1070,11 +1097,23 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
     
     log.Printf("debug: vnet_id_str: "+vnet_id_str)
     vnetParams := make(map[string]string)
-    vnetParams["vxlan_tunnel"] = "default_vxlan_tunnel"
+    vnetParams["vxlan_tunnel"] = tunnel_name
     vnetParams["vni"] = strconv.Itoa(attr.Vnid)
     vnetParams["guid"] = vars["vnet_name"]
     if strings.Compare(vars["vnet_name"], "Vnet-default") == 0 {
+        if v6_tunnel == false {
+            WriteRequestError(w, http.StatusInternalServerError, "Vnet-default is for V6 Tunnels, please create Vnet-default-v4", []string{}, "")
+            return
+        }
         vnetParams["scope"] = "default"
+        vnetParams["vxlan_tunnel"] = "default_vxlan_tunnel"
+    } else if strings.Compare(vars["vnet_name"], "Vnet-default-v4") == 0 {
+        if v4_tunnel == false {
+            WriteRequestError(w, http.StatusInternalServerError, "V4 tunnel not created, please create V4 Vxlan Tunnel", []string{}, "")
+            return
+        }
+        vnetParams["scope"] = "default"
+        vnetParams["vxlan_tunnel"] = "default_vxlan_tunnel_v4"
     }
     if attr.AdvPrefix != "" {
         vnetParams["advertise_prefix"] = attr.AdvPrefix
