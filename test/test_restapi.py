@@ -119,7 +119,7 @@ class TestRestApiPositive:
         })
         assert r.status_code == 409
 
-        tunnel_table = configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel')
+        tunnel_table = configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel_v4')
         assert tunnel_table == {b'src_ip': b'34.53.1.0'}
         logging.info("Tunnel table is %s", tunnel_table)
 
@@ -129,7 +129,7 @@ class TestRestApiPositive:
         r = restapi_client.delete_config_tunnel_decap_tunnel_type('vxlan')
         assert r.status_code == 204
         # The delete is a no-op and should return 204, moreover the tunnel should not be deleted 
-        tunnel_table = configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel')
+        tunnel_table = configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel_v4')
         assert tunnel_table == {b'src_ip': b'34.53.1.0'}
 
 
@@ -163,7 +163,7 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-                                  b'vxlan_tunnel': b'default_vxlan_tunnel',
+                                  b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                                   b'vni': b'1001',
                                   b'guid': b'vnet-guid-1'
                                 }
@@ -178,7 +178,7 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-                                  b'vxlan_tunnel': b'default_vxlan_tunnel',
+                                  b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                                   b'vni': b'1001',
                                   b'guid': b'vnet-guid-1'
                                 }
@@ -200,7 +200,7 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                     b'vni': b'1001',
                     b'guid': b'vnet-guid-1',
                     b'advertise_prefix': b'false'
@@ -213,7 +213,7 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '2')
         assert vrouter_table == {
-                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                     b'vni': b'1002',
                     b'guid': b'vnet-guid-2',
                     b'advertise_prefix': b'true'
@@ -231,7 +231,7 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                     b'vni': b'1001',
                     b'guid': b'vnet-guid-1',
                     b'advertise_prefix': b'true',
@@ -248,7 +248,7 @@ class TestRestApiPositive:
 
         vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         assert vrouter_table == {
-                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                     b'vni': b'2001',
                     b'guid': b'Vnet-default',
                     b'scope': b'default'
@@ -295,7 +295,7 @@ class TestRestApiPositive:
              self.check_vrouter_exists(restapi_client, "vnet-guid-"+str(i), 1000+i)
              vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i))
              assert vrouter_table == {
-                     b'vxlan_tunnel': b'default_vxlan_tunnel',
+                     b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                      b'vni': b'100'+str(i).encode(),
                      b'guid': b'vnet-guid-'+str(i).encode()
                      }
@@ -308,7 +308,7 @@ class TestRestApiPositive:
              self.check_vrouter_exists(restapi_client, "vnet-guid-"+str(i+3), 1003+i)
              vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i))
              assert vrouter_table == {
-                     b'vxlan_tunnel': b'default_vxlan_tunnel',
+                     b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                      b'vni': b'100'+str(i+3).encode(),
                      b'guid': b'vnet-guid-'+str(i+3).encode()
                      }
@@ -318,7 +318,7 @@ class TestRestApiPositive:
              self.check_vrouter_exists(restapi_client, "vnet-guid-"+str(i+6), 1006+i)
              vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i+3))
              assert vrouter_table == {
-                     b'vxlan_tunnel': b'default_vxlan_tunnel',
+                     b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                      b'vni': b'100'+str(i+6).encode(),
                      b'guid': b'vnet-guid-'+str(i+6).encode()
                      }

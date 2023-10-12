@@ -367,7 +367,7 @@ class ra_client_positive_tests(rest_api_client):
         })
         self.assertEqual(r.status_code, 409)
 
-        tunnel_table = self.configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel')
+        tunnel_table = self.configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel_v4')
         self.assertEqual(tunnel_table, {b'src_ip': b'34.53.1.0'})
         l.info("Tunnel table is %s", tunnel_table)
 
@@ -376,7 +376,7 @@ class ra_client_positive_tests(rest_api_client):
         r = self.delete_config_tunnel_decap_tunnel_type('vxlan')
         self.assertEqual(r.status_code, 204)
         # The delete is a no-op and should return 204, moreover the tunnel should not be deleted 
-        tunnel_table = self.configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel')
+        tunnel_table = self.configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel_v4')
         self.assertEqual(tunnel_table, {b'src_ip': b'34.53.1.0'})
 
 
@@ -406,7 +406,7 @@ class ra_client_positive_tests(rest_api_client):
 
         vrouter_table = self.configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
         self.assertEqual(vrouter_table, {
-							b'vxlan_tunnel': b'default_vxlan_tunnel',
+							b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
 							b'vni': b'1001',
 							b'guid': b'vnet-guid-1'
 							})
@@ -447,7 +447,7 @@ class ra_client_positive_tests(rest_api_client):
              self.check_vrouter_exists("vnet-guid-"+str(i), 1000+i)
              vrouter_table = self.configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i))
              self.assertEqual(vrouter_table, {
-                     b'vxlan_tunnel': b'default_vxlan_tunnel',
+                     b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                      b'vni': b'100'+str(i),
                      b'guid': b'vnet-guid-'+str(i)
                      })
@@ -460,7 +460,7 @@ class ra_client_positive_tests(rest_api_client):
              self.check_vrouter_exists("vnet-guid-"+str(i+3), 1003+i)
              vrouter_table = self.configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i))
              self.assertEqual(vrouter_table, {
-                     b'vxlan_tunnel': b'default_vxlan_tunnel',
+                     b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                      b'vni': b'100'+str(i+3),
                      b'guid': b'vnet-guid-'+str(i+3)
                      })
@@ -470,7 +470,7 @@ class ra_client_positive_tests(rest_api_client):
              self.check_vrouter_exists("vnet-guid-"+str(i+6), 1006+i)
              vrouter_table = self.configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF +str(i+3))
              self.assertEqual(vrouter_table, {
-                     b'vxlan_tunnel': b'default_vxlan_tunnel',
+                     b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                      b'vni': b'100'+str(i+6),
                      b'guid': b'vnet-guid-'+str(i+6)
                      })
