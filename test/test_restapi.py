@@ -123,6 +123,21 @@ class TestRestApiPositive:
         assert tunnel_table == {b'src_ip': b'34.53.1.0'}
         logging.info("Tunnel table is %s", tunnel_table)
 
+        # Test V6 tunnel
+        r = restapi_client.post_config_tunnel_decap_tunnel_type('vxlan', {
+            'ip_addr': '2000::1000'
+        })
+        assert r.status_code == 204
+
+        r = restapi_client.post_config_tunnel_decap_tunnel_type('vxlan', {
+            'ip_addr': '2000::1001'
+        })
+        assert r.status_code == 409
+
+        tunnel_table = configdb.hgetall(VXLAN_TUNNEL_TB + '|default_vxlan_tunnel')
+        assert tunnel_table == {b'src_ip': b'2000::1000'}
+        logging.info("Tunnel v6 table is %s", tunnel_table)
+
     def test_delete_config_tunnel_decap_tunnel_type(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
         restapi_client.post_generic_vxlan_tunnel()
@@ -241,7 +256,7 @@ class TestRestApiPositive:
     def test_post_vrouter_default(self, setup_restapi_client):
         _, _, configdb, restapi_client = setup_restapi_client
         restapi_client.post_generic_vxlan_tunnel()
-        r = restapi_client.post_config_vrouter_vrf_id("Vnet-default", {
+        r = restapi_client.post_config_vrouter_vrf_id("Vnet-default-v4", {
             'vnid': 2001
         })
         assert r.status_code == 204
@@ -250,14 +265,66 @@ class TestRestApiPositive:
         assert vrouter_table == {
                     b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
                     b'vni': b'2001',
+                    b'guid': b'Vnet-default-v4',
+                    b'scope': b'default'
+               }
+
+    def test_post_vrouter_v6_default(self, setup_restapi_client):
+        _, _, configdb, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vxlan_v6_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("Vnet-default", {
+            'vnid': 2001
+        })
+        assert r.status_code == 204
+
+        vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
+        assert vrouter_table == {
+                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vni': b'2001',
                     b'guid': b'Vnet-default',
                     b'scope': b'default'
-                                                        }
+                }
+
+    def test_post_vrouter_v4_v6_default(self, setup_restapi_client):
+        _, _, configdb, restapi_client = setup_restapi_client
+        restapi_client.post_generic_vxlan_tunnel()
+        restapi_client.post_generic_vxlan_v6_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("Vnet-default", {
+            'vnid': 2001
+        })
+        assert r.status_code == 204
+
+        vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '1')
+        assert vrouter_table == {
+                    b'vxlan_tunnel': b'default_vxlan_tunnel',
+                    b'vni': b'2001',
+                    b'guid': b'Vnet-default',
+                    b'scope': b'default'
+                }
+
+        r = restapi_client.post_config_vrouter_vrf_id("Vnet-default-v4", {
+            'vnid': 2001
+        })
+        assert r.status_code == 204
+
+        vrouter_table = configdb.hgetall(VNET_TB + '|' + VNET_NAME_PREF + '2')
+        assert vrouter_table == {
+                    b'vxlan_tunnel': b'default_vxlan_tunnel_v4',
+                    b'vni': b'2001',
+                    b'guid': b'Vnet-default-v4',
+                    b'scope': b'default'
+                }
 
     def test_get_vrouter(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         restapi_client.post_generic_vrouter_and_deps()
         self.check_vrouter_exists(restapi_client, "vnet-guid-1",1001)
+
+    def  test_default_vrouter(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        restapi_client.post_generic_default_vrouter_and_deps()
+        self.check_vrouter_exists(restapi_client,"Vnet-default",8000)
+        self.check_vrouter_exists(restapi_client,"Vnet-default-v4",8000)
 
     def test_duplicate_vni(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
@@ -1894,6 +1961,24 @@ class TestRestApiNegative():
             'advertise_prefix': 'False'
         })
         assert r.status_code == 400
+
+    def test_post_vrouter_v4_default(self, setup_restapi_client):
+        _, _, configdb, restapi_client = setup_restapi_client
+        #Create V4 only tunnel
+        restapi_client.post_generic_vxlan_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("Vnet-default", {
+            'vnid': 2001
+        })
+        assert r.status_code == 500
+
+    def test_post_vrouter_v6_default(self, setup_restapi_client):
+        _, _, configdb, restapi_client = setup_restapi_client
+        #Create V6 only tunnel
+        restapi_client.post_generic_vxlan_v6_tunnel()
+        r = restapi_client.post_config_vrouter_vrf_id("Vnet-default-v4", {
+            'vnid': 2001
+        })
+        assert r.status_code == 500
 
     # Vlan
     def test_post_vlan_which_exists(self, setup_restapi_client):

@@ -1073,9 +1073,12 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
 
     guid := CacheGetVniId(uint32(attr.Vnid))
     if guid != "" {
-        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
-              "Object already exists: {\"vni\":\"" + strconv.Itoa(attr.Vnid) + "\", \"vnet_name\":\"" + guid +"\"}", []string{}, "")
-        return
+        // Default Vnets can have same Vnid
+        if !(strings.Contains(guid, "Vnet-default")) {
+            WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+                  "Object already exists: {\"vni\":\"" + strconv.Itoa(attr.Vnid) + "\", \"vnet_name\":\"" + guid +"\"}", []string{}, "")
+            return
+        }
     }
 
     vnet_id = CacheGenAndSetVnetGuidId(vars["vnet_name"], uint32(attr.Vnid))

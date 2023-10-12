@@ -213,6 +213,24 @@ class rest_api_client(unittest.TestCase):
         })
         self.assertEqual(rv.status_code, 204)
 
+    def post_generic_vxlan_v6_tunnel(self):
+        rv = self.post_config_tunnel_decap_tunnel_type('vxlan', {
+            'ip_addr': '2000:1000'
+        })
+        self.assertEqual(rv.status_code, 204)
+
+    def post_generic_default_vrouter_and_deps(self):
+        self.post_generic_vxlan_tunnel()
+        self.post_generic_vxlan_v6_tunnel()
+        rv = self.post_config_vrouter_vrf_id("vnet-default", {
+            'vnid': 8000
+        })
+        self.assertEqual(rv.status_code, 204)
+        rv = self.post_config_vrouter_vrf_id("vnet-default-v4", {
+            'vnid': 8000
+        })
+        self.assertEqual(rv.status_code, 204)
+
     def post_generic_vrouter_and_deps(self):
         self.post_generic_vxlan_tunnel()
         rv = self.post_config_vrouter_vrf_id("vnet-guid-1", {
@@ -414,6 +432,11 @@ class ra_client_positive_tests(rest_api_client):
     def  test_get_vrouter(self):
         self.post_generic_vrouter_and_deps()
         self.check_vrouter_exists("vnet-guid-1",1001)
+
+    def  test_default_vrouter(self):
+        self.post_generic_default_vrouter_and_deps()
+        self.check_vrouter_exists("vnet-default",8000)
+        self.check_vrouter_exists("vnet-default-v4",8000)
 
     def test_duplicate_vni(self):
         self.post_generic_vrouter_and_deps_duplicate()
