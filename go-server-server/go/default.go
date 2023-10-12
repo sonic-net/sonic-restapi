@@ -1048,7 +1048,7 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    if kv == nil and kv_4 == nil {
+    if kv == nil && kv_4 == nil {
         WriteRequestErrorWithSubCode(w, http.StatusConflict, DEP_MISSING,
               "Default VxLAN VTEP must be created prior to creating VRF", []string{"tunnel"}, "")
         return
