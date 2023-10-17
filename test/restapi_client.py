@@ -215,6 +215,25 @@ class RESTAPI_client:
         })
         assert rv.status_code == 204
 
+    def post_generic_vxlan_v6_tunnel(self):
+        rv = self.post_config_tunnel_decap_tunnel_type('vxlan', {
+            'ip_addr': '2000::1000'
+        })
+        assert rv.status_code == 204
+
+    def post_generic_default_vrouter_and_deps(self):
+        self.post_generic_vxlan_tunnel()
+        self.post_generic_vxlan_v6_tunnel()
+        rv = self.post_config_vrouter_vrf_id("Vnet-default", {
+            'vnid': 8000
+        })
+        assert rv.status_code == 204
+
+        rv = self.post_config_vrouter_vrf_id("Vnet-default-v4", {
+            'vnid': 8000
+        })
+        assert rv.status_code == 204
+
     def post_generic_vrouter_and_deps(self):
         self.post_generic_vxlan_tunnel()
         rv = self.post_config_vrouter_vrf_id("vnet-guid-1", {
