@@ -132,7 +132,7 @@ func main() {
       fmt.Fprintln(os.Stderr, "InitDpdkPort requires 4 args")
       flag.Usage()
     }
-    tmp0, err38 := (strconv.Atoi(flag.Arg(1)))
+    tmp0, err38 := (strconv.ParseInt(flag.Arg(1), 10, 8))
     if err38 != nil {
       Usage()
       return
@@ -145,7 +145,7 @@ func main() {
       return
     }
     value1 := msee.MseeMacT(argvalue1)
-    tmp2, err40 := (strconv.Atoi(flag.Arg(3)))
+    tmp2, err40 := (strconv.ParseInt(flag.Arg(3), 10, 32))
     if err40 != nil {
       Usage()
       return
@@ -177,28 +177,28 @@ func main() {
       fmt.Fprintln(os.Stderr, "AddPortToVrf requires 4 args")
       flag.Usage()
     }
-    tmp0, err47 := (strconv.Atoi(flag.Arg(1)))
+    tmp0, err47 := (strconv.ParseInt(flag.Arg(1), 10, 32))
     if err47 != nil {
       Usage()
       return
     }
     argvalue0 := int32(tmp0)
     value0 := msee.MseeVrfIDT(argvalue0)
-    tmp1, err48 := (strconv.Atoi(flag.Arg(2)))
+    tmp1, err48 := (strconv.ParseInt(flag.Arg(2), 10, 8))
     if err48 != nil {
       Usage()
       return
     }
     argvalue1 := int8(tmp1)
     value1 := msee.MseePortT(argvalue1)
-    tmp2, err49 := (strconv.Atoi(flag.Arg(3)))
+    tmp2, err49 := (strconv.ParseInt(flag.Arg(3), 10, 16))
     if err49 != nil {
       Usage()
       return
     }
     argvalue2 := int16(tmp2)
     value2 := msee.MseeVlanT(argvalue2)
-    tmp3, err50 := (strconv.Atoi(flag.Arg(4)))
+    tmp3, err50 := (strconv.ParseInt(flag.Arg(4), 10, 16))
     if err50 != nil {
       Usage()
       return
@@ -213,21 +213,21 @@ func main() {
       fmt.Fprintln(os.Stderr, "DeletePortFromVrf requires 3 args")
       flag.Usage()
     }
-    tmp0, err51 := (strconv.Atoi(flag.Arg(1)))
+    tmp0, err51 := (strconv.ParseInt(flag.Arg(1), 10, 8))
     if err51 != nil {
       Usage()
       return
     }
     argvalue0 := int8(tmp0)
     value0 := msee.MseePortT(argvalue0)
-    tmp1, err52 := (strconv.Atoi(flag.Arg(2)))
+    tmp1, err52 := (strconv.ParseInt(flag.Arg(2), 10, 16))
     if err52 != nil {
       Usage()
       return
     }
     argvalue1 := int16(tmp1)
     value1 := msee.MseeVlanT(argvalue1)
-    tmp2, err53 := (strconv.Atoi(flag.Arg(3)))
+    tmp2, err53 := (strconv.ParseInt(flag.Arg(3), 10, 16))
     if err53 != nil {
       Usage()
       return
@@ -242,14 +242,14 @@ func main() {
       fmt.Fprintln(os.Stderr, "MapVniToVrf requires 2 args")
       flag.Usage()
     }
-    tmp0, err54 := (strconv.Atoi(flag.Arg(1)))
+    tmp0, err54 := (strconv.ParseInt(flag.Arg(1), 10, 32))
     if err54 != nil {
       Usage()
       return
     }
     argvalue0 := int32(tmp0)
     value0 := msee.MseeVniT(argvalue0)
-    tmp1, err55 := (strconv.Atoi(flag.Arg(2)))
+    tmp1, err55 := (strconv.ParseInt(flag.Arg(2), 10, 32))
     if err55 != nil {
       Usage()
       return
@@ -264,7 +264,7 @@ func main() {
       fmt.Fprintln(os.Stderr, "UnmapVniToVrf requires 1 args")
       flag.Usage()
     }
-    tmp0, err56 := (strconv.Atoi(flag.Arg(1)))
+    tmp0, err56 := (strconv.ParseInt(flag.Arg(1), 10, 32))
     if err56 != nil {
       Usage()
       return
@@ -279,7 +279,7 @@ func main() {
       fmt.Fprintln(os.Stderr, "AddEncapRoute requires 6 args")
       flag.Usage()
     }
-    tmp0, err57 := (strconv.Atoi(flag.Arg(1)))
+    tmp0, err57 := (strconv.ParseInt(flag.Arg(1), 10, 32))
     if err57 != nil {
       Usage()
       return
@@ -326,14 +326,14 @@ func main() {
       return
     }
     value3 := msee.MseeMacT(argvalue3)
-    tmp4, err71 := (strconv.Atoi(flag.Arg(5)))
+    tmp4, err71 := (strconv.ParseInt(flag.Arg(5), 10, 32))
     if err71 != nil {
       Usage()
       return
     }
     argvalue4 := int32(tmp4)
     value4 := msee.MseeVniT(argvalue4)
-    tmp5, err72 := (strconv.Atoi(flag.Arg(6)))
+    tmp5, err72 := (strconv.ParseInt(flag.Arg(6), 10, 16))
     if err72 != nil {
       Usage()
       return
@@ -348,7 +348,7 @@ func main() {
       fmt.Fprintln(os.Stderr, "DeleteEncapRoute requires 2 args")
       flag.Usage()
     }
-    tmp0, err73 := (strconv.Atoi(flag.Arg(1)))
+    tmp0, err73 := (strconv.ParseInt(flag.Arg(1), 10, 32))
     if err73 != nil {
       Usage()
       return
@@ -380,7 +380,7 @@ func main() {
       fmt.Fprintln(os.Stderr, "AddDecapRoute requires 6 args")
       flag.Usage()
     }
-    tmp0, err80 := (strconv.Atoi(flag.Arg(1)))
+    tmp0, err80 := (strconv.ParseInt(flag.Arg(1), 10, 32))
     if err80 != nil {
       Usage()
       return
@@ -410,21 +410,21 @@ func main() {
       return
     }
     value2 := msee.MseeMacT(argvalue2)
-    tmp3, err88 := (strconv.Atoi(flag.Arg(4)))
+    tmp3, err88 := (strconv.ParseInt(flag.Arg(4), 10, 8))
     if err88 != nil {
       Usage()
       return
     }
     argvalue3 := int8(tmp3)
     value3 := msee.MseePortT(argvalue3)
-    tmp4, err89 := (strconv.Atoi(flag.Arg(5)))
+    tmp4, err89 := (strconv.ParseInt(flag.Arg(5), 10, 16))
     if err89 != nil {
       Usage()
       return
     }
     argvalue4 := int16(tmp4)
     value4 := msee.MseeVlanT(argvalue4)
-    tmp5, err90 := (strconv.Atoi(flag.Arg(6)))
+    tmp5, err90 := (strconv.ParseInt(flag.Arg(6), 10, 16))
     if err90 != nil {
       Usage()
       return
@@ -439,7 +439,7 @@ func main() {
       fmt.Fprintln(os.Stderr, "DeleteDecapRoute requires 2 args")
       flag.Usage()
     }
-    tmp0, err91 := (strconv.Atoi(flag.Arg(1)))
+    tmp0, err91 := (strconv.ParseInt(flag.Arg(1), 10, 32))
     if err91 != nil {
       Usage()
       return

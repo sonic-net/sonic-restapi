@@ -7,7 +7,7 @@
 all: client
 
 client: client.go ../mseethrift/msee.go
-	go build client.go
+	go build -race client.go
 
 msee/constants.go msee/msee.go msee/ttypes.go: msee.thrift.intermediate
 	go get "git.apache.org/thrift.git/lib/go/thrift"

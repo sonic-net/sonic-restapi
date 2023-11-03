@@ -215,6 +215,25 @@ class RESTAPI_client:
         })
         assert rv.status_code == 204
 
+    def post_generic_vxlan_v6_tunnel(self):
+        rv = self.post_config_tunnel_decap_tunnel_type('vxlan', {
+            'ip_addr': '2000::1000'
+        })
+        assert rv.status_code == 204
+
+    def post_generic_default_vrouter_and_deps(self):
+        self.post_generic_vxlan_tunnel()
+        self.post_generic_vxlan_v6_tunnel()
+        rv = self.post_config_vrouter_vrf_id("Vnet-default", {
+            'vnid': 8000
+        })
+        assert rv.status_code == 204
+
+        rv = self.post_config_vrouter_vrf_id("Vnet-default-v4", {
+            'vnid': 8000
+        })
+        assert rv.status_code == 204
+
     def post_generic_vrouter_and_deps(self):
         self.post_generic_vxlan_tunnel()
         rv = self.post_config_vrouter_vrf_id("vnet-guid-1", {
@@ -250,9 +269,9 @@ class RESTAPI_client:
        for route in routes_arr:
            route_table = self.db.hgetall(ROUTE_TUN_TB + ':' + VNET_NAME_PREF +str(vnet_num_mapped)+':'+route['ip_prefix'])
            assert route_table == {
-                            b'endpoint' : route['nexthop'],
-                            b'mac_address' : route['mac_address'],
-                            b'vni' : str(route['vnid'])
+                            b'endpoint' : route['nexthop'].encode(),
+                            b'mac_address' : route['mac_address'].encode(),
+                            b'vni' : str(route['vnid']).encode()
                           }
 
     def check_routes_dont_exist_in_tun_tb(self, vnet_num_mapped, routes_arr):
@@ -264,8 +283,8 @@ class RESTAPI_client:
        for route in routes_arr:
            route_table = self.db.hgetall(LOCAL_ROUTE_TB + ':' + VNET_NAME_PREF +str(vnet_num_mapped)+':'+route['ip_prefix'])
            assert route_table == {
-                            b'nexthop' : route['nexthop'],
-                            b'ifname' : route['ifname']
+                            b'nexthop' : route['nexthop'].encode(),
+                            b'ifname' : route['ifname'].encode()
                           }
 
     def check_routes_dont_exist_in_loc_route_tb(self, vnet_num_mapped, routes_arr):

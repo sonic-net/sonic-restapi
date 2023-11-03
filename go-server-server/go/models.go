@@ -34,6 +34,8 @@ type RouteModel struct {
     NextHop        string `json:"nexthop"`
     NextHopMonitor string `json:"nexthop_monitor,omitempty"`
     Primary        string `json:"primary,omitempty"`
+    AdvPrefix      string `json:"adv_prefix,omitempty"`
+    Monitoring     string `json:"monitoring,omitempty"`
     MACAddress     string `json:"mac_address,omitempty"`
     Vnid           int    `json:"vnid,omitempty"`
     Weight         string `json:"weight,omitempty"`
@@ -137,6 +139,7 @@ type TunnelDecapReturnModel struct {
 type VnetModel struct {
     Vnid        int     `json:"vnid"`
     AdvPrefix   string  `json:"advertise_prefix,omitempty"`
+    OverlayDmac string  `json:"overlay_dmac,omitempty"`
 }
 
 type VnetReturnModel struct {
@@ -196,6 +199,8 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         NextHop        *string `json:"nexthop"`
         NextHopMonitor *string `json:"nexthop_monitor"`
         Primary        *string `json:"primary"`
+        AdvPrefix      *string `json:"adv_prefix"`
+        Monitoring     *string `json:"monitoring"`
         MACAddress     *string `json:"mac_address"`
         Vnid           int     `json:"vnid"`
         Weight         *string `json:"weight"`
@@ -264,6 +269,15 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
         m.Primary = *required.Primary
     }
 
+    if required.AdvPrefix != nil {
+        _, _, err = ParseIPBothPrefix(*required.AdvPrefix)
+        if err != nil {
+            err = &InvalidFormatError{Field: "adv_prefix", Message: "Invalid advertisement prefix"}
+            return
+        }
+        m.AdvPrefix = *required.AdvPrefix
+    }
+
     if required.IfName == nil && required.MACAddress != nil {
         _, err = net.ParseMAC(*required.MACAddress)
 
@@ -296,6 +310,9 @@ func (m *RouteModel) UnmarshalJSON(data []byte) (err error) {
     }
     if required.Profile != nil {
         m.Profile = *required.Profile
+    }
+    if required.Monitoring != nil {
+        m.Monitoring = *required.Monitoring
     }
     return
 }
@@ -373,6 +390,7 @@ func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
     required := struct {
         Vnid        *int    `json:"vnid"`
         AdvPrefix   *string `json:"advertise_prefix"`
+        OverlayDmac *string `json:"overlay_dmac"`
     }{}
 
     err = json.Unmarshal(data, &required)
@@ -398,6 +416,15 @@ func (m *VnetModel) UnmarshalJSON(data []byte) (err error) {
         } else {
             err = &InvalidFormatError{Field: "advertise_prefix", Message: "advertise_prefix must be either true or false"}
         }
+    }
+
+    if required.OverlayDmac != nil {
+        _, err = net.ParseMAC(*required.OverlayDmac)
+        if err != nil {
+            err = &InvalidFormatError{Field: "mac_address", Message: "Invalid MAC address"}
+            return
+        }
+        m.OverlayDmac = *required.OverlayDmac
     }
 
     return

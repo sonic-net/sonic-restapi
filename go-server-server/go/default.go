@@ -901,22 +901,31 @@ func ConfigTunnelDecapTunnelTypePost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, "default_vxlan_tunnel"))
+    tunnel_name := "default_vxlan_tunnel"
+    // Check if IP address is V4.
+    if IsValidIP(attr.IPAddr) {
+        tunnel_name = "default_vxlan_tunnel_v4"
+    }
+
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, tunnel_name))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
+    //Check if tunnel already exist and the address family is same
     if kv != nil {
-        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
-               "Object already exists: Default Vxlan VTEP", []string{}, "")
-        return
+        if isV4orV6(kv["src_ip"]) == isV4orV6(attr.IPAddr) {
+            WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+                   "Object already exists: Default Vxlan VTEP", []string{}, "")
+            return
+        }
     }
 
     pt := swsscommon.NewTable(db.swss_db, VXLAN_TUNNEL_TB)
     defer pt.Delete()
 
-    pt.Set("default_vxlan_tunnel", map[string]string{
+    pt.Set(tunnel_name, map[string]string{
         "src_ip": attr.IPAddr,
     }, "SET", "")
 
@@ -1025,16 +1034,34 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, "default_vxlan_tunnel"))
+    tunnel_name := "default_vxlan_tunnel_v4"
+    kv_4, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, tunnel_name))
     if err != nil {
         WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
         return
     }
 
-    if kv == nil {
+    tunnel_name = "default_vxlan_tunnel"
+    kv, err := GetKVs(db.db_num, generateDBTableKey(db.separator, VXLAN_TUNNEL_TB, tunnel_name))
+    if err != nil {
+        WriteRequestError(w, http.StatusInternalServerError, "Internal service error", []string{}, "")
+        return
+    }
+
+    if kv == nil && kv_4 == nil {
         WriteRequestErrorWithSubCode(w, http.StatusConflict, DEP_MISSING,
               "Default VxLAN VTEP must be created prior to creating VRF", []string{"tunnel"}, "")
         return
+    }
+
+    var v6_tunnel, v4_tunnel bool
+    if kv_4 != nil {
+        tunnel_name = "default_vxlan_tunnel_v4"
+	v4_tunnel = true
+    }
+    if kv != nil {
+        tunnel_name = "default_vxlan_tunnel"
+	v6_tunnel = true
     }
 
     vnet_id := CacheGetVnetGuidId(vars["vnet_name"])
@@ -1046,9 +1073,12 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
 
     guid := CacheGetVniId(uint32(attr.Vnid))
     if guid != "" {
-        WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
-              "Object already exists: {\"vni\":\"" + strconv.Itoa(attr.Vnid) + "\", \"vnet_name\":\"" + guid +"\"}", []string{}, "")
-        return
+        // Default Vnets can have same Vnid
+        if !(strings.Contains(guid, "Vnet-default")) {
+            WriteRequestErrorWithSubCode(w, http.StatusConflict, RESRC_EXISTS,
+                  "Object already exists: {\"vni\":\"" + strconv.Itoa(attr.Vnid) + "\", \"vnet_name\":\"" + guid +"\"}", []string{}, "")
+            return
+        }
     }
 
     vnet_id = CacheGenAndSetVnetGuidId(vars["vnet_name"], uint32(attr.Vnid))
@@ -1070,15 +1100,30 @@ func ConfigVrouterVrfIdPost(w http.ResponseWriter, r *http.Request) {
     
     log.Printf("debug: vnet_id_str: "+vnet_id_str)
     vnetParams := make(map[string]string)
-    vnetParams["vxlan_tunnel"] = "default_vxlan_tunnel"
+    vnetParams["vxlan_tunnel"] = tunnel_name
     vnetParams["vni"] = strconv.Itoa(attr.Vnid)
     vnetParams["guid"] = vars["vnet_name"]
     if strings.Compare(vars["vnet_name"], "Vnet-default") == 0 {
+        if v6_tunnel == false {
+            WriteRequestError(w, http.StatusInternalServerError, "Vnet-default is for V6 Tunnels, please create Vnet-default-v4", []string{}, "")
+            return
+        }
         vnetParams["scope"] = "default"
+        vnetParams["vxlan_tunnel"] = "default_vxlan_tunnel"
+    } else if strings.Compare(vars["vnet_name"], "Vnet-default-v4") == 0 {
+        if v4_tunnel == false {
+            WriteRequestError(w, http.StatusInternalServerError, "V4 tunnel not created, please create V4 Vxlan Tunnel", []string{}, "")
+            return
+        }
+        vnetParams["scope"] = "default"
+        vnetParams["vxlan_tunnel"] = "default_vxlan_tunnel_v4"
     }
     if attr.AdvPrefix != "" {
         vnetParams["advertise_prefix"] = attr.AdvPrefix
         CacheSetPrefixAdv(vnet_id_str, attr.AdvPrefix)
+    }
+    if attr.OverlayDmac != "" {
+        vnetParams["overlay_dmac"] = attr.OverlayDmac
     }
     pt.Set(vnet_id_str, vnetParams, "SET", "")        
 
@@ -1241,8 +1286,8 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                         continue                        
                     }
                 } else {
-                    if prefix_len != 64 {
-                        r.Error_msg = "Prefix length other than 64 is not supported"
+                    if prefix_len < 64 {
+                        r.Error_msg = "Prefix length lesser than 64 is not supported"
                         failed = append(failed, r)
                         continue                          
                     }
@@ -1291,6 +1336,7 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                     if cur_route["endpoint"] != r.NextHop ||
                         cur_route["endpoint_monitor"] != r.NextHopMonitor ||
                         cur_route["primary"] != r.Primary ||
+                        cur_route["adv_prefix"] != r.AdvPrefix ||
                         cur_route["mac_address"] != r.MACAddress ||
                         cur_route["vni"] != strconv.Itoa(r.Vnid) ||
                         cur_route["weight"] != r.Weight ||
@@ -1414,6 +1460,39 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                 }
                 if r.Profile != "" {
                     route_map["profile"] = r.Profile
+                }
+                if r.AdvPrefix != "" {
+                    adv_ip, adv_network, err := net.ParseCIDR(r.AdvPrefix)
+                    if err != nil {
+                        r.Error_msg = "Incorrect Advertisement Prefix"
+                        failed = append(failed, r)
+                        continue
+                    }
+
+                    if adv_ip.String() != strings.Split(adv_network.String(), "/")[0] {
+                        r.Error_msg = "Incorrect Advertisement Prefix"
+                        failed = append(failed, r)
+                        continue
+                    }
+
+		    prefix_len, _ := adv_network.Mask.Size()
+                    if isV4orV6(adv_ip.String()) == 4 {
+                        if prefix_len < 18 {
+                            r.Error_msg = "Adv Prefix length lesser than 18 is not supported"
+                            failed = append(failed, r)
+                            continue
+                        }
+                    } else {
+                        if prefix_len < 60 {
+                            r.Error_msg = "Adv Prefix length lesser than 60 is not supported"
+                            failed = append(failed, r)
+                            continue
+                        }
+                    }
+                    route_map["adv_prefix"] = r.AdvPrefix
+                }
+                if r.Monitoring != "" {
+                    route_map["monitoring"] = r.Monitoring
                 }
                 pt.Set(generateDBTableKey(db.separator,vnet_id_str, r.IPPrefix), route_map, "SET", "")
             } else {
@@ -1654,6 +1733,7 @@ func ConfigVrfVrfIdRoutesGet(w http.ResponseWriter, r *http.Request) {
         if profile, ok := kvp["profile"]; ok {
             routeModel.Profile = profile
         }
+
         routes = append(routes, routeModel)
     }
 

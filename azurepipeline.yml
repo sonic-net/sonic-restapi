@@ -10,7 +10,7 @@ pr:
 jobs:
 - job: Build
   pool:
-    vmImage: ubuntu-18.04
+    vmImage: ubuntu-20.04
 
   variables:
     DIFF_COVER_CHECK_THRESHOLD: 80
@@ -35,11 +35,10 @@ jobs:
 
     - script: |
         set -ex
-        pip install requests
-        pip install redis
+        pip install -r test/requirements.txt
         pip install -U pytest
         cd test
-        pytest -v
+        pytest -vv
         docker exec rest-api cat /tmp/rest-api.err.log
         docker exec rest-api ps aux
         sleep 600
@@ -58,7 +57,7 @@ jobs:
         set -ex
         # Install .NET CORE
         curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        sudo apt-add-repository https://packages.microsoft.com/ubuntu/18.04/prod
+        sudo apt-add-repository https://packages.microsoft.com/ubuntu/20.04/prod
         sudo apt-get update
         sudo apt-get install -y dotnet-sdk-5.0
       displayName: "Install .NET CORE"
