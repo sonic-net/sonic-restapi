@@ -6,6 +6,10 @@ export GOPATH=$(HOME)/go
 export GOBIN=$(GOPATH)/bin
 export GO111MODULE=on
 export GOFLAGS=-modcacherw
+RACE_OPTION := -race
+ifeq ($(CONFIGURED_ARCH),armhf)
+RACE_OPTION :=
+endif
 
 all: install build
 
@@ -16,10 +20,10 @@ install: build
 build: $(GOPATH)/bin/go-server-server $(GOPATH)/bin/go-server-server.test
 
 $(GOPATH)/bin/go-server-server: libcswsscommon $(GOPATH)/src/go-server-server/main.go
-	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) build -race -v
+	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) build $(RACE_OPTION) -v
 
 $(GOPATH)/bin/go-server-server.test: libcswsscommon $(GOPATH)/src/go-server-server/main.go
-	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) test -race -c -covermode=atomic -coverpkg "go-server-server/go" -v -o $(GOPATH)/bin/go-server-server.test
+	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) test $(RACE_OPTION) -c -covermode=atomic -coverpkg "go-server-server/go" -v -o $(GOPATH)/bin/go-server-server.test
 
 $(GOPATH)/src/go-server-server/main.go:
 	mkdir -p               $(GOPATH)/src
