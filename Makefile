@@ -20,7 +20,7 @@ install: build
 build: $(GOPATH)/bin/go-server-server $(GOPATH)/bin/go-server-server.test
 
 $(GOPATH)/bin/go-server-server: libcswsscommon $(GOPATH)/src/go-server-server/main.go
-	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) build $(RACE_OPTION) -v
+	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) build $(RACE_OPTION) -v -o $(GOPATH)/bin/go-server-server
 
 $(GOPATH)/bin/go-server-server.test: libcswsscommon $(GOPATH)/src/go-server-server/main.go
 	cd $(GOPATH)/src/go-server-server && $(GO) get -v && $(GO) test $(RACE_OPTION) -c -covermode=atomic -coverpkg "go-server-server/go" -v -o $(GOPATH)/bin/go-server-server.test
