@@ -3,7 +3,7 @@ FROM debian:buster
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+RUN echo "deb http://archive.debian.org/debian buster-backports main" >> /etc/apt/sources.list
 
 RUN apt-get update \
  && apt-get install -y \
