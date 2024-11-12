@@ -2344,7 +2344,7 @@ class TestRestApiNegative():
         r = restapi_client.patch_config_vrouter_vrf_id_routes("vnet-guid-1", [route])
         assert r.status_code == 207
         j = json.loads(r.text)
-        assert j['failed'][0]['error_msg'] == "Adv Prefix length lesser than 60 is not supported"
+        assert j['failed'][0]['error_msg'] == "Adv Prefix length lesser than 48 is not supported"
 
         # Append and remove
         route = {
