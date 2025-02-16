@@ -17,7 +17,7 @@ RUN dpkg -i /debs/libhiredis0.13_0.13.3-2_amd64.deb \
  && dpkg -i /debs/libnl-3-200_3.2.27-1_amd64.deb \
  && dpkg -i /debs/libnl-genl-3-200_3.2.27-1_amd64.deb \
  && dpkg -i /debs/libnl-route-3-200_3.2.27-1_amd64.deb \
- && dpkg -i /debs/libyang_1.0.73_amd64.deb \
+ && dpkg -i /debs/libyang_3.7.8-2_amd64.deb \
  && dpkg -i /debs/libswsscommon_1.0.0_amd64.deb \
  && dpkg -i /debs/libswsscommon-dev_1.0.0_amd64.deb \
  && dpkg -i /debs/sonic-rest-api_1.0.1_amd64.deb \
