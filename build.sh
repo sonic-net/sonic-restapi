@@ -1,5 +1,5 @@
 
-set -e
+set -ex
 
 # copy debian packages from sonic-buildimage
 #bash copy.sh
