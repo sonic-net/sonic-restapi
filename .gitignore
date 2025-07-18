@@ -1,0 +1,6 @@
+# Built packages
+debs/*.deb
+
+# Python object files
+__pycache__
+*.py[co]
