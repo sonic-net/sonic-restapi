@@ -35,5 +35,5 @@ libcswsscommon:
 	sudo make -C libcswsscommon install
 
 clean:
-	rm -rf $(GOPATH)
+	rm -rf $(GOPATH) || true
 	make -C libcswsscommon clean
