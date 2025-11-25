@@ -10,7 +10,7 @@ pr:
 jobs:
 - job: Build
   pool:
-    vmImage: ubuntu-20.04
+    vmImage: ubuntu-latest
 
   variables:
     DIFF_COVER_CHECK_THRESHOLD: 80
