@@ -17,7 +17,7 @@ RUN apt-get update \
       flex \
       g++ \
       git \
-      libboost-serialization1.71-dev \
+      libboost-serialization-dev \
       libhiredis-dev \
       libzmq5-dev \
       libevent-dev \
