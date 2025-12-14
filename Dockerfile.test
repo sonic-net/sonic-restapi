@@ -1,9 +1,9 @@
-FROM debian:buster
+FROM debian:bookworm
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN echo "deb http://archive.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+RUN echo "deb http://deb.debian.org/debian bookworm main" >> /etc/apt/sources.list
 
 RUN apt-get update \
  && apt-get install -y \
@@ -14,7 +14,7 @@ RUN apt-get update \
       bridge-utils \
       net-tools \
       procps \
-      libboost-serialization1.71-dev \
+      libboost-serialization1.74-dev \
       libzmq5-dev
 
 COPY debs /debs
