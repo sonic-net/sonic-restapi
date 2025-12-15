@@ -3,8 +3,6 @@ FROM debian:bookworm
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN echo "deb http://deb.debian.org/debian bookworm" >> /etc/apt/sources.list
-
 RUN apt-get update \
  && apt-get install -y \
       vim \
