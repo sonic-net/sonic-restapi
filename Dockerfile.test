@@ -27,7 +27,8 @@ RUN sed -ri 's/^(save .*$)/# \1/g;                                              
              s/^logfile .*$/logfile ""/;                                                \
              s/^# syslog-enabled no$/syslog-enabled no/;                                \
              s/^client-output-buffer-limit pubsub [0-9]+mb [0-9]+mb [0-9]+/client-output-buffer-limit pubsub 0 0 0/; \
-             s/^bind 127.0.0.1/bind 0.0.0.0/ \
+             s/^bind 127.0.0.1/bind 0.0.0.0/; \
+             s/^protected-mode yes/protected-mode no/ \
             ' /etc/redis/redis.conf
 
 COPY supervisor/redis.conf /etc/supervisor/conf.d/
