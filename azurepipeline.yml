@@ -41,7 +41,7 @@ jobs:
         pytest -vv
         docker exec rest-api cat /tmp/rest-api.err.log
         docker exec rest-api ps aux
-        sleep 600
+        sleep 1200
         cd ..
         docker cp rest-api:/coverage.cov ./
         docker run -d --rm=true --name rest-api_build -v /tmp/target:/src -v $(pwd):/src/rest -w /src/rest rest-api-build-image tail -f /dev/null
