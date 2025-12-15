@@ -10,7 +10,7 @@ pr:
 jobs:
 - job: Build
   pool:
-    vmImage: ubuntu-20.04
+    vmImage: ubuntu-22.04
 
   variables:
     DIFF_COVER_CHECK_THRESHOLD: 80
@@ -42,6 +42,7 @@ jobs:
         docker exec rest-api cat /tmp/rest-api.err.log
         docker exec rest-api ps aux
         sleep 600
+        docker exec rest-api supervisorctl stop rest-api
         cd ..
         docker cp rest-api:/coverage.cov ./
         docker run -d --rm=true --name rest-api_build -v /tmp/target:/src -v $(pwd):/src/rest -w /src/rest rest-api-build-image tail -f /dev/null
@@ -57,9 +58,9 @@ jobs:
         set -ex
         # Install .NET CORE
         curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-        sudo apt-add-repository https://packages.microsoft.com/ubuntu/20.04/prod
+        sudo apt-add-repository https://packages.microsoft.com/ubuntu/22.04/prod
         sudo apt-get update
-        sudo apt-get install -y dotnet-sdk-5.0
+        sudo apt-get install -y dotnet-sdk-8.0
       displayName: "Install .NET CORE"
 
     - task: PublishCodeCoverageResults@1
