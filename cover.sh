@@ -6,5 +6,5 @@ cp -r go-server-server $GOPATH/src/go-server-server
 
 go tool cover -html=coverage.cov -o=htmlcov/coverage.html
 
-go get github.com/t-yuki/gocover-cobertura
+go install github.com/t-yuki/gocover-cobertura@latest
 $GOPATH/bin/gocover-cobertura < coverage.cov > coverage.xml
