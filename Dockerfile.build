@@ -3,6 +3,8 @@ FROM debian:bookworm
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
+
 RUN apt-get update \
  && apt-get install -y \
       wget \
@@ -15,7 +17,7 @@ RUN apt-get update \
       flex \
       g++ \
       git \
-      libboost-serialization1.74-dev \
+      libboost-serialization1.83-dev \
       libhiredis-dev \
       libzmq5-dev \
       libevent-dev \
