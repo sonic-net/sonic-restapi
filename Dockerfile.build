@@ -1,9 +1,9 @@
-FROM debian:buster
+FROM debian:bookworm
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN echo "deb http://archive.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+RUN echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
 
 RUN apt-get update \
  && apt-get install -y \
@@ -17,7 +17,7 @@ RUN apt-get update \
       flex \
       g++ \
       git \
-      libboost-serialization1.71-dev \
+      libboost-serialization1.83-dev \
       libhiredis-dev \
       libzmq5-dev \
       libevent-dev \
@@ -25,7 +25,8 @@ RUN apt-get update \
       libtool \
       make \
       sudo \
-      pkg-config
+      pkg-config \
+      eatmydata
 
 COPY debs /debs
 RUN dpkg -i /debs/*.deb || apt-get --fix-broken -y install
@@ -41,12 +42,10 @@ RUN rm -fr /debs
 # && make \
 # && make install
 
-RUN export VERSION=1.15 \
- && cd /tmp \
- && wget https://storage.googleapis.com/golang/go$VERSION.linux-amd64.tar.gz \
- && tar -C /usr/local -xzf go$VERSION.linux-amd64.tar.gz \
- && rm -fr /go \
- && mkdir -m 0666 /go
+RUN eatmydata apt-get install -y golang
+
+RUN eatmydata apt-get install -y golang-go \
+ && ln -sf /usr/lib/go-1.19 /usr/local/go
 
 ENV GOROOT=/usr/local/go
 ENV PATH=$PATH:$GOROOT/bin
