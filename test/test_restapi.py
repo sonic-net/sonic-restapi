@@ -113,6 +113,12 @@ class TestClientCertAuth:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
+    def test_wildcard_match_failure_5(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("test.example.sonic.com") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
     # Wildcard match tests for "*test.sonic"
 
     def test_wildcard_match_success_a(self, setup_restapi_client):
