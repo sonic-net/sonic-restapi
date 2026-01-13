@@ -12,6 +12,7 @@ func CommonNameMatch(r *http.Request) bool {
 	// matches one of the trusted common names of the server config.
 	for _, peercert := range r.TLS.PeerCertificates {
 		commonName := peercert.Subject.CommonName
+		log.Printf("info: CommonName in the client cert: %s", commonName)
 		for _, name := range trustedCertCommonNames {
 			if strings.HasPrefix(name, "*") {
 				// wildcard common name matching
@@ -24,7 +25,6 @@ func CommonNameMatch(r *http.Request) bool {
 				return true;
 			}
 		}
-		log.Printf("info: CommonName in the client cert: %s", commonName)
 	}
 
     log.Printf("error: Authentication Fail! None of the CommonNames in the client cert match any of the trusted common names")
