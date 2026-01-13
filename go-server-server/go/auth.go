@@ -8,7 +8,7 @@ import (
 
 func CommonNameMatch(r *http.Request) bool {
     // During client cert authentication, after the certificate chain is validated by
-    // TLS, here we will futher check if at least one of the common names in the end-entity certificate
+    // TLS, here we will further check if at least one of the common names in the end-entity certificate
 	// matches one of the trusted common names of the server config.
 	for _, peercert := range r.TLS.PeerCertificates {
 		commonName := peercert.Subject.CommonName
