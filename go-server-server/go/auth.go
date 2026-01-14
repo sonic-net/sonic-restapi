@@ -7,8 +7,8 @@ import (
 )
 
 func CommonNameMatch(r *http.Request) bool {
-    // During client cert authentication, after the certificate chain is validated by
-    // TLS, here we will further check if at least one of the common names in the end-entity certificate
+	// During client cert authentication, after the certificate chain is validated by
+	// TLS, here we will further check if at least one of the common names in the end-entity certificate
 	// matches one of the trusted common names in the server config.
 
 	for _, name := range trustedCertCommonNames {
@@ -44,6 +44,6 @@ func CommonNameMatch(r *http.Request) bool {
 		}
 	}
 
-    log.Printf("error: Authentication Fail! None of the common names in the client cert match any of the trusted common names")
-    return false;
+	log.Printf("error: Authentication Fail! None of the common names in the client cert match any of the trusted common names")
+	return false;
 }
