@@ -61,7 +61,7 @@ class ClientCert:
 
 class TestClientCertAuth:
 
-    # Exact match tests for "test.client.restapi.sonic"
+    # Exact matching tests for "test.client.restapi.sonic"
 
     def test_exact_match_success(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
@@ -87,7 +87,13 @@ class TestClientCertAuth:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    # Wildcard match tests for "*.example.sonic"
+    def test_exact_match_failure_4(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("TEST.CLIENT.RESTAPI.SONIC") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    # Wildcard matching tests for "*.example.sonic"
 
     def test_wildcard_match_success_1(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
@@ -101,77 +107,115 @@ class TestClientCertAuth:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 200
 
-    def test_wildcard_match_failure_1(self, setup_restapi_client):
+    def test_wildcard_match_success_3(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("sub.test.example.sonic") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
-            assert r.status_code == 401
+            assert r.status_code == 200
 
-    def test_wildcard_match_failure_2(self, setup_restapi_client):
+    def test_wildcard_match_success_4(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("TEST.example.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 200
+
+    def test_wildcard_match_failure_1(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("example.sonic") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    def test_wildcard_match_failure_3(self, setup_restapi_client):
+    def test_wildcard_match_failure_2(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("test.example") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    def test_wildcard_match_failure_4(self, setup_restapi_client):
+    def test_wildcard_match_failure_3(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("test.example.com") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    def test_wildcard_match_failure_5(self, setup_restapi_client):
+    def test_wildcard_match_failure_4(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("someexample.sonic") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    def test_wildcard_match_failure_6(self, setup_restapi_client):
+    def test_wildcard_match_failure_5(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("test.example.sonic.com") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    def test_wildcard_match_failure_7(self, setup_restapi_client):
+    def test_wildcard_match_failure_6(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert(".example.sonic") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    # Wildcard match tests for "*test.sonic"
+    def test_wildcard_match_failure_7(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("TEST.EXAMPLE.SONIC") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
 
-    def test_wildcard_match_failure_a(self, setup_restapi_client):
+    # Matching tests for "*test.sonic" (invalid CN)
+
+    def test_invalid_match_failure_1(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("mytest.sonic") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    def test_wildcard_match_failure_b(self, setup_restapi_client):
+    def test_invalid_match_failure_2(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("test.sonic") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    def test_wildcard_match_failure_c(self, setup_restapi_client):
+    def test_invalid_match_failure_3(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("sub.test.sonic") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    def test_wildcard_match_failure_d(self, setup_restapi_client):
+    def test_invalid_match_failure_4(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("est.sonic") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
-    def test_wildcard_match_failure_e(self, setup_restapi_client):
+    def test_invalid_match_failure_5(self, setup_restapi_client):
         _, _, _, restapi_client = setup_restapi_client
         with ClientCert("test.sonico") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    # Corner cases
+
+    def test_empty_cn(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    def test_missing_tld(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("test.example.") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    def test_match_all(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("*") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    def test_ends_with_dot(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("*.") as client_cert:
             r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
             assert r.status_code == 401
 
