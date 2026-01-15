@@ -24,7 +24,7 @@ jobs:
     - script: |
         set -ex
         ./build.sh
-        docker run -d --rm -p8090:8090 -p6379:6379 --name rest-api --cap-add NET_ADMIN --privileged -t rest-api-image-test_local:latest
+        docker run -d --rm -p8090:8090 -p6379:6379 -p8081:8081 --name rest-api --cap-add NET_ADMIN --privileged -t rest-api-image-test_local:latest
         docker save rest-api-image-test_local | gzip > rest-api-image-test_local.gz
         docker save rest-api-build-image | gzip > rest-api-build-image.gz
         cp *.gz $(Build.ArtifactStagingDirectory)
