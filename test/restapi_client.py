@@ -11,6 +11,7 @@ VNET_NAME_PREF    = "Vnet"
 VLAN_NAME_PREF    = "Vlan"
 
 TEST_HOST = 'http://localhost:8090/'
+TEST_HOST_HTTPS = "https://localhost:8081/"
 
 class RESTAPI_client:
 
@@ -45,7 +46,10 @@ class RESTAPI_client:
         logging.info('Response Body: %s' % r.text)
         return r
 
-    def get(self, url, body = [], params = {}):
+    def get(self, url, body = [], params = {}, client_cert=None):
+        """
+        :param client_cert: tuple of (cert_file, key_file) for client certificate authentication
+        """
         if body == None:
             data = None
         else:
@@ -53,7 +57,10 @@ class RESTAPI_client:
 
         logging.info("Request GET: %s" % url)
         logging.info("JSON Body: %s" % data)
-        r = requests.get(TEST_HOST + url, data=data, params=params, headers={'Content-Type': 'application/json'})
+        if client_cert:
+            r = requests.get(TEST_HOST_HTTPS + url, data=data, params=params, headers={'Content-Type': 'application/json'}, cert=client_cert, verify=False)
+        else:
+            r = requests.get(TEST_HOST + url, data=data, params=params, headers={'Content-Type': 'application/json'})
         logging.info('Response Code: %s' % r.status_code)
         logging.info('Response Body: %s' % r.text)
         return r
@@ -70,6 +77,9 @@ class RESTAPI_client:
         logging.info('Response Code: %s' % r.status_code)
         logging.info('Response Body: %s' % r.text)
         return r
+
+    def get_heartbeat(self, client_cert=None):
+        return self.get("v1/state/heartbeat", client_cert=client_cert)
 
     def get_config_reset_status(self):
         return self.get('v1/config/resetstatus')

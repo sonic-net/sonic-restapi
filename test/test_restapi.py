@@ -2,6 +2,7 @@
 
 import logging
 import json
+import os
 
 # DB Names
 VXLAN_TUNNEL_TB   = "VXLAN_TUNNEL"
@@ -28,6 +29,128 @@ DELETE_DEP = 2
 sorted_org = sorted
 def sorted(l):
     return sorted_org(l, key = lambda x : str(sorted_org(x.items())) if isinstance(x, dict) else x)
+
+
+class ClientCert:
+    def __init__(self, common_name, cert_name="restapiclient"):
+        self.common_name = common_name
+        self.cert_name = cert_name
+
+    def __enter__(self):
+        """
+        Generate a client certificate using self.common_name.
+        This new certificate is signed by the self-signed certificate in cert/client/selfsigned.crt.
+        """
+        self.cert = f"{self.cert_name}.crt"
+        self.key = f"{self.cert_name}.key"
+        self.csr = f"{self.cert_name}.csr"
+        os.system(f"openssl genrsa -out {self.key} 2048")
+        os.system(f"openssl req -new -key {self.key} -subj '/CN={self.common_name}' -out {self.csr}")
+        os.system(f"openssl x509 -req -in {self.csr} -CA ../cert/client/selfsigned.crt \
+                    -CAkey ../cert/client/selfsigned.key -CAcreateserial -out {self.cert} -days 825 -sha256")
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Clean up generated cert, key, and csr files.
+        """
+        os.remove(self.cert)
+        os.remove(self.csr)
+        os.remove(self.key)
+
+
+class TestClientCertAuth:
+
+    # Exact match tests for "test.client.restapi.sonic"
+
+    def test_exact_match_success(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("test.client.restapi.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 200
+
+    def test_exact_match_failure(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("client.restapi.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    # Wildcard match tests for "*.example.sonic"
+
+    def test_wildcard_match_success_1(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("test.example.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 200
+
+    def test_wildcard_match_success_2(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("another.test.example.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 200
+
+    def test_wildcard_match_failure_1(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("example.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    def test_wildcard_match_failure_2(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("test.example") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    def test_wildcard_match_failure_3(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("test.example.com") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    def test_wildcard_match_failure_4(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("someexample.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    def test_wildcard_match_failure_5(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("test.example.sonic.com") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    # Wildcard match tests for "*test.sonic"
+
+    def test_wildcard_match_success_a(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("mytest.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 200
+
+    def test_wildcard_match_success_b(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("test.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 200
+
+    def test_wildcard_match_success_c(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("example.test.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 200
+
+    def test_wildcard_match_failure_a(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("est.sonic") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
+    def test_wildcard_match_failure_b(self, setup_restapi_client):
+        _, _, _, restapi_client = setup_restapi_client
+        with ClientCert("test.sonico") as client_cert:
+            r = restapi_client.get_heartbeat(client_cert=(client_cert.cert, client_cert.key))
+            assert r.status_code == 401
+
 
 class TestRestApiPositive:
     """Normal behaviour tests"""
