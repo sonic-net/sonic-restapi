@@ -1286,8 +1286,8 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                         continue                        
                     }
                 } else {
-                    if prefix_len < 64 {
-                        r.Error_msg = "Prefix length lesser than 64 is not supported"
+                    if prefix_len < 48 {
+                        r.Error_msg = "Prefix length lesser than 48 is not supported"
                         failed = append(failed, r)
                         continue                          
                     }
@@ -1483,8 +1483,8 @@ func ConfigVrouterVrfIdRoutesPatch(w http.ResponseWriter, r *http.Request) {
                             continue
                         }
                     } else {
-                        if prefix_len < 60 {
-                            r.Error_msg = "Adv Prefix length lesser than 60 is not supported"
+                        if prefix_len < 40 {
+                            r.Error_msg = "Adv Prefix length lesser than 40 is not supported"
                             failed = append(failed, r)
                             continue
                         }
