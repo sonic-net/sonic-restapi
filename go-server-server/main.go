@@ -102,15 +102,24 @@ func signal_handler(messenger chan<- int, wgroup *sync.WaitGroup) {
 
 func monitor_certs(messenger chan<- int, wgroup *sync.WaitGroup) {
     defer wgroup.Done()
-    client_cert_finfo, _ := os.Lstat(*sw.ClientCertFlag)
+    client_cert_finfo, err := os.Lstat(*sw.ClientCertFlag)
+    if err != nil {
+        log.Fatalf("error: couldn't stat client cert file: %s", err)
+    }
     prev_client_cert_mtime := client_cert_finfo.ModTime()
     log.Printf("trace: Last modified time of %s is %d", client_cert_finfo.Name(), prev_client_cert_mtime.Unix())
 
-    server_cert_finfo, _ := os.Lstat(*sw.ServerCertFlag)
+    server_cert_finfo, err := os.Lstat(*sw.ServerCertFlag)
+    if err != nil {
+        log.Fatalf("error: couldn't stat server cert file: %s", err)
+    }
     prev_server_cert_mtime := server_cert_finfo.ModTime()
     log.Printf("trace: Last modified time of %s is %d", server_cert_finfo.Name(), prev_server_cert_mtime.Unix())
 
-    sever_key_finfo, _ := os.Lstat(*sw.ServerKeyFlag)
+    sever_key_finfo, err := os.Lstat(*sw.ServerKeyFlag)
+    if err != nil {
+        log.Fatalf("error: couldn't stat server key file: %s", err)
+    }
     prev_sever_key_mtime := sever_key_finfo.ModTime()
     log.Printf("trace: Last modified time of %s is %d", sever_key_finfo.Name(), prev_sever_key_mtime.Unix())
 
@@ -118,7 +127,12 @@ func monitor_certs(messenger chan<- int, wgroup *sync.WaitGroup) {
 
     for {
         reload := false
-        client_cert_finfo, _ := os.Lstat(*sw.ClientCertFlag)
+        client_cert_finfo, err := os.Lstat(*sw.ClientCertFlag)
+        if err != nil {
+            log.Printf("error: couldn't stat client cert file: %s", err)
+            time.Sleep(CERT_MONITOR_FREQUENCY)
+            continue
+        }
         client_cert_mtime := client_cert_finfo.ModTime()
         log.Printf("trace: Last modified time of %s is %d", client_cert_finfo.Name(), client_cert_mtime.Unix())
         if client_cert_mtime != prev_client_cert_mtime {
@@ -127,7 +141,12 @@ func monitor_certs(messenger chan<- int, wgroup *sync.WaitGroup) {
         }
         prev_client_cert_mtime = client_cert_mtime
 
-        server_cert_finfo, _ := os.Lstat(*sw.ServerCertFlag)
+        server_cert_finfo, err := os.Lstat(*sw.ServerCertFlag)
+        if err != nil {
+            log.Printf("error: couldn't stat server cert file: %s", err)
+            time.Sleep(CERT_MONITOR_FREQUENCY)
+            continue
+        }
         server_cert_mtime := server_cert_finfo.ModTime()
         log.Printf("trace: Last modified time of %s is %d", server_cert_finfo.Name(), server_cert_mtime.Unix())
         if server_cert_mtime != prev_server_cert_mtime {
@@ -136,7 +155,12 @@ func monitor_certs(messenger chan<- int, wgroup *sync.WaitGroup) {
         }
         prev_server_cert_mtime = server_cert_mtime
 
-        sever_key_finfo, _ := os.Lstat(*sw.ServerKeyFlag)
+        sever_key_finfo, err := os.Lstat(*sw.ServerKeyFlag)
+        if err != nil {
+            log.Printf("error: couldn't stat server key file: %s", err)
+            time.Sleep(CERT_MONITOR_FREQUENCY)
+            continue
+        }
         sever_key_mtime := sever_key_finfo.ModTime()
         log.Printf("trace: Last modified time of %s is %d", sever_key_finfo.Name(), sever_key_mtime.Unix())
         if sever_key_mtime != prev_sever_key_mtime {
