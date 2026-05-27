@@ -50,6 +50,10 @@ func StartHttpsServer(handler http.Handler, messenger <-chan int, wgroup *sync.W
             // RequireAndVerifyClientCert
             ClientAuth: tls.RequireAndVerifyClientCert,
             MinVersion: tls.VersionTLS12,
+            // Disable TLS session tickets to avoid an AES-128-CTR
+            // panic in golang-fips/openssl/v2 with the SymCrypt
+            // FIPS provider (which does not implement AES-128-CTR).
+            SessionTicketsDisabled: true,
         }
         tlsConfig.BuildNameToCertificate()
 
