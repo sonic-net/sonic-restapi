@@ -1,3 +1,3 @@
 module swsscommon
 
-go 1.15
+go 1.25.9
