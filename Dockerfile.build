@@ -42,10 +42,9 @@ RUN rm -fr /debs
 # && make \
 # && make install
 
-RUN eatmydata apt-get install -y golang
-
-RUN eatmydata apt-get install -y golang-go \
- && ln -sf /usr/lib/go-1.19 /usr/local/go
+RUN wget -q https://dl.google.com/go/go1.25.9.linux-amd64.tar.gz -O /tmp/go.tar.gz \
+ && tar -C /usr/local -xzf /tmp/go.tar.gz \
+ && rm /tmp/go.tar.gz
 
 ENV GOROOT=/usr/local/go
 ENV PATH=$PATH:$GOROOT/bin
