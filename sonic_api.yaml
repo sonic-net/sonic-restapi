@@ -2730,8 +2730,6 @@ definitions:
         description: tunnel local termination IP address
   VnetEntry:
     type: object
-    required:
-      - vnid
     properties:
       vnid:
         type: integer
