@@ -7,6 +7,21 @@ pr:
     include:
     - "*"
 
+variables:
+  - name: BUILD_BRANCH
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      value: $(System.PullRequest.TargetBranch)
+    ${{ else }}:
+      value: $(Build.SourceBranchName)
+
+resources:
+  repositories:
+  - repository: sonic-swss-common
+    type: github
+    name: sonic-net/sonic-swss-common
+    endpoint: sonic-net
+    ref: refs/heads/$(BUILD_BRANCH)
+
 jobs:
 - job: Build
   pool:
@@ -20,6 +35,11 @@ jobs:
   steps:
     - checkout: self
       clean: true
+      path: s
+
+    - checkout: sonic-swss-common
+      clean: true
+      path: sonic-swss-common
 
     - script: |
         set -ex
@@ -45,7 +65,7 @@ jobs:
         docker exec rest-api supervisorctl stop rest-api
         cd ..
         docker cp rest-api:/coverage.cov ./
-        docker run -d --rm=true --name rest-api_build -v /tmp/target:/src -v $(pwd):/src/rest -w /src/rest rest-api-build-image tail -f /dev/null
+        docker run -d --rm=true --name rest-api_build -v /tmp/target:/src -v $(pwd):/src/rest -v "$(realpath ../sonic-swss-common):/src/sonic-swss-common:ro" -w /src/rest rest-api-build-image tail -f /dev/null
         mkdir htmlcov
         docker exec rest-api_build sh /src/rest/cover.sh
       displayName: Test

@@ -1,6 +1,9 @@
 
 set -e
 
+# The native Go replacement must be visible inside the build container.
+test -f ../sonic-swss-common/go.mod
+
 # copy debian packages from sonic-buildimage
 #bash copy.sh
 python3 copy.py
@@ -12,7 +15,7 @@ docker build -t rest-api-build-image --rm -f Dockerfile.build .
 mkdir -p /tmp/target
 
 # create .deb packages inside of the build container
-docker run --rm=true -v /tmp/target:/src -v $(pwd):/src/rest -w /src/rest rest-api-build-image dpkg-buildpackage -us -uc
+docker run --rm=true -v /tmp/target:/src -v $(pwd):/src/rest -v "$(realpath ../sonic-swss-common):/src/sonic-swss-common:ro" -w /src/rest rest-api-build-image dpkg-buildpackage -us -uc
 #docker run --rm=true -v /tmp/target:/src -v $(pwd)/arp_responder:/src/arp -w /src/arp  rest-api-build-image dpkg-buildpackage -us -uc
 
 # copy created packages to out debs directoy
