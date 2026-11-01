@@ -27,3 +27,9 @@ This is a configuration agent which exposes HTTPS endpoints to perform dynamic n
   1. scp/copy over the generated archive(`rest-api-image.gz`) to your switch
   2. `docker load < rest-api-image.gz`
   3. `docker run -d -p=8090:8090/tcp -v /var/run/redis/redis.sock:/var/run/redis/redis.sock --name rest-api --cap-add NET_ADMIN --privileged -t rest-api-image:latest`
+
+## Build with the SONiC source tree
+
+Keep `sonic-restapi` and `sonic-swss-common` beside each other under `src/`.
+The normal package Makefile uses that selected swss-common Go binding and native library for
+Redis login. It links the source into its Go build workspace.

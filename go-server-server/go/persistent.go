@@ -186,12 +186,12 @@ func genVxlanTunnelInfo() {
 
 func DBConnect() {
     if *RunApiAsLocalTestDocker {
-        redisDB = redis.NewClient(&redis.Options{
+        redisDB = newRedisClient(&redis.Options{
             Addr:     "localhost:6379",
             Password: "",
         })
     } else {
-        redisDB = redis.NewClient(&redis.Options{
+        redisDB = newRedisClient(&redis.Options{
             Network:  "unix",
             Addr:     REDIS_SOCK,
             Password: "",

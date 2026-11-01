@@ -1,6 +1,7 @@
 .PHONY: all install build libcswsscommon clean
 
 GO := /usr/local/go/bin/go
+SWSS_COMMON_DIR := $(abspath ../sonic-swss-common)
 export GOROOT=/usr/local/go
 export GOPATH=$(HOME)/go
 export GOBIN=$(GOPATH)/bin
@@ -29,6 +30,7 @@ $(GOPATH)/src/go-server-server/main.go:
 	mkdir -p               $(GOPATH)/src
 	cp -r go-server-server $(GOPATH)/src/go-server-server
 	cp -r swsscommon       $(GOPATH)/src/swsscommon
+	ln -s $(SWSS_COMMON_DIR) $(GOPATH)/src/sonic-swss-common
 
 libcswsscommon:
 	make -C libcswsscommon
