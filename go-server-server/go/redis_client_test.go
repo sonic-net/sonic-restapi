@@ -20,16 +20,11 @@ import (
 	"github.com/go-redis/redis/v7"
 )
 
-var authRoot = func() string {
-	if root := os.Getenv("REDIS_AUTH_TEST_DIR"); root != "" {
-		return filepath.Join(root, "policy")
-	}
-	return "/run/redis-auth"
-}()
+const authRoot = "/run/redis-auth"
 
 func requireRoot(t *testing.T) {
 	t.Helper()
-	if os.Geteuid() != 0 {
+	if os.Geteuid() != 0 || os.Getenv("SWSS_AUTH_TEST_CONTAINER") != "1" {
 		t.Skip("requires root in an isolated container")
 	}
 	if _, err := os.Lstat(authRoot); !os.IsNotExist(err) {
