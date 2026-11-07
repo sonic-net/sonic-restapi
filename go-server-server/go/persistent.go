@@ -186,12 +186,12 @@ func genVxlanTunnelInfo() {
 
 func DBConnect() {
     if *RunApiAsLocalTestDocker {
-        redisDB = redis.NewClient(&redis.Options{
+        redisDB = newRedisClient(&redis.Options{
             Addr:     "localhost:6379",
             Password: "",
         })
     } else {
-        redisDB = redis.NewClient(&redis.Options{
+        redisDB = newRedisClient(&redis.Options{
             Network:  "unix",
             Addr:     REDIS_SOCK,
             Password: "",
@@ -204,9 +204,14 @@ func DBConnect() {
 	     swssDB = swsscommon.NewDBConnector(APPL_DB, "localhost", 6379, SWSS_TIMEOUT)
 	     swss_conf_DB = swsscommon.NewDBConnector(CONFIG_DB, "localhost", 6379, SWSS_TIMEOUT)
     } else {
-        swssDB = swsscommon.NewDBConnector2(APPL_DB, REDIS_SOCK, SWSS_TIMEOUT)
-        swss_conf_DB = swsscommon.NewDBConnector2(CONFIG_DB, REDIS_SOCK, SWSS_TIMEOUT)
-        swss_ctr_DB = swsscommon.NewDBConnector2(COUNTER_DB, REDIS_SOCK, SWSS_TIMEOUT)
+        connect := func(name string) swsscommon.DBConnector {
+            db, err := swsscommon.NewDBConnectorNamed(name, SWSS_TIMEOUT, true)
+            if err != nil { log.Fatalf("Cannot connect to %s: %v", name, err) }
+            return db
+        }
+        swssDB = connect("APPL_DB")
+        swss_conf_DB = connect("CONFIG_DB")
+        swss_ctr_DB = connect("COUNTERS_DB")
     }
     app_db_ops = db_ops{separator: ":", swss_db: swssDB, db_num: APPL_DB}
     conf_db_ops = db_ops{separator: "|", swss_db: swss_conf_DB, db_num: CONFIG_DB}
