@@ -7,12 +7,8 @@ require (
 	github.com/go-redis/redis/v7 v7.4.1
 	github.com/gorilla/mux v1.7.4
 	github.com/satori/go.uuid v1.2.1-0.20180404165556-75cca531ea76
-	github.com/sonic-net/sonic-swss-common v0.0.0-20261105000629-1a2b92b44664
 	github.com/vharitonsky/iniflags v0.0.0-20180513140207-a33cd0b5f3de
 	swsscommon v0.0.0
 )
 
 replace swsscommon v0.0.0 => ../swsscommon
-
-// SONiC builds use the matching native source from the sibling checkout.
-replace github.com/sonic-net/sonic-swss-common => ../sonic-swss-common

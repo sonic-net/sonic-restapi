@@ -2,9 +2,10 @@ package restapi
 
 import (
 	"context"
-	"github.com/go-redis/redis/v7"
-	"github.com/sonic-net/sonic-swss-common/goext/redisconn"
 	"net"
+
+	"github.com/go-redis/redis/v7"
+	"swsscommon/redisconn"
 )
 
 func newRedisClient(options *redis.Options) *redis.Client {
