@@ -1,9 +1,10 @@
-FROM debian:bookworm
+# The sonic-slave container for the target branch, which carries the Go that
+# sonic-buildimage builds the REST API with
+ARG BUILD_BRANCH=master
+FROM sonicdev-microsoft.azurecr.io:443/sonic-slave-trixie:${BUILD_BRANCH}
 
 ## Make apt-get non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
-
-RUN echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
 
 RUN apt-get update \
  && apt-get install -y \
@@ -42,13 +43,12 @@ RUN rm -fr /debs
 # && make \
 # && make install
 
-RUN wget -q https://dl.google.com/go/go1.25.9.linux-amd64.tar.gz -O /tmp/go.tar.gz \
- && tar -C /usr/local -xzf /tmp/go.tar.gz \
- && rm /tmp/go.tar.gz
-
+# Go is the container's and is never downloaded, so a go.mod that needs a
+# newer Go fails instead
 ENV GOROOT=/usr/local/go
 ENV PATH=$PATH:$GOROOT/bin
 ENV GOPATH=/go
+ENV GOTOOLCHAIN=local
 
 #RUN git clone https://github.com/apache/thrift.git $GOPATH/src/git.apache.org/thrift.git \
 # && cd $GOPATH/src/git.apache.org/thrift.git \

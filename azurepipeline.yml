@@ -2,6 +2,10 @@ trigger:
   branches:
     include:
       - "*"
+    # Renovate's branches build as pull requests; a branch build would report
+    # under the same check name
+    exclude:
+      - renovate/*
 pr:
   branches:
     include:
@@ -16,17 +20,33 @@ jobs:
     DIFF_COVER_CHECK_THRESHOLD: 80
     DIFF_COVER_ENABLE: 'true'
     DIFF_COVER_WORKING_DIRECTORY: $(System.DefaultWorkingDirectory)
+    # Dockerfile.build builds in the sonic-slave container for this branch
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      BUILD_BRANCH: $(System.PullRequest.TargetBranch)
+    ${{ else }}:
+      BUILD_BRANCH: $(Build.SourceBranchName)
 
   steps:
     - checkout: self
       clean: true
 
+    # The sonic-slave container needs more disk than the hosted image leaves free
     - script: |
         set -ex
+        sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+        df -h /
+      displayName: 'Free disk space'
+
+    - script: |
+        set -ex
+        # Only master and release branches have a sonic-slave container
+        case "$BUILD_BRANCH" in
+          master|20[0-9][0-9][0-9][0-9]) ;;
+          *) export BUILD_BRANCH=master ;;
+        esac
         ./build.sh
         docker run -d --rm -p8090:8090 -p6379:6379 -p8081:8081 --name rest-api --cap-add NET_ADMIN --privileged -t rest-api-image-test_local:latest
         docker save rest-api-image-test_local | gzip > rest-api-image-test_local.gz
-        docker save rest-api-build-image | gzip > rest-api-build-image.gz
         cp *.gz $(Build.ArtifactStagingDirectory)
         mkdir $(Build.ArtifactStagingDirectory)/debs
         cp debs/*.deb $(Build.ArtifactStagingDirectory)/debs
