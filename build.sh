@@ -6,7 +6,7 @@ set -e
 python3 copy.py
 
 # build a container with build utilities
-docker build -t rest-api-build-image --rm -f Dockerfile.build .
+docker build -t rest-api-build-image --rm --build-arg BUILD_BRANCH="${BUILD_BRANCH:-master}" -f Dockerfile.build .
 
 # create a directory for target .deb files
 mkdir -p /tmp/target

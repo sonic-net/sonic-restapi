@@ -1,0 +1,9 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["local>sonic-net/sonic-pipelines//renovate/default"],
+  "ignoreDeps": ["go", "swsscommon"],
+  "dockerfile": {
+    "description": "No Dockerfile here is shipped: sonic-buildimage builds the REST API container from its own. Dockerfile.build and Dockerfile.test are CI images whose base follows the sonic-slave container's distribution, and the others are unused",
+    "enabled": false
+  }
+}
