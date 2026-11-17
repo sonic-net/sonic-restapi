@@ -5,5 +5,16 @@
   "dockerfile": {
     "description": "No Dockerfile here is shipped: sonic-buildimage builds the REST API container from its own. Dockerfile.build and Dockerfile.test are CI images whose base follows the sonic-slave container's distribution, and the others are unused",
     "enabled": false
-  }
+  },
+  "packageRules": [
+    {
+      "description": "Renovate merges the updates the preset labels automerge: security updates below a major version, except patched modules. It merges on a later run, once every check on the head commit has passed, not only the required ones, and the renovate-approve app has approved the pull request. Reviewers are still assigned, so one that fails reaches them.",
+      "matchJsonata": ["isVulnerabilityAlert = true and $not('patched-module' in addLabels)"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": false,
+      "assignAutomerge": true
+    }
+  ]
 }
