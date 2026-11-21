@@ -15,6 +15,14 @@
       "automergeType": "pr",
       "platformAutomerge": false,
       "assignAutomerge": true
+    },
+    {
+      "description": "github.com/go-redis/redis/v7 is the last release under that path; the module moved to github.com/redis/go-redis/v9. Renovate's gomod manager cannot rename a module, so a major update to the old path can never apply; it fails go get. Moving to the new module changes import paths and call sites, and is made by hand.",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["github.com/go-redis/redis/v7"],
+      "matchUpdateTypes": ["major"],
+      "minimumReleaseAge": "7 days",
+      "enabled": false
     }
   ]
 }
