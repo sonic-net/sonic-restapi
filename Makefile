@@ -2,14 +2,13 @@
 
 GO := /usr/local/go/bin/go
 export GOROOT=/usr/local/go
-export GOPATH=$(HOME)/go
+export GOPATH=$(abspath .)/.gopath
 export GOBIN=$(GOPATH)/bin
+export GOMODCACHE=$(HOME)/go/pkg/mod
 export GO111MODULE=on
-export GOFLAGS=-modcacherw
-RACE_OPTION := -race
-ifeq ($(CONFIGURED_ARCH),armhf)
-RACE_OPTION :=
-endif
+export GOWORK=off
+export GOTOOLCHAIN=local
+export CGO_ENABLED=1
 
 all: install build
 
