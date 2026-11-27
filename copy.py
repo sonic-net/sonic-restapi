@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import urllib.parse
 from subprocess import Popen, PIPE
 
@@ -16,7 +17,13 @@ def main():
     if not os.path.exists("./debs/"):
         os.mkdir("./debs")
 
-    for dep in config['dependencies']:   
+    swsscommon_debs_dir = os.environ.get("SWSSCOMMON_DEBS_DIR")
+    for dep in config['dependencies']:
+        if swsscommon_debs_dir and dep.startswith(("libswsscommon_", "libswsscommon-dev_")):
+            filename = f"{dep}_{config['arch']}.deb"
+            shutil.copyfile(os.path.join(swsscommon_debs_dir, filename), os.path.join("debs", filename))
+            continue
+
         params = {
             'branchName': config['branch'],
             'platform': config['platform'],
