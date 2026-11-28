@@ -1,8 +1,9 @@
 package restapi
 
 import (
+    "context"
     "fmt"
-    "github.com/go-redis/redis/v7"
+    "github.com/redis/go-redis/v9"
     "log"
     "strconv"
     "strings"
@@ -220,9 +221,9 @@ func DBConnect() {
 
 func GetKVs(DB int, key string) (kv map[string]string, err error) {
     pipe := redisDB.TxPipeline()
-    pipe.Select(DB)
-    kvRes := pipe.HGetAll(key)
-    _, err = pipe.Exec()
+    pipe.Select(context.Background(), DB)
+    kvRes := pipe.HGetAll(context.Background(), key)
+    _, err = pipe.Exec(context.Background())
     if err != nil {
         return
     }
@@ -242,10 +243,10 @@ func GetKVsMulti(DB int, pattern string) (kv map[string]map[string]string, err e
 
     for {
         pipe := redisDB.TxPipeline()
-        pipe.Select(DB)
-        ret := pipe.Scan(cursor, pattern, 1)
+        pipe.Select(context.Background(), DB)
+        ret := pipe.Scan(context.Background(), cursor, pattern, 1)
 
-        _, err = pipe.Exec()
+        _, err = pipe.Exec(context.Background())
         if err != nil {
             return
         }
@@ -378,11 +379,11 @@ func SwssGetVrouterRoutes(vnet_id_str string, vnidMatch int, ipFilter string) (r
 
 func CacheGetConfigResetInfo() (GUID string, time string, resetStatus string, err error) {
     pipe := redisDB.TxPipeline()
-    pipe.Select(APPL_CACHE_DB)
-    getCmd_guid := pipe.HGet("RESET_INFO", "GUID")
-    getCmd_time := pipe.HGet("RESET_INFO", "time")
-    getCmd_resetStatus := pipe.HGet("RESET_INFO", "reset_status")
-    _, err = pipe.Exec()
+    pipe.Select(context.Background(), APPL_CACHE_DB)
+    getCmd_guid := pipe.HGet(context.Background(), "RESET_INFO", "GUID")
+    getCmd_time := pipe.HGet(context.Background(), "RESET_INFO", "time")
+    getCmd_resetStatus := pipe.HGet(context.Background(), "RESET_INFO", "reset_status")
+    _, err = pipe.Exec(context.Background())
 
     if err != nil {
         return
@@ -408,10 +409,10 @@ func CacheGetConfigResetInfo() (GUID string, time string, resetStatus string, er
 
 func CacheSetConfigResetInfo(GUID string, time string) error {
     pipe := redisDB.TxPipeline()
-    pipe.Select(APPL_CACHE_DB)
-    setCmd_guid := pipe.HSet("RESET_INFO", "GUID", GUID)
-    setCmd_time := pipe.HSet("RESET_INFO", "time", time)
-    _, err := pipe.Exec()
+    pipe.Select(context.Background(), APPL_CACHE_DB)
+    setCmd_guid := pipe.HSet(context.Background(), "RESET_INFO", "GUID", GUID)
+    setCmd_time := pipe.HSet(context.Background(), "RESET_INFO", "time", time)
+    _, err := pipe.Exec(context.Background())
     if err != nil {
         return err
     }
@@ -429,15 +430,15 @@ func CacheSetConfigResetInfo(GUID string, time string) error {
 
 func CacheSetResetStatusInfo(resetStatus bool) error {
     pipe := redisDB.TxPipeline()
-    pipe.Select(APPL_CACHE_DB)
+    pipe.Select(context.Background(), APPL_CACHE_DB)
 
     val := "false"
     if resetStatus {
         val = "true"
     }
 
-    setCmd_resetStatus := pipe.HSet("RESET_INFO", "reset_status", val)
-    _, err := pipe.Exec()
+    setCmd_resetStatus := pipe.HSet(context.Background(), "RESET_INFO", "reset_status", val)
+    _, err := pipe.Exec(context.Background())
     if err != nil {
         return err
     }

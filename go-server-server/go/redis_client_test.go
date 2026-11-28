@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 )
 
 const authRoot = "/run/redis-auth"
@@ -90,19 +90,20 @@ func fixture(t *testing.T) (string, func()) {
 }
 
 func TestRedisClientWriterPoolPipelineAndReconnect(t *testing.T) {
+	ctx := context.Background()
 	socket, _ := fixture(t)
 	client := newRedisClient(&redis.Options{Network: "unix", Addr: socket, PoolSize: 3})
 	t.Cleanup(func() { client.Close() })
-	if err := client.Set("test:key", "before", 0).Err(); err != nil {
+	if err := client.Set(ctx, "test:key", "before", 0).Err(); err != nil {
 		t.Fatal("writer did not authenticate")
 	}
 	pipeline := client.TxPipeline()
-	pipeline.Select(8)
-	pipeline.HSet("RESTAPI_TEST", "value", "stored")
-	if _, err := pipeline.Exec(); err != nil {
+	pipeline.Select(ctx, 8)
+	pipeline.HSet(ctx, "RESTAPI_TEST", "value", "stored")
+	if _, err := pipeline.Exec(ctx); err != nil {
 		t.Fatal("writer transaction failed")
 	}
-	if err := client.ClientKillByFilter("type", "normal", "skipme", "no").Err(); err != nil {
+	if err := client.ClientKillByFilter(ctx, "type", "normal", "skipme", "no").Err(); err != nil {
 		// The command kills its own connection too. The next call must authenticate again.
 		if !strings.Contains(err.Error(), "EOF") {
 			t.Fatal("writer connection reset failed")
@@ -112,7 +113,7 @@ func TestRedisClientWriterPoolPipelineAndReconnect(t *testing.T) {
 	// A subsequent new connection must still run the named-user login.
 	var reconnect error
 	for attempt := 0; attempt < 4; attempt++ {
-		reconnect = client.Set("test:reconnect", "after", 0).Err()
+		reconnect = client.Set(ctx, "test:reconnect", "after", 0).Err()
 		if reconnect == nil {
 			break
 		}
@@ -129,7 +130,7 @@ func TestRedisClientMissingSecretStops(t *testing.T) {
 	}
 	client := newRedisClient(&redis.Options{Network: "unix", Addr: socket, MaxRetries: -1})
 	defer client.Close()
-	if err := client.Ping().Err(); err == nil {
+	if err := client.Ping(context.Background()).Err(); err == nil {
 		t.Fatal("missing writer state was ignored")
 	}
 }
@@ -146,23 +147,24 @@ func TestRedisClientExistingDialerPreserved(t *testing.T) {
 			return nil, syscall.ECONNREFUSED
 		}})
 	defer client.Close()
-	client.Ping()
+	client.Ping(context.Background())
 	if !called {
 		t.Fatal("original dialer was lost")
 	}
 }
 
 func TestRedisClientOrdinaryReader(t *testing.T) {
+	ctx := context.Background()
 	if os.Getenv("REDIS_REST_READER_TEST") == "1" {
 		client := newRedisClient(&redis.Options{Network: "unix", Addr: os.Getenv("REDIS_REST_TEST_SOCKET"), MaxRetries: -1})
 		defer client.Close()
-		if err := client.Ping().Err(); err != nil {
+		if err := client.Ping(ctx).Err(); err != nil {
 			t.Fatal("ordinary reader could not connect")
 		}
-		if value, err := client.Get("test:key").Result(); err != nil || value != "before" {
+		if value, err := client.Get(ctx, "test:key").Result(); err != nil || value != "before" {
 			t.Fatal("ordinary reader could not read")
 		}
-		if err := client.Set("test:key", "bad", 0).Err(); err == nil || !strings.Contains(err.Error(), "NOPERM") {
+		if err := client.Set(ctx, "test:key", "bad", 0).Err(); err == nil || !strings.Contains(err.Error(), "NOPERM") {
 			t.Fatal("ordinary reader write was not denied")
 		}
 		return
@@ -170,7 +172,7 @@ func TestRedisClientOrdinaryReader(t *testing.T) {
 	socket, _ := fixture(t)
 	writer := newRedisClient(&redis.Options{Network: "unix", Addr: socket})
 	defer writer.Close()
-	if err := writer.Set("test:key", "before", 0).Err(); err != nil {
+	if err := writer.Set(ctx, "test:key", "before", 0).Err(); err != nil {
 		t.Fatal("writer setup failed")
 	}
 	binary := filepath.Join(filepath.Dir(socket), "reader.test")
@@ -211,16 +213,29 @@ func TestRedisClientConfiguredTLSIsPreserved(t *testing.T) {
 		defer connection.Close()
 		connection.SetDeadline(time.Now().Add(2 * time.Second))
 		reader := bufio.NewReader(connection)
-		for _, expected := range []string{"*1\r\n", "$4\r\n", "ping\r\n"} {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				served <- err
-				return
+		expect := func(lines ...string) error {
+			for _, expected := range lines {
+				line, err := reader.ReadString('\n')
+				if err != nil {
+					return err
+				}
+				if strings.ToLower(line) != expected {
+					return syscall.EPROTO
+				}
 			}
-			if strings.ToLower(line) != expected {
-				served <- syscall.EPROTO
-				return
-			}
+			return nil
+		}
+		if err := expect("*2\r\n", "$5\r\n", "hello\r\n", "$1\r\n", "3\r\n"); err != nil {
+			served <- err
+			return
+		}
+		if _, err := connection.Write([]byte("-ERR unknown command 'hello'\r\n")); err != nil {
+			served <- err
+			return
+		}
+		if err := expect("*1\r\n", "$4\r\n", "ping\r\n"); err != nil {
+			served <- err
+			return
 		}
 		_, err = connection.Write([]byte("+PONG\r\n"))
 		served <- err
@@ -228,10 +243,10 @@ func TestRedisClientConfiguredTLSIsPreserved(t *testing.T) {
 	client := newRedisClient(&redis.Options{
 		Addr: listener.Addr().String(), MaxRetries: -1,
 		DialTimeout: time.Second, ReadTimeout: time.Second,
-		TLSConfig: &tls.Config{RootCAs: roots},
+		TLSConfig: &tls.Config{RootCAs: roots}, DisableIdentity: true,
 	})
 	defer client.Close()
-	if err := client.Ping().Err(); err != nil {
+	if err := client.Ping(context.Background()).Err(); err != nil {
 		t.Fatalf("configured TLS connection failed: %v", err)
 	}
 	if err := <-served; err != nil {

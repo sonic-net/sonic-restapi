@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/go-redis/redis/v7"
+	"github.com/redis/go-redis/v9"
 	"swsscommon/redisconn"
 )
 
