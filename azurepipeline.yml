@@ -11,6 +11,13 @@ pr:
     include:
     - "*"
 
+variables:
+  - name: BUILD_BRANCH
+    ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+      value: $(System.PullRequest.TargetBranch)
+    ${{ else }}:
+      value: $(Build.SourceBranchName)
+
 jobs:
 - job: Build
   pool:
@@ -37,6 +44,20 @@ jobs:
         df -h /
       displayName: 'Free disk space'
 
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        source: specific
+        project: build
+        pipeline: '9'
+        runVersion: specific
+        runId: '1288226'
+        artifact: sonic-swss-common-trixie
+        patterns: |
+          libswsscommon_*.deb
+          libswsscommon-dev_*.deb
+        targetPath: $(Pipeline.Workspace)/swss-common
+      displayName: 'Download swss-common Trixie packages'
+
     - script: |
         set -ex
         # Only master and release branches have a sonic-slave container
@@ -52,6 +73,8 @@ jobs:
         cp debs/*.deb $(Build.ArtifactStagingDirectory)/debs
         cp debian/sonic-rest-api/usr/sbin/go-server-server $(Build.ArtifactStagingDirectory)
       displayName: 'Build image'
+      env:
+        SWSSCOMMON_DEBS_DIR: $(Pipeline.Workspace)/swss-common
 
     - script: |
         set -ex

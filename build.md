@@ -1,7 +1,7 @@
 # How to build the Go MSEE server
 
 ## Prerequesites
-1) libswsscommon built and the library available on `LD_LIBRARY_PATH`. Can be found at [sonic-swss-common](https://github.com/Azure/sonic-swss-common) - follow the build instructions there. Must also set `SWSSCOMMON_SRC` to the full path to the directory `sonic-swss-common`.
+1) Install `libswsscommon-dev` and its matching runtime library, including the SDK Go adapter from [swss-common #1275](https://github.com/sonic-net/sonic-swss-common/pull/1275). A swss-common source checkout is not required.
 2) libcswsscommon must be built, run make within `MSEE/libcswsscommon` after step 1.
 2) Redis database on localhost:6379 - we use DB 0 (`APPL_DB`) and 4
 3) Go version 1.8 (static binaries can be found at [https://golang.org/dl/](https://golang.org/dl/))
@@ -26,7 +26,7 @@ $GOPATH/src/mseethrifttest   -> MSEE/mseethrifttest
 $GOPATH/src/swsscommon       -> MSEE/swsscommon
 ```
 
-It should then be possible to run `go get` followed by `go build` within `$GOPATH/src/go-server-server` to build the `go-server-server` binary.
+Run `make build` from the repository root to prepare the SDK Go adapter in the local `swsscommon` module and build the `go-server-server` binary.
 
 ## Building the mock Thrift server
 The Go server requires that it can connect to the Thrift server, we have a mock server that will allow every request to suceed, this will allow the Go server to run successfully.

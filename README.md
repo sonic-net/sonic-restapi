@@ -27,3 +27,13 @@ This is a configuration agent which exposes HTTPS endpoints to perform dynamic n
   1. scp/copy over the generated archive(`rest-api-image.gz`) to your switch
   2. `docker load < rest-api-image.gz`
   3. `docker run -d -p=8090:8090/tcp -v /var/run/redis/redis.sock:/var/run/redis/redis.sock --name rest-api --cap-add NET_ADMIN --privileged -t rest-api-image:latest`
+
+## Native SDK dependency
+
+Builds require `libswsscommon-dev` and its matching runtime library, including the
+Go adapter introduced by swss-common #1275. The Makefile copies
+`/usr/share/swss/go/redisconn/dial.go` into the existing local `swsscommon` module
+before building. A sibling swss-common source checkout is not required.
+
+`build.sh` installs SDK packages downloaded by `copy.py`. Those artifacts must
+include #1275; the normal SONiC build uses its selected SDK packages.
